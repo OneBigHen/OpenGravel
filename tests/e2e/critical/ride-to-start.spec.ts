@@ -52,3 +52,27 @@ test("a GPX that starts at the rider offers no Ride to the start", async ({ page
   await expect(page.getByRole("button", { name: "Open Far away GPX" })).toBeVisible();
   await expect(page.getByTestId(/^ride-to-start-/)).toHaveCount(0);
 });
+
+/**
+ * The same ask from Explore: a catalog ride read from far away offers Ride to the
+ * start, and one tap goes to the ride screen and plans the way there. It never
+ * stops on the planner's "No route yet".
+ */
+test("an Explore ride from far away rides to the start without a No route yet screen", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ longitude: -75.1, latitude: 40.18, accuracy: 10 });
+  const plans: unknown[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/route-plan")) plans.push(request.postDataJSON());
+  });
+  await page.goto("/explore/sample-ridge-loop");
+  const button = page.getByTestId("ride-to-start");
+  await expect(button).toBeVisible({ timeout: 30_000 });
+  await expect(button).toHaveText(/^Ride to the start · \d+(\.\d)? mi$/);
+  await button.click();
+  await expect(page).toHaveURL(/\/ride/, { timeout: 60_000 });
+  await context.setGeolocation({ longitude: -75.1, latitude: 40.18, accuracy: 8 });
+  await expect.poll(() => plans.length, { timeout: 60_000 }).toBeGreaterThan(0);
+  await expect(page.getByText("No route yet")).toHaveCount(0);
+  await expect(page.getByTestId("ride-far-from-start")).toHaveCount(0);
+});
