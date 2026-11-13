@@ -17,7 +17,7 @@ test("daylight chip in the sheet opens conditions; Ask lives in Options", async 
   const context = page.getByTestId("route-context");
   await expect(context).toBeVisible();
   await expect(context).toContainText(/before sunrise/);
-  await expect(context).toHaveAttribute("aria-label", /arrive.*before sunrise/i);
+  await expect(context).toHaveAttribute("aria-label", /(Arrive|Back) \d.*before sunrise/);
   // The chip is inside the sheet, not over the map.
   const sheetBox = (await page.getByTestId("start-ride").boundingBox())!;
   expect((await context.boundingBox())!.y).toBeGreaterThan(sheetBox.y - 400);
