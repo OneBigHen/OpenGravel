@@ -2856,8 +2856,8 @@
   z-index: 1;
   margin: 0 -12px;
   padding: 12px 12px 8px;
+  border-bottom: 1px solid var(--og-line);
   background: var(--og-surface);
-  box-shadow: 0 8px 8px -8px rgb(0 0 0 / 0.28);
 }
 
 /* OG-18: the green row (Start recording, Resume) stays green inside a group. */
