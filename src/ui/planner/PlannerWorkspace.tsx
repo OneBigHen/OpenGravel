@@ -809,6 +809,7 @@ export function PlannerWorkspace({
             onEditConflictArea: handleEditConflictArea,
             onRemoveConflictArea: handleRemoveAvoidArea,
             errorMessage: viewModel.errorMessage,
+            ...(viewModel.failed ? { onRetryPlan: handlePlan } : {}),
             renderError,
             mapLoadStatus,
             onRetryMap: handleRetryMap,

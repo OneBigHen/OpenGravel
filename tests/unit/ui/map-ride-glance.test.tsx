@@ -179,15 +179,14 @@ describe("MapRideGlance", () => {
     );
   });
 
-  it("offers Retry inside the pill when a plan failed with no route to show", () => {
+  it("stays out of the way when a plan failed with no route to show (OG-04)", () => {
+    // The sheet's error row says it, whole, with the one Retry; a pill here
+    // covered that message and offered a second Retry.
     const onRetry = vi.fn();
     render(glance({ summary: null, planning: false, failed: true, onRetry }));
 
-    const container = screen.getByTestId("ride-glance-map");
-    expect(container).toHaveAttribute("data-state", "failed");
-    expect(container).toHaveTextContent("No route yet");
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("ride-glance-map")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
   it("re-states a changed ride once, after the edits stop", () => {

@@ -430,3 +430,23 @@
     min-height: 56px;
   }
 }
+
+/* OG-04: a failed plan is one row — icon, the whole message, one Retry. */
+.og-planner__error-row {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  color: var(--og-danger);
+}
+
+.og-planner__error-row .og-planner__error {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.og-planner__error-icon { flex: none; }
+
+.og-planner__error-row .og-planner__error-retry {
+  flex: none;
+  min-height: 44px;
+}

@@ -278,11 +278,13 @@ export interface PlannerViewModel {
    *
    * - **a loop**, whose shape and ride time the rider accepts by pressing
    *   `Make my loop`;
-   * - **a failure**, where `Plan again` is a deliberate retry;
    * - **a cancel**, where the rider stopped the attempt and the planner must not
    *   start it again behind their back;
    * - **a ride with no destination** (including one a sketch supplies), whose
    *   disabled state carries the single instruction that says what is missing.
+   *
+   * A failure is not one of them: its single Retry sits in the error row beside
+   * the message (OG-04), so the commitment never offers a second one.
    */
   readonly showPlanAction: boolean;
   /**
@@ -1228,13 +1230,14 @@ export function buildPlannerViewModel(
         : (bundle?.candidates.length ?? 0) > 0
           ? PLAN_LABEL_UPDATE
           : PLAN_LABEL_CREATE,
-    // A loop, a failure and a cancel still need the press; a destination that is
-    // being planned does not.
+    // A loop and a cancel still need the press; a destination that is being
+    // planned does not. A failure's one retry lives in its error row (OG-04), so
+    // the commitment steps aside rather than offering a second "Plan again".
     showPlanAction:
-      failed ||
-      cancelled ||
-      document.intent.shape === "loop" ||
-      document.intent.finish === null,
+      !failed &&
+      (cancelled ||
+        document.intent.shape === "loop" ||
+        document.intent.finish === null),
     planIsCurrent:
       !failed &&
       bundle !== null &&
