@@ -173,9 +173,10 @@ function sameBox(a: Box, b: Box): boolean {
  * renderer has loaded its style and finished its opening fit, which is the other
  * half of the same question.
  */
-export async function settledExtent(page: Page): Promise<Extent> {
+export async function settledExtent(page: Page, quietSamples = 1): Promise<Extent> {
   let previous: { readonly extent: Extent; readonly box: Box } | null = null;
-  for (let attempt = 0; attempt < 150; attempt += 1) {
+  let steady = 0;
+  for (let attempt = 0; attempt < 150 + quietSamples; attempt += 1) {
     const extent = await readExtentOrNull(page);
     const measured = await plannerMap(page).boundingBox();
     const box =
@@ -187,7 +188,10 @@ export async function settledExtent(page: Page): Promise<Extent> {
       sameExtent(extent, previous.extent) &&
       sameBox(box, previous.box)
     ) {
-      return extent;
+      steady += 1;
+      if (steady >= quietSamples) return extent;
+    } else {
+      steady = 0;
     }
     previous = extent === null || box === null ? null : { extent, box };
     await page.waitForTimeout(60);
@@ -330,7 +334,9 @@ async function settledExtentShowing(
 ): Promise<ShownCoordinate> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    const extent = await settledExtent(page);
+    // The phone camera re-fits once, 300 ms after a sheet or chrome change; wait it out
+    // so the fraction pressed is the one the camera ends up showing.
+    const extent = await settledExtent(page, 8);
     const fraction = fractionOf(extent, coordinate);
     if (insideExtent(fraction)) return { extent, fraction };
     if (Date.now() >= deadline) {
@@ -366,7 +372,7 @@ export async function clickMapAtFraction(
   page: Page,
   fraction: Fraction,
 ): Promise<{ readonly coordinate: Coordinate; readonly extent: Extent }> {
-  return clickFractionOfExtent(page, await settledExtent(page), fraction);
+  return clickFractionOfExtent(page, await settledExtent(page, 8), fraction);
 }
 
 /**
@@ -448,8 +454,20 @@ export async function placeEndpoint(
   // A destination placed after a start must keep that start, so it goes through
   // the composer's armed placement rather than the menu's "Directions to here",
   // which deliberately replaces the start with the rider's location.
-  if (!(await page.getByTestId("finish-chip").isVisible())) await page.getByTestId("sheet-handle").click();
-  await page.getByTestId("finish-chip").click();
+  // The chip lives in the half sheet, not the peek: open one detent if it is
+  // not showing yet, and wait for it rather than tapping the handle blind.
+  const chip = page.getByTestId("finish-chip");
+  await expect(async () => {
+    if (!(await chip.isVisible())) await page.getByTestId("sheet-handle").click();
+    await expect(chip).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await chip.click();
+  // Armed placement needs the map in reach: a full sheet covers it, so lower it.
+  const dock = page.getByTestId("planner-dock");
+  await expect(async () => {
+    if ((await dock.getAttribute("data-detent")) === "full") await page.getByTestId("sheet-handle").click();
+    await expect(dock).not.toHaveAttribute("data-detent", "full", { timeout: 1_500 });
+  }).toPass({ timeout: 20_000 });
   await pressMapAt(page, fraction);
 }
 

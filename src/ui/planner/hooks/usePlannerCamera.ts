@@ -15,6 +15,7 @@ import { computeInsets, toRect, type Rect } from "@/application/map/insets";
 import type { MapScene } from "@/application/map/types";
 import type { PlanningSessionSnapshot } from "@/application/planner/planning-session";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
+import { isCompactViewport } from "@/ui/planner/usePhonePlanner";
 
 /** How far in from the map's sides a phone's floating sheet may sit and still
  *  count as a bottom sheet (it floats 8px in; 24px leaves room for safe areas). */
@@ -43,7 +44,17 @@ function readSafeArea() {
 
 /** The ride inspector beside the map slot, when the composition has one. */
 /** Controls that float over the top of the map on every tier (UX rework 2, #8). */
-const TOP_CHROME = ["places-control", "top-search", "trip-card"] as const;
+const TOP_CHROME = ["places-control", "top-search", "trip-card", "route-context-row"] as const;
+
+/**
+ * Phone fit (PF-4): 28px of breathing room beyond the measured chrome on every
+ * side, and 20px more at the bottom so the destination pin (40px, anchored at
+ * its foot) never sits under the sheet's top edge.
+ */
+const PHONE_FIT_GUTTER_PX = 28;
+const PHONE_PIN_ROOM_PX = 20;
+/** A sheet changing detent re-fits once it has settled, not on every frame of its move. */
+const SETTLE_REFIT_MS = 300;
 /** The map's own button column down its right-hand side. */
 const SIDE_CHROME = ["map-satellite-toggle", "show-whole-ride", "map-layers"] as const;
 
@@ -163,6 +174,7 @@ export function usePlannerCamera(input: {
             ...chromeBands(toRect(mapSlot.getBoundingClientRect())),
           ],
           safeArea: readSafeArea(),
+          ...(isCompactViewport() ? { gutter: PHONE_FIT_GUTTER_PX, extraBottom: PHONE_PIN_ROOM_PX } : {}),
         }),
       );
       const sheetHead = sheetHeadRef.current;
@@ -172,8 +184,16 @@ export function usePlannerCamera(input: {
 
     measure();
     window.addEventListener("resize", measure);
+    // The sheet animates between detents and the chrome settles over a frame or
+    // two: measure once it has stopped moving, so the map re-fits one time, to
+    // the rectangle the rider ends up with.
+    let settle: ReturnType<typeof setTimeout> | null = null;
+    const measureSettled = (): void => {
+      if (settle !== null) clearTimeout(settle);
+      settle = setTimeout(() => { settle = null; measure(); }, SETTLE_REFIT_MS);
+    };
     const observer =
-      typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+      typeof ResizeObserver === "function" ? new ResizeObserver(measureSettled) : null;
     if (observer !== null) {
       if (dockRef.current !== null) observer.observe(dockRef.current);
       if (headerRef.current !== null) observer.observe(headerRef.current);
@@ -188,6 +208,7 @@ export function usePlannerCamera(input: {
     }
     return () => {
       window.removeEventListener("resize", measure);
+      if (settle !== null) clearTimeout(settle);
       observer?.disconnect();
     };
   }, [plannerUiStore]);
