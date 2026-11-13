@@ -137,6 +137,7 @@ import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify
 import type { StoreApi } from "zustand/vanilla";
 import { bearingTo } from "@/domain/breadcrumb/route";
 import { haversine } from "@/domain/geometry/analysis";
+import { RECORDING_STOP_ASK_MS, recordingRowCopy, stopFollowingHint } from "@/ui/ride/recording-row";
 
 
 export interface RideFocusProps {
@@ -389,6 +390,13 @@ export function RideFocus({
   const roadBlocked = useRoadBlocked(navigation?.position ?? null);
   /** The "your screen may sleep" line is one the rider can put away for the ride. */
   const [screenNoteDismissed, setScreenNoteDismissed] = useState(false);
+  /** OG-18: the first press on a running Recording row asks before it deletes the track. */
+  const [recordingStopAsk, setRecordingStopAsk] = useState(false);
+  useEffect(() => {
+    if (!recordingStopAsk) return undefined;
+    const timer = window.setTimeout(() => setRecordingStopAsk(false), RECORDING_STOP_ASK_MS);
+    return (): void => window.clearTimeout(timer);
+  }, [recordingStopAsk]);
 
   // iPad/iPhone Safari keeps the on-screen keyboard (and a shrunken viewport)
   // alive when the planner's text box was focused as the ride opened, which left
@@ -1603,6 +1611,8 @@ export function RideFocus({
           the Menu now (it was a rail disc) and does exactly what it did.
         */}
         {terminal !== null ? null : (
+          /* OG-16: pinned to the sheet's top edge; the rows scroll under it. */
+          <div className="og-ride__sheet-pin" data-testid="ride-menu-pin">
           <div className="og-ride__menu-group" data-testid="ride-menu-emergency">
             <button
               type="button"
@@ -1615,6 +1625,7 @@ export function RideFocus({
               <span className="og-ride__sheet-row-label">Emergency</span>
               <span className="og-ride__sheet-row-hint">Where am I, call 911</span>
             </button>
+          </div>
           </div>
         )}
         {terminal !== null ? null : <RoadBlockedMenuRow state={roadBlocked} onOpened={(): void => setSheetOpen(false)} />}
@@ -1680,7 +1691,7 @@ export function RideFocus({
                 onClick={(): void => { void store.getState().continueFreeRide(); }}
               >
                 <span className="og-ride__sheet-row-label">Stop following this route</span>
-                <span className="og-ride__sheet-row-hint">Keep recording</span>
+                <span className="og-ride__sheet-row-hint">{stopFollowingHint(navigation.recordingId !== null)}</span>
               </button>
             )}
             {/*
@@ -1688,30 +1699,43 @@ export function RideFocus({
               who wants it off: one row, the state in the hint, and the same
               promise as before — turning it off discards the track.
             */}
-            {navigation === null || navigation.activity === "free" || navigation.activity === "completed" ? null : (
-              <button
-                type="button"
-                className="og-ride__sheet-row"
-                data-testid="ride-recording-toggle"
-                aria-pressed={navigation.recordingId !== null}
-                disabled={recordingToggleBusy || recordingCleanupPending}
-                onClick={(): void => {
-                  if (recordingCleanupPending || navigation.recordingId !== null) void store.getState().stopRecording();
-                  else void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
-                }}
-              >
-                <span className="og-ride__sheet-row-label">Recording</span>
-                <span className="og-ride__sheet-row-hint">
-                  {recordingToggleBusy
-                    ? "Working…"
-                    : recordingCleanupPending
-                      ? "Retry turning it off"
-                      : navigation.recordingId === null
-                        ? "Off"
-                        : "On"}
-                </span>
-              </button>
-            )}
+            {navigation === null || navigation.activity === "free" || navigation.activity === "completed" ? null : (() => {
+              const row = recordingRowCopy({
+                recording: navigation.recordingId !== null,
+                busy: recordingToggleBusy,
+                cleanupPending: recordingCleanupPending,
+                asking: recordingStopAsk,
+              });
+              return (
+                <button
+                  type="button"
+                  className={`og-ride__sheet-row${row.tone === "plain" ? "" : ` og-ride__sheet-row--${row.tone}`}`}
+                  data-testid="ride-recording-toggle"
+                  data-tone={row.tone}
+                  data-confirm={recordingStopAsk && navigation.recordingId !== null ? "true" : "false"}
+                  aria-pressed={navigation.recordingId !== null}
+                  disabled={recordingToggleBusy}
+                  onClick={(): void => {
+                    if (recordingCleanupPending) {
+                      void store.getState().stopRecording();
+                    } else if (navigation.recordingId !== null) {
+                      // Turning recording off deletes the track: ask once, in red.
+                      if (!recordingStopAsk) {
+                        setRecordingStopAsk(true);
+                        return;
+                      }
+                      setRecordingStopAsk(false);
+                      void store.getState().stopRecording();
+                    } else {
+                      void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
+                    }
+                  }}
+                >
+                  <span className="og-ride__sheet-row-label">{row.label}</span>
+                  <span className="og-ride__sheet-row-hint">{row.hint}</span>
+                </button>
+              );
+            })()}
             <button
               type="button"
               className="og-ride__sheet-row og-ride__sheet-row--danger"

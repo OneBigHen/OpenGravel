@@ -633,10 +633,11 @@ describe("dark chrome and honest states", () => {
     expect(then).toMatch(/font-weight:\s*600/);
     // Reduced motion has nothing to stop: the row appears instantly, always.
     expect(then).not.toMatch(/(animation|transition)[\w-]*\s*:/);
-    // One line, ellipsised rather than wrapping the card.
-    expect(ruleIn(globals, ".og-ride__maneuver-then-action")).toMatch(
-      /text-overflow:\s*ellipsis/,
-    );
+    // OG-19: the street name wraps to a second line; it is never cut with "…".
+    const thenAction = ruleIn(globals, ".og-ride__maneuver-then-action");
+    expect(thenAction).not.toMatch(/text-overflow:\s*ellipsis/);
+    expect(thenAction).not.toMatch(/white-space:\s*nowrap/);
+    expect(thenAction).toMatch(/overflow-wrap:\s*anywhere/);
     expect(ruleIn(globals, '.og-ride__maneuver[data-then="true"]')).toMatch(/min-height:\s*12[68]px/);
 
     const exit = ruleIn(globals, ".og-ride__maneuver-exit");
@@ -2622,6 +2623,57 @@ describe("Free Ride recording controls", () => {
     expect(toggle).toHaveTextContent("Recording");
     expect(toggle).toHaveTextContent("On");
     expect(toggle).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("asks once, in red, before the guided Menu's Recording row deletes the track (OG-18)", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store);
+    act(() => store.setState({ navigation: projected.navigation, viewModel: projected.viewModel }));
+    const stop = vi.spyOn(store.getState(), "stopRecording").mockResolvedValue(undefined);
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    expect(screen.getByTestId("continue-free-ride")).toHaveTextContent("Keep riding and recording");
+    const toggle = screen.getByTestId("ride-recording-toggle");
+    fireEvent.click(toggle);
+    expect(stop).not.toHaveBeenCalled();
+    expect(toggle).toHaveAttribute("data-confirm", "true");
+    expect(toggle).toHaveAttribute("data-tone", "danger");
+    expect(toggle).toHaveClass("og-ride__sheet-row--danger");
+    expect(toggle).toHaveTextContent("Stop and delete the track?");
+    fireEvent.click(toggle);
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers Start recording in green and drops the 'Keep recording' promise when nothing records (OG-18)", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store, { recordingId: null });
+    act(() => store.setState({ navigation: projected.navigation, viewModel: projected.viewModel }));
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    const toggle = screen.getByTestId("ride-recording-toggle");
+    expect(toggle).toHaveTextContent("Start recording");
+    expect(toggle).toHaveClass("og-ride__sheet-row--primary");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("continue-free-ride")).toHaveTextContent("Keep riding");
+    expect(screen.getByTestId("continue-free-ride")).not.toHaveTextContent("recording");
+  });
+
+  it("never squeezes a Menu group and pins Emergency above the rows (OG-16, OG-17)", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store);
+    act(() => store.setState({ navigation: projected.navigation, viewModel: projected.viewModel }));
+    fireEvent.click(screen.getByTestId("ride-menu"));
+    const pin = screen.getByTestId("ride-menu-pin");
+    expect(pin.parentElement).toBe(screen.getByTestId("ride-panel"));
+    expect(pin.parentElement?.firstElementChild).toBe(pin);
+    expect(within(pin).getByTestId("ride-emergency")).toBeInTheDocument();
+
+    expect(cssRule(".og-ride__sheet > *")).toMatch(/flex-shrink:\s*0/);
+    const pinned = cssRule(".og-ride__sheet-pin");
+    expect(pinned).toMatch(/position:\s*sticky/);
+    expect(pinned).toMatch(/top:\s*0/);
+    expect(pinned).toMatch(/background:\s*var\(--og-surface\)/);
+    expect(cssRule(".og-ride__sheet:has(> .og-ride__sheet-pin)")).toMatch(/scroll-padding-top:\s*\d+px/);
   });
 
   it("keeps the Free Ride sheet controls available during a recording without opening the sheet", async () => {

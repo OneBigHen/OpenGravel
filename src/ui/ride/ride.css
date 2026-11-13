@@ -205,11 +205,11 @@
   stroke-width: 3.6;
 }
 
+/* OG-19: the street name is the part that matters, so the "Then" line wraps
+   to a second line instead of cutting the name with "…". */
 .og-ride__maneuver-then-action {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .og-ride__maneuver-then-road {
@@ -2834,3 +2834,38 @@
 
 .og-ride__toast--report { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border-radius: var(--og-radius-card); }
 .og-ride__toast-action { min-height: 56px; padding: 0 16px; border: 1px solid var(--og-line-strong); border-radius: var(--og-radius-control); background: var(--og-surface-2); color: var(--og-ink); font: inherit; font-weight: 700; cursor: pointer; }
+
+/* OG-16 / OG-17 (owner's phone, 2026-11-13): every Menu row is whole.
+   The sheet is a scrolling flex column, and its groups clip their own rows
+   (overflow: hidden), so a tall Menu used to squeeze each group shorter than
+   its rows and slice them through the letters. Nothing in the sheet shrinks;
+   the sheet scrolls instead. Emergency stays pinned at the top edge with the
+   rows scrolling under it, and a row scrolled to by keyboard clears it. */
+.og-ride__sheet > * {
+  flex-shrink: 0;
+}
+
+.og-ride__sheet:has(> .og-ride__sheet-pin) {
+  padding-top: 0;
+  scroll-padding-top: 84px;
+}
+
+.og-ride__sheet-pin {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 -12px;
+  padding: 12px 12px 8px;
+  background: var(--og-surface);
+  box-shadow: 0 8px 8px -8px rgb(0 0 0 / 0.28);
+}
+
+/* OG-18: the green row (Start recording, Resume) stays green inside a group. */
+.og-ride__sheet .og-ride__menu-group .og-ride__sheet-row--primary {
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
+.og-ride__sheet .og-ride__menu-group .og-ride__sheet-row--primary .og-ride__sheet-row-hint {
+  color: var(--og-on-primary);
+}
