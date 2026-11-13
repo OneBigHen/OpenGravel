@@ -94,7 +94,7 @@ export function summarizeAdvisorRide(
 /** Only the existing explanation grammar can cross the wire; never arbitrary factual prose. */
 function validExplanation(value: string): boolean {
   if (["No faster route to compare this ride against.", "Matches the fastest option in time."].includes(value)) return true;
-  const benefit = "(?:a curvier line|more back-road character|a closer surface match|more elevation change|lower traffic|fewer junctions|more new-to-you road|a lower closure risk)";
+  const benefit = "(?:a curvier line|more back-road character|a closer surface match|more elevation change|lower traffic|quieter roads|more new-to-you road|a lower closure risk)";
   return new RegExp(`^Adds \\d+ minutes(?: and \\d+(?:\\.\\d+)? mi more)?(?: over the fastest option| for ${benefit}(?: and ${benefit})?)\\.$`).test(value);
 }
 
