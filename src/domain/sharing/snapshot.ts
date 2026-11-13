@@ -92,6 +92,7 @@ export function buildShareSnapshot(
     },
     author: pseudonym.length === 0 ? null : { pseudonym },
     source: { attribution: source.provenance },
+    ...(source.credit === undefined ? {} : { credit: source.credit }),
   } satisfies ShareSnapshot);
 }
 

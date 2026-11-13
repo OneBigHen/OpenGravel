@@ -57,6 +57,40 @@ export interface RiderLineSnap {
   note: string;
 }
 export type Verdict = 'Win' | 'Tie' | 'Loss';
+/** One threshold the verdict had to clear, and how far over it the route is. */
+export interface MarginBar {
+  /** Plain-English name of the bar, as the rider sees it in the report. */
+  label: string;
+  /** The route's value for this bar (good miles, share, or miles above fastest). */
+  score: number;
+  /** The value the rule asks for. */
+  bar: number;
+  /** score / bar: 1.0 is exactly on the bar, 1.1 is 10% above it. Infinity when the bar is zero. */
+  ratio: number;
+}
+/** Scorecard v4 item c: how close a Win is to the bar it had to clear. */
+export interface WinMargin {
+  /** Best passing path's closest bar, as a share above it (0.04 = 4% above). Null when unmeasured. */
+  aboveBar: number | null;
+  /** True when the best passing path clears its closest bar by less than 10%. Only meaningful for a Win. */
+  thin: boolean;
+  /** The closest bar that path cleared. */
+  bar: string | null;
+  /** Every threshold behind the verdict, kept so a thin label can be explained. */
+  detail: MarginBar[];
+}
+/** Scorecard v4 item d: what the "fastest" reference was, and whether it is honestly fastest. */
+export interface FastestReferenceCheck {
+  /** Only A-to-B rides have a fastest reference; loops are compared with an equal-time loop. */
+  applicable: boolean;
+  referenceMinutes: number | null;
+  chosenMinutes: number | null;
+  /** How much quicker our chosen line is than the reference, as a share of the reference (0.03 = 3%). */
+  quickerShare: number | null;
+  /** True when our own line is more than 2% quicker than the line called "fastest": the reference is broken. */
+  failed: boolean;
+  message: string;
+}
 export interface Row {
   ride: Ride;
   openGravel: Measurement | null;
@@ -73,6 +107,10 @@ export interface Row {
   /** The verdict scorecard v1 would have given, so both headlines can be printed. */
   verdictV1: Verdict;
   reasonsV1: string[];
+  /** How close this row's v3 verdict is to its bar (item c). */
+  margin: WinMargin;
+  /** What the fastest reference was, and whether our own line beat it (item d). */
+  referenceCheck: FastestReferenceCheck;
   routerUse: RouterUse | null;
   errors: string[];
 }

@@ -1,23 +1,26 @@
 import { expect, it } from 'vitest';
-import { headline, headlineV1, headlineV2, report } from '../../../scripts/scorecard/report';
+import { headline, headlineV1, headlineV2, headlineV3, report } from '../../../scripts/scorecard/report';
 import { yardstickCheck } from '../../../scripts/scorecard/yardstick';
 import { routerLoad } from '../../../scripts/scorecard/load';
 import type { Row, Measurement } from '../../../scripts/scorecard/types';
 const measured: Measurement = { miles: 10, minutes: 20, goodMiles: 4, goodShare: 0.4, v1GoodMiles: 3, v1GoodShare: 0.3, dirtShare: 0.4, francoPerKm: 30, busyShare: 0.1, extraMinutes: 0, riderMatch: null, unknownSurfaceShare: 0.2, planningSeconds: 1, trustFailures: ['sand'], unknownTrust: ['No closure feed'], authorityWarnings: [], geometry: [{ lat: 40, lon: -77 }, { lat: 40.01, lon: -77.01 }] };
 const ride: Row['ride'] = { id: 'fixture', label: '<script>bad</script>', source: 'corpus', mode: 'gravel', requestId: 'fixed', start: { lat: 40, lon: -77 }, end: { lat: 40.01, lon: -77.01 } };
-const row: Row = { ride, openGravel: measured, fastest: { ...measured, trustFailures: [] }, riderLine: null, riderSnap: null, verdict: 'Loss', reasons: ['sand'], verdictV2: 'Loss', reasonsV2: ['sand'], verdictV1: 'Tie', reasonsV1: [], routerUse: { calls: 4, shadowCalls: 2, firstCallSeconds: 3.25, firstAnswerSeconds: 1.5 }, errors: [] };
+const referenceCheck: Row['referenceCheck'] = { applicable: true, referenceMinutes: 20, chosenMinutes: 20, quickerShare: 0, failed: false, message: 'Fastest reference 20.0 min (motorcycle_fastest, no alternatives); chosen line 20.0 min, 0.0% slower.' };
+const margin: Row['margin'] = { aboveBar: 0.2, thin: false, bar: '3 more good miles than fastest', detail: [] };
+const row: Row = { ride, openGravel: measured, fastest: { ...measured, trustFailures: [] }, riderLine: null, riderSnap: null, verdict: 'Loss', reasons: ['sand'], verdictV2: 'Loss', reasonsV2: ['sand'], verdictV1: 'Tie', reasonsV1: [], margin, referenceCheck, routerUse: { calls: 4, shadowCalls: 2, firstCallSeconds: 3.25, firstAnswerSeconds: 1.5 }, errors: [] };
 it('produces one self-contained row per ride with sketches, both trust counts and Google links only', () => {
   document.documentElement.innerHTML = report([row], 'tuning', '2026-11-10T17:00:00Z', ['Fixed loop duration'], ['Checkout differs from production']);
   expect(document.querySelectorAll('tbody > tr')).toHaveLength(1);
-  expect(document.querySelectorAll('tbody > tr > td')).toHaveLength(11);
+  expect(document.querySelectorAll('tbody > tr > td')).toHaveLength(12);
   expect(document.querySelectorAll('svg')).toHaveLength(1);
   expect(document.querySelectorAll('polyline')).toHaveLength(4);
   expect(document.querySelectorAll('script,img,link,iframe')).toHaveLength(0);
   expect(document.querySelector('a')?.href).toContain('https://www.google.com/maps/dir/?api=1');
   expect(document.querySelector('tbody')?.textContent).toContain('<script>bad</script>');
   expect(document.querySelector('[role=status]')?.textContent).toContain('Checkout differs from production');
-  expect(document.querySelector('h1')?.textContent).toContain('Wins 0/1, trust failures 1');
+  expect(document.querySelector('h1')?.textContent).toContain('Wins 0/1 (0 thin), trust failures 1, fastest-reference failures 0');
   expect(document.querySelector('td:last-child')?.textContent).toContain('1 / 0 / unknown');
+  expect(document.querySelector('tbody')?.textContent).toContain('Fastest reference 20.0 min');
 });
 it('prints the v3 headline with v2 and v1 beside it, the yardstick, router calls and first-answer seconds', () => {
   const wins: Row = { ...row, verdict: 'Win', verdictV2: 'Tie', verdictV1: 'Loss', reasons: [], reasonsV1: ['Fewer good miles than fastest'] };
@@ -42,6 +45,21 @@ it('prints the v3 headline with v2 and v1 beside it, the yardstick, router calls
   expect(text).toContain('7.34% Curvy bend share');
   expect(text).toContain('4 (+2 shadow) / 1.5');
   expect(text).toContain('v3 Win · v2 Tie · v1 Loss');
+});
+it('prints a margin column, labels thin wins and counts a broken fastest reference in the headline', () => {
+  const thin: Row = {
+    ...row, verdict: 'Win', reasons: [],
+    margin: { aboveBar: 0.04, thin: true, bar: '2.39% Curvy bend share', detail: [] },
+    referenceCheck: { applicable: true, referenceMinutes: 29.1, chosenMinutes: 18.1, quickerShare: 0.378, failed: true, message: 'FASTEST REFERENCE FAILED' },
+  };
+  expect(headlineV3([thin])).toContain('Wins 1/1 (1 thin)');
+  expect(headlineV3([thin])).toContain('fastest-reference failures 1');
+  document.documentElement.innerHTML = report([thin], 'tuning', '2026-11-10T17:00:00Z');
+  expect(document.querySelector('h1')?.textContent).toContain('Wins 1/1 (1 thin)');
+  expect(document.querySelectorAll('tbody > tr > td')).toHaveLength(12);
+  expect(document.querySelector('tbody')?.textContent).toContain('thin');
+  expect(document.querySelector('tbody')?.textContent).toContain('2.39% Curvy bend share');
+  expect(document.querySelector('tbody')?.textContent).toContain('FASTEST REFERENCE FAILED');
 });
 it('shows the rider line as a third contestant and sketches it', () => {
   const withRider: Row = { ...row, ride: { ...ride, riderTrack: { catalogId: 'c', geometryPolyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' } }, riderLine: { ...measured, goodMiles: 9, trustFailures: [], riderMatch: 0.97 } };

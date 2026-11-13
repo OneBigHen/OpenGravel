@@ -1,5 +1,6 @@
 "use client";
 
+import type { RideCredit } from "@/domain/ride/credit";
 import Image from "next/image";
 import { useRef, useState } from "react";
 
@@ -42,7 +43,7 @@ function Paragraphs({ text }: { readonly text: string }) {
   return text.split(/\n{2,}|\n/).filter((line) => line.trim().length > 0).map((line, index) => <p key={index}>{line}</p>);
 }
 
-export function RouteStory({ story, routeName }: { readonly story: CatalogRideStory; readonly routeName: string }) {
+export function RouteStory({ story, routeName, credit }: { readonly story: CatalogRideStory; readonly routeName: string; readonly credit?: RideCredit }) {
   const [expanded, setExpanded] = useState(false);
   const [allComments, setAllComments] = useState(false);
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);
@@ -73,7 +74,9 @@ export function RouteStory({ story, routeName }: { readonly story: CatalogRideSt
         <p className="og-eyebrow">{story.source.kind}</p>
         <h2 id="route-story-title">From {story.source.name}</h2>
         <p className="og-route-story__byline">
-          {story.sharedBy === undefined ? "Shared by a group member" : <>Shared by <strong>{story.sharedBy}</strong></>}
+          {credit?.author != null
+            ? <>Route by <strong>{credit.author}</strong></>
+            : story.sharedBy === undefined ? "Shared by a group member" : <>Shared by <strong>{story.sharedBy}</strong></>}
           {shared === null ? null : <> · {shared}</>}
           {story.source.url === undefined ? null : (
             <> · <a href={story.source.url} target="_blank" rel="noopener noreferrer">Original post<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a></>

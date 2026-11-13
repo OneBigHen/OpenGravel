@@ -7,6 +7,10 @@
  * --freeze-threshold snaps the tuning riders' lines only and rewrites scripts/scorecard/frozen-threshold.ts
  * (the Curvy loop bar: 75% of the median rider-line share). Plans nothing.
  * Scorecard v3 is the headline; v2 and v1 are printed on the next two lines, always. --set nj runs the fixed 10-ride New Jersey set.
+ * Scorecard v4 records the router's graph build date and profile hash (from /info, else "unknown") plus the
+ * git commit, prints a margin column ("thin" wins are within 10% of their bar) and checks the "fastest"
+ * reference (our own line more than 2% quicker means the reference is broken). Combine two result files
+ * from the same graph with: npm run scorecard:combine -- run-1.json run-2.json
  * Scorecard v2: Curvy good miles are the planner's own bend metres; a third contestant, the rider's own
  * line snapped to our roads, is measured with the same code but never used to plan or scored.
  * Exit 0 means all 20 comparisons ran, not that OpenGravel won or was safe. Exit 1: a planning error.
@@ -24,7 +28,10 @@ import type { BoundingBox } from '../../src/application/route-intelligence/types
 import { frozenAuthority } from './authority';
 import { measure } from './measure';
 import { asV1, winTieLoss, winTieLossV3 } from './scoring';
-import { headline, headlineV1, headlineV2, report } from './report';
+import { headlineV1, headlineV2, headlineV3, report } from './report';
+import { unmeasuredMargin, winMargin } from './margin';
+import { fastestReferenceCheck } from './reference';
+import { readRouterProvenance } from './provenance';
 import { createRouterMeter, instrumentProvider, loadLine, routerLoad } from './load';
 import { MIN_SNAP_COVERAGE, pickAnchors, snapProfileFor, snapRiderLine, type SnapResult } from './rider-line';
 import { freezeCurvyThreshold, renderFrozenThreshold, riderCurvyShares } from './threshold';
@@ -102,6 +109,9 @@ async function main(): Promise<void> {
   const baseUrl = process.env.GRAPHHOPPER_URL ?? 'http://127.0.0.1:8989';
   const url = new URL(baseUrl);
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw new Error('Use the local SSH tunnel to docker-stable');
+  // Scorecard v4 item b: record which graph and profiles answered, and the source commit.
+  // The /info read is deliberately outside the router meter: it is provenance, not a plan cost.
+  const provenance = await readRouterProvenance(baseUrl);
   const atlasPath = process.env.OGV_GRAVEL_ATLAS_PATH ?? 'data/scorecard/gravel-atlas-v3.sqlite';
   const atlas = createGravelAtlas(atlasPath);
   if (!freeze && !atlas.availability().available) throw new Error(`Local atlas unavailable: ${JSON.stringify(atlas.availability())}`);
@@ -203,12 +213,22 @@ async function main(): Promise<void> {
     const outcome = selected && baseline ? winTieLossV3(ride, selected, baseline, curvyThreshold, ride.loopMinutes !== undefined ? riderLine : null) : failed;
     const outcomeV2 = selected && baseline ? winTieLoss(ride, selected, baseline, curvyThreshold) : failed;
     const outcomeV1 = selected && baseline ? winTieLoss(ride, asV1(selected), asV1(baseline)) : failed;
-    const row: Row = { ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...outcome, verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
+    // Items c and d: the margin behind the v3 verdict, and what the fastest reference actually was.
+    const margin = selected && baseline ? winMargin(ride, selected, baseline, curvyThreshold, ride.loopMinutes !== undefined ? riderLine : null) : unmeasuredMargin();
+    const referenceCheck = fastestReferenceCheck(ride, selected, baseline);
+    const row: Row = {
+      ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...outcome,
+      verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons,
+      margin: { ...margin, thin: outcome.verdict === 'Win' && margin.thin }, referenceCheck, routerUse, errors,
+    };
     rows.push(row);
     const sec = (n: number | null | undefined) => n === null || n === undefined ? '?' : n.toFixed(1);
     const mine = routerUse ? `${routerUse.calls} router calls, first answer ${sec(routerUse.firstAnswerSeconds)}s, first call ${sec(routerUse.firstCallSeconds)}s` : 'router use unknown';
     const rider = riderLine && baseline ? `; rider line ${riderLine.goodMiles.toFixed(1)} vs fastest ${baseline.goodMiles.toFixed(1)} good mi` : '';
-    console.log(`${rows.length}/${rides.length} ${ride.label}: ${row.verdict} (v2 ${row.verdictV2}, v1 ${row.verdictV1}); trust ${selected?.trustFailures.length ?? 'unknown'}; ${mine}${rider}; ${[...row.reasons, ...errors].join('; ')}`);
+    const reference = referenceCheck.applicable
+      ? `; fastest reference ${sec(referenceCheck.referenceMinutes)} min (chosen ${sec(referenceCheck.chosenMinutes)} min${referenceCheck.quickerShare === null ? '' : `, ${(Math.abs(referenceCheck.quickerShare) * 100).toFixed(1)}% ${referenceCheck.quickerShare >= 0 ? 'quicker' : 'slower'}`})${referenceCheck.failed ? ' FASTEST REFERENCE FAILED' : ''}`
+      : '';
+    console.log(`${rows.length}/${rides.length} ${ride.label}: ${row.verdict} (v2 ${row.verdictV2}, v1 ${row.verdictV1}); trust ${selected?.trustFailures.length ?? 'unknown'}; ${mine}${rider}${reference}; ${[...row.reasons, ...errors].join('; ')}`);
     await writeFile('scorecard-out/progress.json', JSON.stringify(rows, null, 2));
   }
   await meter.idle();
@@ -222,10 +242,14 @@ async function main(): Promise<void> {
     baselineTrustFailures: rows.reduce((n, r) => n + (r.fastest?.trustFailures.length ?? 0), 0),
     planningErrors: rows.filter(r => r.errors.length).length,
     ridesWithUnknownTrust: rows.filter(r => r.openGravel && r.openGravel.unknownTrust.length > 0).length,
+    thinWins: rows.filter(r => r.verdict === 'Win' && r.margin.thin).length,
+    fastestReferenceFailures: rows.filter(r => r.referenceCheck.failed).length,
   };
   const yardstick = yardstickCheck(rows);
   const load = routerLoad(rows);
   const warnings: string[] = [];
+  if (provenance.graphBuildDate === 'unknown') warnings.push('The router /info did not report a graph build date (unknown); a two-run comparison cannot confirm both runs used the same graph.');
+  if (provenance.profileHash === 'unknown') warnings.push('The router /info did not report profiles (profile hash unknown); a changed router profile cannot be detected from this result file.');
   const moved = set === 'tuning' ? Object.entries(riderCurvyShares(rows)).filter(([id, share]) => Math.abs(share - (FROZEN_CURVY_THRESHOLD.riderShares[id] ?? NaN)) > 1e-4 || !(id in FROZEN_CURVY_THRESHOLD.riderShares)) : [];
   if (moved.length) warnings.push(`Rider-line shares differ from the frozen Curvy threshold's inputs (${moved.map(([id]) => id).join(', ')}). The router or map may have changed; the threshold stays frozen until you deliberately run --freeze-threshold.`);
   const lowCoverage = rows.filter(r => r.riderSnap && r.riderSnap.coverage < 1).map(r => `${r.ride.label} ${(r.riderSnap!.coverage * 100).toFixed(0)}%`);
@@ -233,13 +257,13 @@ async function main(): Promise<void> {
   if (!yardstick.passed) warnings.unshift(yardstick.message);
   const gitHead = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const sourceWarnings = (await readFile('src/server/planning/plan-service.ts', 'utf8')).includes('OGV_DIRT_LOOP_GENERATORS') ? [] : ['This checkout does not read OGV_DIRT_LOOP_GENERATORS; results describe this revision, not the newer production planner.'];
-  const result = { headline: headline(rows), headlineV2: headlineV2(rows), headlineV1: headlineV1(rows), yardstick, routerLoad: load, curvyLoopThreshold: curvyThreshold, summary, set, generatedAt: new Date().toISOString(), rideDate: manifest.rideDate,
-    gitHead, sourceWarnings,
+  const result = { headline: headlineV3(rows), headlineV2: headlineV2(rows), headlineV1: headlineV1(rows), yardstick, routerLoad: load, curvyLoopThreshold: curvyThreshold, summary, set, generatedAt: new Date().toISOString(), rideDate: manifest.rideDate,
+    gitHead, graphBuildDate: provenance.graphBuildDate, profileHash: provenance.profileHash, sourceWarnings,
     manifestSha256, atlasSha256: createHash('sha256').update(await readFile(atlasPath)).digest('hex'),
     authoritySha256: createHash('sha256').update(await readFile('scorecard-out/authority-snapshots.json')).digest('hex'),
     switches: SWITCHES, router: baseUrl, routerCalls: meter.count(), assumptions: manifest.notes, rows };
   await writeFile('scorecard-out/latest.json', JSON.stringify(result, null, 2));
-  await writeFile('scorecard-out/index.html', report(rows, set, manifest.rideDate, [`Measured source revision: ${gitHead}`, ...manifest.notes], [...warnings, ...sourceWarnings], { yardstick, load, curvyLoopThreshold: curvyThreshold }));
+  await writeFile('scorecard-out/index.html', report(rows, set, manifest.rideDate, [`Measured source revision: ${gitHead}`, `Router graph build date: ${provenance.graphBuildDate}; profile hash: ${provenance.profileHash}`, ...manifest.notes], [...warnings, ...sourceWarnings], { yardstick, load, curvyLoopThreshold: curvyThreshold }));
   const label = set === 'nj' ? `NJ ${summary.winsV3}/${rows.length}` : `${set} ${summary.winsV3}/${rows.length}`;
   console.log(`v3 (this scorecard, ${label}): ${result.headline}`);
   console.log(`v2 (previous rule):  ${result.headlineV2}`);

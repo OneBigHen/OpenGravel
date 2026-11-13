@@ -1,5 +1,6 @@
 "use client";
 
+import { creditText } from "@/domain/ride/credit";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { PA_RIDING_AREAS, parsePaRidingArea } from "@/application/explore/riding-areas";
@@ -166,7 +167,9 @@ function RouteCard({
   const teaser = entry.storyTeaser;
   // Who shared it is the one thing a rider needs from the story on a card; the
   // comment and photo counts are on the ride page, where the story itself is.
-  const byline = teaser === undefined
+  const byline = entry.credit !== undefined
+    ? creditText(entry.credit)
+    : teaser === undefined
     ? null
     : teaser.sharedBy === undefined
       ? `From ${teaser.sourceName}`

@@ -40,6 +40,7 @@ import { distanceToStartKm } from "@/application/explore/query";
 import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
+import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
@@ -446,7 +447,8 @@ export function RouteDetail({
   const startDistance = riderOrigin === undefined ? null : startDistanceLabel(distanceToStartKm(riderOrigin, entry));
   // The header says the two things a rider decides with: how far the start is,
   // and where the route came from. Everything else waits below (§7 copy).
-  const provenanceSource = provenanceSourceName(entry.provenance);
+  // A credited route names its author and source in the credit line instead.
+  const provenanceSource = entry.credit === undefined ? provenanceSourceName(entry.provenance) : "";
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
 
   // The instrument panel uses the same evidence-backed facts as the route
@@ -515,7 +517,7 @@ export function RouteDetail({
   const canSave = onSave !== undefined && entry.source === "catalog" && fullGeometry;
 
   function exportGpx(): void {
-    const xml = buildPlannedRouteGpx({ title: entry.name, geometry: entry.geometry });
+    const xml = buildPlannedRouteGpx({ title: entry.name, geometry: entry.geometry, ...(entry.credit === undefined ? {} : { credit: entry.credit }) });
     downloadExport(new TextEncoder().encode(xml), exportFilename(entry.name, "planned-route"));
   }
 
@@ -533,6 +535,7 @@ export function RouteDetail({
         <div className="og-route-detail__heading">
           <h1>{entry.name}</h1>
         </div>
+        <RideCreditLine credit={entry.credit} />
         {rideFacts.length === 0 ? null : (
           <dl className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => {
@@ -636,7 +639,7 @@ export function RouteDetail({
       {/* The group post usually opens with the same words; say them once. */}
       {repeatsStory(entry.summary, entry.story?.description) ? null : <p className="og-route-detail__summary">{entry.summary}</p>}
 
-      {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} />}
+      {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} credit={entry.credit} />}
 
       {variants.length > 0 ? (
         <section className="og-route-detail__variants" aria-label="Other versions of this ride">

@@ -1,4 +1,5 @@
 import type { BreadcrumbRoute } from "@/domain/breadcrumb/types";
+import type { RideCredit } from "./credit";
 /**
  * The authored ride model (03-DOMAIN-MODEL §2–§19).
  *
@@ -274,6 +275,11 @@ export interface RideProvenance {
   readonly sourceId?: string;
   /** Recognized external owner for an explicitly imported document. */
   readonly source?: "SwitchBack";
+  /**
+   * Whose work this route is, when it is not the rider's own. Copied into every
+   * save, fork and share so credit is never lost.
+   */
+  readonly credit?: RideCredit;
 }
 
 /**

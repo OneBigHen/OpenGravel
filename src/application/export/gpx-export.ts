@@ -1,3 +1,4 @@
+import { creditDescription, type RideCredit } from "@/domain/ride/credit";
 import type { Coordinate } from "@/domain/ride/types";
 
 /**
@@ -43,6 +44,8 @@ export interface PlannedRouteExportInput {
   readonly elevation?: readonly (number | null)[];
   /** ISO instant for `<metadata><time>`; an unparsable value is not written. */
   readonly createdTime?: string | null;
+  /** Whose route this is, when it is not the rider's own: written as GPX author, link and description. */
+  readonly credit?: RideCredit;
 }
 
 export interface TrackExportInput {
@@ -51,6 +54,8 @@ export interface TrackExportInput {
   readonly waypoints?: readonly ExportWaypoint[];
   /** ISO instant for `<metadata><time>`; an unparsable value is not written. */
   readonly createdTime?: string | null;
+  /** Whose route this is, when it is not the rider's own: written as GPX author, link and description. */
+  readonly credit?: RideCredit;
 }
 
 const GPX_PREFIX = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="OpenGravel" xmlns="http://www.topografix.com/GPX/1/1">`;
@@ -107,12 +112,18 @@ function trackPointXml(
   return `<trkpt ${pointAttributes(coordinate)}>${elevationXml(elevation)}${time}</trkpt>`;
 }
 
-function metadataXml(title: string, createdTime: string | null | undefined): string {
+function metadataXml(title: string, createdTime: string | null | undefined, credit?: RideCredit): string {
   const trimmed = createdTime?.trim() ?? "";
   const time = trimmed !== "" && !Number.isNaN(Date.parse(trimmed))
     ? `<time>${escapeXml(trimmed)}</time>`
     : "";
-  return `<metadata><name>${escapeXml(title)}</name>${time}</metadata>`;
+  // GPX 1.1 metadata order: name, desc, author, copyright, link, time.
+  const desc = credit === undefined ? "" : `<desc>${escapeXml(creditDescription(credit))}</desc>`;
+  const author = credit?.author == null ? "" : `<author><name>${escapeXml(credit.author)}</name></author>`;
+  const link = credit?.sourceUrl === undefined
+    ? ""
+    : `<link href="${escapeXml(credit.sourceUrl)}"><text>${escapeXml(credit.sourceName)}</text></link>`;
+  return `<metadata><name>${escapeXml(title)}</name>${desc}${author}${link}${time}</metadata>`;
 }
 
 function trackXml(track: ExportTrack): string {
@@ -228,7 +239,7 @@ export function buildPlannedRouteGpx(input: PlannedRouteExportInput): string {
     const coordinate = input.geometry[index] as Coordinate;
     return routePointXml(coordinate, named.get(`${coordinate.lat},${coordinate.lon}`) ?? null);
   }).join("");
-  return `${GPX_PREFIX}${metadataXml(input.title, input.createdTime)}<rte><name>${escapeXml(input.title)}</name>${routePoints}</rte>${GPX_SUFFIX}`;
+  return `${GPX_PREFIX}${metadataXml(input.title, input.createdTime, input.credit)}<rte><name>${escapeXml(input.title)}</name>${routePoints}</rte>${GPX_SUFFIX}`;
 }
 
 /** Build the full-line file: one `<trk>` with every point and named `<wpt>`s. */
@@ -243,7 +254,7 @@ export function buildPlannedTrackGpx(input: PlannedRouteExportInput): string {
       ...(elevation === undefined ? {} : { elevation }),
     }],
   });
-  return `${GPX_PREFIX}${metadataXml(input.title, input.createdTime)}${waypoints}${track}${GPX_SUFFIX}`;
+  return `${GPX_PREFIX}${metadataXml(input.title, input.createdTime, input.credit)}${waypoints}${track}${GPX_SUFFIX}`;
 }
 
 /** Build a track-only GPX while retaining every source track segment. */
@@ -253,7 +264,7 @@ export function buildTrackGpx(input: TrackExportInput): string {
     throw new Error("A track export needs at least one geometry point per segment.");
   }
   const waypoints = input.waypoints?.map(waypointXml).join("") ?? "";
-  return `${GPX_PREFIX}${metadataXml(input.title, input.createdTime)}${waypoints}${input.tracks.map(trackXml).join("")}${GPX_SUFFIX}`;
+  return `${GPX_PREFIX}${metadataXml(input.title, input.createdTime, input.credit)}${waypoints}${input.tracks.map(trackXml).join("")}${GPX_SUFFIX}`;
 }
 
 /** Original exports are byte-for-byte copies; no text decode or re-encode occurs. */
