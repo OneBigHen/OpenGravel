@@ -90,6 +90,12 @@ const SAVED = "M4.5 10.5 8 14l7.5-8";
 
 export interface RideSummaryProps {
   readonly card: RouteCardVm;
+  /**
+   * A new answer is on its way and `card` is the previous one (OG-05): every
+   * number is a skeleton until it lands, so "Finding roads…" never sits beside
+   * a full set of stats that are about to change.
+   */
+  readonly computing?: boolean;
   readonly cards: readonly RouteCardVm[];
   readonly start: RideActionsProps["start"];
   /** The ride's name, already resolved by `destinationLineFor`. */
@@ -118,6 +124,7 @@ export interface RideSummaryProps {
 
 export function RideSummary({
   card,
+  computing = false,
   cards,
   start,
   title,
@@ -217,15 +224,22 @@ export function RideSummary({
           </button> : null}</>}
         {quick.onStyle === undefined ? null : <button type="button" className="og-phone-summary__icon" data-testid="summary-style" aria-label="Ride options" title="Ride options" onClick={quick.onStyle}><Glyph d={SLIDERS}/></button>}
       </div>
-      <div className="og-phone-summary__eta">
+      {computing ? <div className="og-phone-summary__eta" data-testid="summary-computing" aria-busy="true">
+        <span className="og-visually-hidden" role="status">Finding your ride…</span>
+        <span className="og-phone-summary__skeleton og-phone-summary__skeleton--time" aria-hidden="true" />
+        <div className="og-phone-summary__facts" aria-hidden="true">
+          <span className="og-phone-summary__skeleton" />
+          <span className="og-phone-summary__skeleton og-phone-summary__skeleton--short" />
+        </div>
+      </div> : <div className="og-phone-summary__eta">
         <h2 className="og-phone-summary__time">{card.durationLabel}</h2>
         <div className="og-phone-summary__facts">
           <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}</p>
           <p className="og-phone-summary__meta"><span className="og-phone-summary__meta-text">{meta.filter(Boolean).join(" · ")}</span>{geometry.length > 1 && card.durationSeconds !== undefined ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds }} intent={document.intent} /></> : null}</p>
         </div>
-      </div>
+      </div>}
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
-      <RideTruthLines truth={truth} surfaceBar={bar} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
+      {computing ? null : <RideTruthLines truth={truth} surfaceBar={bar} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />}
       {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
     </div>}
     {/* Start, Save, Share: the whole answer to the ride, in one row. */}

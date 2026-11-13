@@ -875,6 +875,9 @@ export function PlannerWorkspace({
               onRouteTraffic: setRouteTraffic,
             },
             sheetExpanded: sheetDetent === "expanded",
+            // OG-05: the numbers on screen belong to an older answer while a new
+            // one is being found, so the summary shows skeletons, not them.
+            computing: session.phase === "validating" || session.phase === "routing-primary",
             hike: plannedHike,
           }}
           refine={{
