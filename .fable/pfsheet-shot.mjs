@@ -45,7 +45,6 @@ async function measure() {
     const m = window.__map;
     let ends = null, alts = null;
     if (m) {
-      const flat = (c) => (Array.isArray(c[0]) ? c.flatMap(flat) : [c]);
       const data = m.getStyle().sources["ogv-routes"]?.data;
       const lines = new Map();
       for (const feature of data?.features ?? []) {
