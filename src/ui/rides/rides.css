@@ -299,7 +299,6 @@
 
 .og-rides__menu-back {
   border-bottom: 1px solid var(--og-line);
-  border-radius: 0;
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
   font-weight: 600;
@@ -495,13 +494,6 @@
   color: var(--og-ink);
 }
 
-.og-empty-state__art {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-
 .og-empty-state__body {
   display: grid;
   align-content: center;
@@ -660,7 +652,6 @@
   border-top: 1px solid var(--og-line);
 }
 
-.og-import__selection-actions,
 .og-import__choice-actions {
   display: flex;
   flex-wrap: wrap;
@@ -728,20 +719,6 @@
 .og-import__breadcrumb p {
   max-width: 720px;
   color: var(--og-ink-2);
-}
-
-/* The one closed line that hides the choices most riders never need. */
-.og-import__more-toggle {
-  justify-self: start;
-  min-height: var(--og-touch);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--og-ink-2);
-  font: inherit;
-  font-size: var(--og-text-meta);
-  text-decoration: underline;
-  cursor: pointer;
 }
 
 .og-import__more {
@@ -830,12 +807,6 @@
   .og-empty-state {
     grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     max-width: 1040px;
-  }
-
-  .og-empty-state__art {
-    height: 100%;
-    min-height: 280px;
-    aspect-ratio: auto;
   }
 
   .og-empty-state__body {
@@ -1081,6 +1052,7 @@
   display: block;
 }
 
+.og-import__more-toggle,
 .og-rides__empty-more,
 .og-rides__empty-link {
   padding: 0;
@@ -1091,4 +1063,9 @@
   font-size: var(--og-text-meta);
   text-decoration: underline;
   cursor: pointer;
+}
+
+.og-import__more-toggle {
+  justify-self: start;
+  min-height: var(--og-touch);
 }

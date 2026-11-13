@@ -55,23 +55,11 @@
   letter-spacing: -0.02em;
 }
 
-.og-explore__intro {
-  max-width: 54ch;
-  margin-top: var(--og-space-2);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-body);
-  line-height: 1.45;
-}
-
 .og-explore__count {
   margin: 0;
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
   font-weight: 600;
-}
-
-.og-explore__masthead-art {
-  display: none;
 }
 
 .og-explore__lens {
@@ -392,11 +380,6 @@
   gap: var(--og-space-2);
 }
 
-.og-explore__wide {
-  width: 100%;
-  text-align: left;
-}
-
 .og-explore__controls .og-explore__sheet-done {
   display: flex;
   align-items: center;
@@ -442,13 +425,6 @@
   padding: 0;
   border-radius: var(--og-radius-sheet);
   background: var(--og-glass-dense);
-}
-
-.og-explore__empty-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--og-space-2);
-  margin-top: var(--og-space-2);
 }
 
 .og-explore__empty a.og-primary {
@@ -882,7 +858,6 @@
     padding-inline: var(--og-space-3);
   }
 
-  .og-explore__intro,
   .og-explore__heading .og-eyebrow,
   .og-explore-card__region {
     display: none;
