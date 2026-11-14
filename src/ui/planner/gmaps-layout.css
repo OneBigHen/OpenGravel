@@ -258,10 +258,6 @@
   margin-top: 2px;
 }
 
-.og-phone-summary__start {
-  margin-top: var(--og-space-1);
-}
-
 .og-phone-summary__actions {
   display: flex;
   gap: var(--og-space-2);

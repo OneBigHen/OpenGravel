@@ -133,8 +133,7 @@
 .og-route-detail__meta,
 .og-route-detail__provenance,
 .og-route-detail__summary,
-.og-route-detail__status,
-.og-route-detail__basis {
+.og-route-detail__status {
   margin: 0;
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
@@ -145,10 +144,6 @@
 
 .og-route-detail__meta {
   flex: 1 0 100%;
-}
-
-.og-route-detail__basis {
-  display: block;
 }
 
 .og-route-detail__region {
@@ -248,42 +243,6 @@
   display: block;
   width: 100%;
   height: 100%;
-}
-
-/* The numbers: a grid of cells separated by hairlines. */
-.og-route-detail__stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  overflow: hidden;
-  border-radius: var(--og-radius-card);
-  background: var(--og-line);
-}
-
-.og-route-detail__stats > div {
-  min-width: 0;
-  padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
-  background: var(--og-glass-dense);
-}
-
-.og-route-detail__stats dt {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.og-route-detail__stats dd {
-  margin: var(--og-space-1) 0 0;
-  font-family: var(--og-face-display);
-  font-size: var(--og-text-headline);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }
 
 /* The truth under the four numbers: a hairline separates facts from judgement. */
@@ -574,17 +533,6 @@
 .og-road-detail-sheet h3 {
   margin-top: var(--og-space-4);
   font-size: var(--og-text-body);
-}
-
-.og-road-detail-sheet__lineage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--og-space-2);
-  margin: var(--og-space-2) 0 0;
-  padding-left: var(--og-space-4);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-  list-style: disc;
 }
 
 .og-road-detail-sheet__evidence {

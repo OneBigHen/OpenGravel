@@ -27,7 +27,6 @@
 
 .og-plan-actions__record-dot { fill: var(--og-record); }
 
-.og-plan-actions__icon,
 .og-composer__loop-quick {
   display: none;
 }
@@ -160,17 +159,11 @@
     white-space: nowrap;
   }
 
-  .og-phone-summary__surface { display: grid; gap: 6px; margin-top: var(--og-space-2); }
-  .og-phone-summary__surface-line { margin: 0; font-size: var(--og-text-meta); font-weight: 600; }
   /* Full sheet width (N3): the bar is a button that shows the longest unpaved
      stretch, so it is as wide as the sheet and reads at a glance. */
   .og-phone-summary .og-phone-summary__strip { display: flex; width: 100%; max-width: none; height: 10px; flex: none; margin: 2px 0 4px; padding: 0; border: 0; background: none; }
   .og-phone-summary button.og-phone-summary__strip { cursor: pointer; min-height: 10px; }
   .og-phone-summary .og-truth { margin-top: var(--og-space-2); }
-
-  .og-phone-summary__start {
-    margin-top: var(--og-space-2);
-  }
 
   .og-phone-summary .og-primary {
     width: 100%;
@@ -276,7 +269,6 @@
     white-space: nowrap;
   }
 
-
   .og-phone-style__chip input:focus-visible + span {
     outline: var(--og-focus-width) solid var(--og-focus-ring);
     outline-offset: -2px;
@@ -331,20 +323,6 @@
     border-radius: var(--og-radius-pill);
     background: var(--og-surface-2);
   }
-
-  /* Save and Share as icons beside the ride's name. */
-  .og-planner .og-plan-actions__icon {
-    display: block;
-  }
-
-  .og-planner .og-plan-actions__label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
 }
 
 .og-option-rows { display: grid; }
