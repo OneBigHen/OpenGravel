@@ -1,5 +1,6 @@
 export { usePlannerAnswerLifecycle } from "./usePlannerAnswerLifecycle";
 export { usePlannerActiveRoute } from "./hooks/usePlannerActiveRoute";
+export { usePlannerGreatRoads } from "./hooks/usePlannerGreatRoads";
 export { usePlannerAvoidAreas } from "./hooks/usePlannerAvoidAreas";
 export { usePlannerCamera } from "./hooks/usePlannerCamera";
 export { usePlannerGeometryCache } from "./usePlannerGeometryCache";
