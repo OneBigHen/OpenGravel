@@ -8,7 +8,7 @@ import { sortBest, type LibraryChip, type RouteLibrary } from "@/application/rou
 import type { IndexRow } from "@/application/route-library/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
-import { bubblesFor, COUNTRY_EXTENT, COUNTRY_INSETS, extentFromCamera, statesInView, zoomForBounds, type Bubble } from "@/ui/explore/routes-camera";
+import { bubblesFor, COUNTRY_INSETS, countryFrame, extentFromCamera, statesInView, zoomForBounds, type Bubble } from "@/ui/explore/routes-camera";
 import { createRoutesOverlay, LINE_MIN_ZOOM, STATE_BUBBLE_MAX_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
 import { RoutesMapCard } from "@/ui/explore/RoutesMapCard";
 
@@ -87,10 +87,10 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
     if (frame !== null) setSize({ width: frame.clientWidth, height: frame.clientHeight });
   }, []);
   const fitExtent = useMemo(() => {
-    if (initial === null) return COUNTRY_EXTENT;
     if (size === null) return null;
+    if (initial === null) return countryFrame(library.rows);
     return extentFromCamera(initial.lat, initial.lon, initial.zoom, size.width, size.height);
-  }, [initial, size]);
+  }, [initial, size, library.rows]);
 
   // The opening fit: PlannerMap's own mount fit frames an empty scene, so say where to look.
   const fitted = useRef<MapHost | null>(null);

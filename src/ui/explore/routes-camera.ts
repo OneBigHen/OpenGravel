@@ -10,6 +10,39 @@ export const COUNTRY_EXTENT: MapExtent = { minLon: -125, minLat: 24.5, maxLon: -
 /** Room the country frame keeps for the chip row above and the List pill below, and a little at the sides. */
 export const COUNTRY_INSETS = { top: 84, right: 8, bottom: 112, left: 8 } as const;
 
+/**
+ * The opening frame: the lower 48 where the rides are, not the whole lower 48
+ * by default. A library that sits in a smaller part of the country (or a phone
+ * whose height lets the frame come closer) opens already framed on the rides,
+ * so the map is not a thin band in the middle of empty space. Never closer than
+ * `COUNTRY_MAX_BOOST` steps of zoom, and never cutting a ride off.
+ */
+export const COUNTRY_MAX_BOOST = 1.2;
+
+export function countryFrame(rows: readonly IndexRow[]): MapExtent {
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const row of rows) {
+    if (row.p === null || row.st.every((state) => INSET_STATES.includes(state))) continue;
+    const [lat, lon] = row.p;
+    if (lon < COUNTRY_EXTENT.minLon || lon > COUNTRY_EXTENT.maxLon || lat < COUNTRY_EXTENT.minLat || lat > COUNTRY_EXTENT.maxLat) continue;
+    minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+    minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+  }
+  if (minLon > maxLon) return COUNTRY_EXTENT;
+  const whole = COUNTRY_EXTENT.maxLon - COUNTRY_EXTENT.minLon;
+  const lonPad = 4;
+  const latPad = 2;
+  const minSpan = whole / 2 ** COUNTRY_MAX_BOOST;
+  const midLon = (minLon + maxLon) / 2;
+  const midLat = (minLat + maxLat) / 2;
+  const halfLon = Math.max((maxLon - minLon) / 2 + lonPad, minSpan / 2);
+  const halfLat = Math.max((maxLat - minLat) / 2 + latPad, (COUNTRY_EXTENT.maxLat - COUNTRY_EXTENT.minLat) / 2 / 2 ** COUNTRY_MAX_BOOST);
+  return {
+    minLon: Math.max(midLon - halfLon, COUNTRY_EXTENT.minLon), maxLon: Math.min(midLon + halfLon, COUNTRY_EXTENT.maxLon),
+    minLat: Math.max(midLat - halfLat, COUNTRY_EXTENT.minLat), maxLat: Math.min(midLat + halfLat, COUNTRY_EXTENT.maxLat),
+  };
+}
+
 /** States far from the lower 48 get one small labelled bubble at the edge of the map instead of a place on it. */
 export const INSET_STATES: readonly string[] = ["AK", "HI"];
 

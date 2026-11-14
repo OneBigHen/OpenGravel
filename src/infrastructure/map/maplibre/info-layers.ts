@@ -14,9 +14,10 @@ import type { MapLayerSpec, MapPalette } from "./style";
 
 
 /** Dirt evidence draws dashed, like a dirt road on a paper map. */
-const DASHED_LINE_LAYERS = ["gravel"];
+const DASHED_LINE_LAYERS = ["gravel", "rough-tracks"];
 export const INFO_SOURCE_ID = "ogv-info";
 export const TRAFFIC_FLOW_SOURCE_ID = "ogv-traffic-flow";
+export const USGS_TOPO_SOURCE_ID = "ogv-usgs-topo";
 
 export const INFO_LAYER_IDS = {
   fill: "ogv-info-fill",

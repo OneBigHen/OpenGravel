@@ -36,6 +36,7 @@ import {
   radarFrameLabel,
   radarFreshness,
   radarTileTemplate,
+  USGS_TOPO_TILES,
   scrubRadarTimeline,
   setRadarPlaying,
   type InfoFeature,
@@ -102,6 +103,7 @@ const LOAD_DEBOUNCE_MS = 450;
 const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   trails: "osm-hiking-routes", "hunting-season": "pa-game-lands",
   trailheads: "osm", "water-sources": "osm", shelters: "osm", summits: "osm",
+  gates: "osm", fords: "osm", "private-roads": "osm", "rough-tracks": "osm",
   hillshade: "hillshade", contours: "terrain", slope: "terrain",
   "live-traffic": "tomtom",
   "traffic-cameras": "traffic-cameras",
@@ -584,7 +586,7 @@ export function useMapLayers(
     () =>
       enabled.length === 0
         ? undefined
-        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, radarTiles, selectedId, visible: enabled.filter((id) => mapLayer(id).kind === "view" || status[id] === "ready" || status[id] === "stale") },
+        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, usgsTopoTiles: enabled.includes("usgs-topo") ? USGS_TOPO_TILES : null, radarTiles, selectedId, visible: enabled.filter((id) => mapLayer(id).kind === "view" || status[id] === "ready" || status[id] === "stale") },
     [enabled, features, radarTiles, result, selectedId, status, trafficFlow],
   );
 
