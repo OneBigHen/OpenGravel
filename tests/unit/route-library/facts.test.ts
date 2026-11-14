@@ -11,6 +11,7 @@ import {
   legalFactOf,
   legalValue,
   legalWording,
+  namesSource,
   parseSourceRating,
   permitWording,
   phraseFor,
@@ -20,6 +21,7 @@ import {
   surfaceValue,
   surfaceWording,
   type FactName,
+  unsourcedClaims,
 } from "@/application/route-library/facts";
 import type { SourcePolicy } from "@/application/route-library/policy";
 import { deriveRide, pinFor } from "@/application/route-library/ride-detail";
@@ -198,6 +200,99 @@ describe("the five facts of a record", () => {
     expect(phraseFor(filled, "permits")).toBe("None required");
     expect(phraseFor(filled, "season")).toBe("Year round");
     expect(phraseFor(record(), "surface")).toBeNull();
+  });
+});
+
+describe("a claim whose provenance names no source", () => {
+  it("never credits the surface source to the difficulty", () => {
+    // The real library has 33 records like this: a difficulty value, no
+    // difficulty_source, and a surface_claim_source that is a different fact's.
+    const facts = factsFor(record({ surface: { difficulty: "moderate", surface_claim_source: "Route page" } }));
+    expect(facts.difficulty).toEqual({ value: null, quote: "moderate", source: null });
+  });
+
+  it("treats a blank provenance field as no source", () => {
+    expect(factsFor(record({ surface: { difficulty: "moderate", difficulty_source: "   ", surface_claim_source: "Route page" } })).difficulty).toEqual({
+      value: null,
+      quote: "moderate",
+      source: null,
+    });
+  });
+
+  it("drops a value whose own provenance says the source did not state it", () => {
+    for (const source of ["not stated on source page", "not stated on source page; scenic byway on a paved state highway", "unknown", "N/A", "-", "?"]) {
+      expect(difficultyFactOf("easy", source)).toEqual({ value: null, quote: "easy", source: null });
+    }
+  });
+
+  it("names a source when the field is a real one, a URL's query string included", () => {
+    expect(namesSource("BestBikingRoads route page")).toBe(true);
+    expect(namesSource("parks.ca.gov/?page_id=1170")).toBe(true);
+    expect(namesSource("  USFS page  ")).toBe(true);
+    expect(namesSource("")).toBe(false);
+    expect(namesSource("   ")).toBe(false);
+    expect(namesSource(undefined)).toBe(false);
+    expect(namesSource("none stated")).toBe(false);
+  });
+
+  it("applies the same rule to every fact, not only difficulty", () => {
+    const facts = factsFor(
+      record({
+        surface: {
+          mix: "paved",
+          legal_status: "public-roads",
+          difficulty: "moderate",
+          permits: "$5/day",
+          seasonality: "May to October",
+          surface_claim_source: "",
+        },
+      }),
+    );
+    expect(facts.surface.value).toBeNull();
+    expect(facts.legal.value).toBeNull();
+    expect(facts.difficulty.value).toBeNull();
+    expect(facts.permits.value).toBeNull();
+    expect(facts.season.value).toBeNull();
+  });
+
+  it("keeps the record's words for review and lists every withheld claim", () => {
+    const claims = unsourcedClaims(
+      record({
+        surface: {
+          mix: "paved",
+          legal_status: "public-roads",
+          difficulty: "moderate",
+          permits: "$5/day",
+          seasonality: "May to October",
+          surface_claim_source: "",
+        },
+      }),
+    );
+    expect(claims).toEqual([
+      { fact: "surface", value: "paved", quote: "paved" },
+      { fact: "legal", value: "public-roads", quote: "public-roads" },
+      { fact: "difficulty", value: "moderate", quote: "moderate" },
+      { fact: "permits", value: "$5/day", quote: "$5/day" },
+      { fact: "season", value: "May to October", quote: "May to October" },
+    ]);
+    expect(
+      unsourcedClaims(
+        record({ surface: { difficulty: "moderate", difficulty_source: "Thread post", surface_claim_source: "Route page" } }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps every sourced claim, so the rule only withholds what cannot be shown", () => {
+    const facts = factsFor(record({ surface: { mix: "paved", difficulty: "easy", difficulty_source: "Route page", permits: "$5/day", surface_claim_source: "Route page" } }));
+    expect(facts.surface).toEqual({ value: "paved", quote: "paved", source: "Route page" });
+    expect(facts.difficulty).toEqual({ value: "easy", quote: "easy", source: "Route page" });
+    expect(facts.permits).toEqual({ value: "$5/day", quote: "$5/day", source: "Route page" });
+    expect(unsourcedClaims(record({ surface: { mix: "paved", legal_status: "public-roads", permits: "$5/day", surface_claim_source: "Route page" } }))).toEqual([]);
+  });
+
+  it("never reaches the ride detail as a value", () => {
+    const derived = deriveRide(record({ surface: { difficulty: "moderate", surface_claim_source: "Route page" } }), HOST, null);
+    expect(derived.detail.facts.difficulty).toEqual({ value: null, quote: "moderate", source: null });
   });
 });
 

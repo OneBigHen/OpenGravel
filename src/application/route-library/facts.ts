@@ -30,6 +30,9 @@ export type DifficultyValue = "easy" | "moderate" | "difficult" | "expert";
 
 export type FactName = "surface" | "legal" | "difficulty" | "permits" | "season";
 
+/** Every fact the ride page can repeat, in the order the report and the snapshot list them. */
+export const FACT_NAMES: readonly FactName[] = ["surface", "legal", "difficulty", "permits", "season"];
+
 export interface RideFacts {
   readonly surface: RideFact<SurfaceValue>;
   readonly legal: RideFact<LegalValue>;
@@ -68,6 +71,23 @@ export function normalizePhrase(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+/**
+ * Wording in a provenance field that names no source: empty, a non-answer, or
+ * an admission that the source did not state the thing. The question-mark rule
+ * of `saysNothing` is deliberately absent: a source address may contain `?`.
+ */
+export const NO_SOURCE = /^(?:unknown|not stated\b.*|none stated|not sure|n\/a|na|varies|tbd|\?+|-{1,2}|—+)$/i;
+
+/**
+ * True when a provenance field names something a reviewer could check. A claim
+ * whose provenance does not is not a claim about the source; it is dropped to
+ * `null` (see `unsourcedClaims`) rather than credited to a neighbouring field.
+ */
+export function namesSource(text: string | null | undefined): boolean {
+  const value = normalizePhrase(text ?? "");
+  return value !== "" && !NO_SOURCE.test(value);
+}
+
 /** True when the field is empty, a non-answer, or a question rather than a claim. */
 export function saysNothing(text: string | null | undefined): boolean {
   if (typeof text !== "string") return true;
@@ -84,15 +104,17 @@ function sourceOf(text: string | null | undefined): string | null {
   return value === "" ? null : value;
 }
 
-/** A fact whose value has to come from a table: a row, or `null`. */
+/** A fact whose value has to come from a table: a row, or `null`. No named source, no value. */
 function tableFact<T>(text: string | null | undefined, source: string | null | undefined, value: T | null): RideFact<T> {
   if (saysNothing(text)) return { value: null, quote: null, source: null };
+  if (!namesSource(source)) return { value: null, quote: clean(text), source: null };
   return { value, quote: clean(text), source: sourceOf(source) };
 }
 
 /** A fact the source words in its own way (season, permits): the quote is the value, or nothing. */
 function quotedFact(text: string | null | undefined, source: string | null | undefined): RideFact<string> {
   if (saysNothing(text)) return { value: null, quote: null, source: null };
+  if (!namesSource(source)) return { value: null, quote: clean(text), source: null };
   return { value: clean(text), quote: clean(text), source: sourceOf(source) };
 }
 
@@ -133,17 +155,72 @@ export function seasonFactOf(text: string | null | undefined, source: string | n
   return quotedFact(text, source);
 }
 
-/** The five facts of one library record. The page and the pack both read this. */
+/**
+ * The five facts of one library record. The page and the pack both read this.
+ *
+ * Each fact is credited only to the field that records where it came from: the
+ * surface block's `surface_claim_source` for the four surface facts, and the
+ * difficulty's own `difficulty_source` for difficulty. The surface claim's
+ * source is never used as evidence for the difficulty: 33 real records omit
+ * `difficulty_source`, and crediting their difficulty to the surface source
+ * would put a claim in front of riders that the record cannot show was said.
+ */
 export function factsFor(record: LibraryRecord): RideFacts {
   const surface = record.surface;
   const claimSource = surface?.surface_claim_source;
   return {
     surface: surfaceFactOf(surface?.mix, claimSource),
     legal: legalFactOf(surface?.legal_status, claimSource),
-    difficulty: difficultyFactOf(surface?.difficulty, surface?.difficulty_source ?? claimSource),
+    difficulty: difficultyFactOf(surface?.difficulty, surface?.difficulty_source),
     permits: permitsFactOf(surface?.permits, claimSource),
     season: seasonFactOf(surface?.seasonality, claimSource),
   };
+}
+
+/** The field that records where a fact came from. Difficulty has its own; the rest share the surface block's. */
+export function provenanceFor(record: LibraryRecord, fact: FactName): string {
+  return clean(fact === "difficulty" ? record.surface?.difficulty_source : record.surface?.surface_claim_source);
+}
+
+/** The value a fact's words would earn, ignoring provenance. */
+function statedValueFor(fact: FactName, phrase: string): string | null {
+  switch (fact) {
+    case "surface":
+      return surfaceValue(phrase);
+    case "legal":
+      return legalValue(phrase);
+    case "difficulty":
+      return difficultyValue(phrase);
+    case "permits":
+    case "season":
+      return clean(phrase);
+  }
+}
+
+/** A claim the record states, in words the tables understand, with no named source behind it. */
+export interface UnsourcedClaim {
+  readonly fact: FactName;
+  readonly value: string;
+  readonly quote: string | null;
+}
+
+/**
+ * Every claim in a record whose provenance field is empty or names no source.
+ * `factsFor` turns each of these into `value: null`; the builder lists them in
+ * its report so a reviewer sees exactly what was withheld and can fix the
+ * record. One rule, applied to every fact: no named source, no claim.
+ */
+export function unsourcedClaims(record: LibraryRecord): readonly UnsourcedClaim[] {
+  const claims: UnsourcedClaim[] = [];
+  for (const fact of FACT_NAMES) {
+    if (namesSource(provenanceFor(record, fact))) continue;
+    const phrase = phraseFor(record, fact) ?? "";
+    if (saysNothing(phrase)) continue;
+    const value = statedValueFor(fact, phrase);
+    if (value === null || value === "") continue;
+    claims.push({ fact, value, quote: clean(phrase) });
+  }
+  return claims;
 }
 
 /** The raw field behind each fact, for the phrase snapshot and the phrase gate. */
