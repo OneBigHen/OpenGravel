@@ -156,6 +156,14 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
 
   function openBubble(bubble: Bubble): void {
     const zoom = view?.zoom ?? 3;
+    if (bubble.kind === "state") {
+      // Look where the state's best ride is, not at the state's middle: a state's rides can all be at one edge.
+      let best: IndexRow | null = null;
+      for (const row of rows) {
+        if (row.p !== null && bubble.state !== undefined && row.st.includes(bubble.state) && (best === null || row.q > best.q)) best = row;
+      }
+      if (best?.p != null) { overlay.zoomTo(best.p[1], best.p[0], 6); return; }
+    }
     overlay.zoomTo(bubble.lon, bubble.lat, bubble.kind === "state" ? 6 : Math.min(Math.max(zoom + GROUP_ZOOM_STEP, LINE_MIN_ZOOM + 0.5), 12));
   }
 
