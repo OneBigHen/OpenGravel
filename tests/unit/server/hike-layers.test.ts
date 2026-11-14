@@ -51,3 +51,35 @@ describe("hiking OSM layers", () => {
     expect(features[0]).toMatchObject({ id: "osm:relation/5/way/3", geometry: { type: "LineString", coordinates: [[-75.6, 40.5], [-75.5, 40.6]] } });
   });
 });
+
+describe("ride-stopper OSM layers", () => {
+  const bounds = { west: -76, south: 40, east: -75, north: 41 };
+  const layers = ["gates", "fords", "private-roads", "rough-tracks"] as const;
+  it("asks Overpass for the mapped tags, points as centres and roads as lines", () => {
+    const query = overpassQuery(bounds, layers) ?? "";
+    expect(query).toContain('"barrier"~"^(gate|lift_gate)$"');
+    expect(query).toContain('"ford"="yes"');
+    expect(query).toContain('"access"~"^(private|no)$"');
+    expect(query).toContain('"tracktype"~"^(grade4|grade5)$"');
+    expect(query).toContain("out center");
+    expect(query).toContain("out geom");
+  });
+
+  it("turns tagged elements into features and never invents one", () => {
+    const line = [{ lon: -75.6, lat: 40.5 }, { lon: -75.5, lat: 40.6 }];
+    const features = parseOverpass({ elements: [
+      { type: "node", id: 1, lon: -75.5, lat: 40.5, tags: { barrier: "gate" } },
+      { type: "node", id: 2, lon: -75.5, lat: 40.5, tags: { ford: "yes" } },
+      { type: "way", id: 3, geometry: line, tags: { highway: "track", access: "private" } },
+      { type: "way", id: 4, geometry: line, tags: { highway: "track", tracktype: "grade5" } },
+      { type: "way", id: 5, geometry: line, tags: { highway: "track", tracktype: "grade2" } },
+      { type: "node", id: 6, lon: -75.5, lat: 40.5, tags: { barrier: "bollard" } },
+      { type: "way", id: 7, tags: { highway: "track", access: "no" } },
+    ] }, layers);
+    expect(features.map((f) => [f.layerId, f.geometry.type])).toEqual([
+      ["gates", "Point"], ["fords", "Point"], ["private-roads", "LineString"], ["rough-tracks", "LineString"],
+    ]);
+    expect(features[2]?.detail).toBe("Mapped as private");
+    expect(features[3]?.detail).toBe("Mapped as soft ground, grade 5");
+  });
+});
