@@ -17,11 +17,7 @@
   overflow: hidden;
 }
 
-.og-routes__stage > .og-routes__map {
-  position: absolute;
-  inset: 0;
-}
-
+.og-routes__stage > .og-routes__map,
 .og-routes__map > .og-map-host {
   position: absolute;
   inset: 0;
@@ -97,19 +93,29 @@
   padding-bottom: calc(var(--og-tabbar-h, 0px) + 72px);
 }
 
-.og-routes__pill {
-  min-height: var(--og-touch);
-  padding: 0 var(--og-space-5);
+/* Pill, count bubbles and ride card share one glass skin. */
+.og-routes__pill,
+.og-routes__bubble,
+.og-routes__card {
   border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-pill);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
   color: var(--og-ink);
+}
+
+.og-routes__pill,
+.og-routes__bubble {
   font: inherit;
   font-size: var(--og-text-meta);
   font-weight: 700;
   pointer-events: auto;
   cursor: pointer;
+}
+
+.og-routes__pill {
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-5);
 }
 
 /* Count bubbles pinned to the map: one per state, then one per group of rides. */
@@ -123,49 +129,32 @@
 
 .og-routes__bubble {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0 auto auto 0;
   display: grid;
   min-width: 40px;
   height: 40px;
   padding: 0 var(--og-space-2);
   place-items: center;
-  border: 1px solid var(--og-glass-edge);
-  border-radius: var(--og-radius-pill);
-  background: var(--og-glass-dense);
-  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  color: var(--og-ink);
   font-family: var(--og-face-display);
-  font-size: var(--og-text-meta);
-  font-weight: 700;
-  pointer-events: auto;
-  cursor: pointer;
   will-change: transform;
 }
 
 /* Alaska and Hawaii: one small labelled bubble each at the map's lower left, clear of the chips and the pill. */
 .og-routes__bubble[data-inset] {
-  top: auto;
-  bottom: 84px;
-  left: 10px;
+  inset: auto auto 84px 10px;
   white-space: nowrap;
 }
 
-.og-routes__bubble[data-inset="HI"] {
-  left: 84px;
-}
+.og-routes__bubble[data-inset="HI"] { left: 84px; }
 
-/* 40px to the eye, 48px to the thumb. */
+/* 40px to the eye, 48px to the thumb; small state bubbles reach further. */
 .og-routes__bubble::before {
   content: "";
   position: absolute;
   inset: -4px;
 }
 
-/* State bubbles are small to leave room, so their touch area reaches further. */
-.og-routes__bubble[data-kind="state"]::before {
-  inset: -9px;
-}
+.og-routes__bubble[data-kind="state"]::before { inset: -9px; }
 
 /* The glass card for the tapped ride. */
 .og-routes__card {
@@ -175,11 +164,7 @@
   display: grid;
   gap: var(--og-space-1);
   padding: var(--og-space-3) var(--og-space-4);
-  border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-card);
-  background: var(--og-glass-dense);
-  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  color: var(--og-ink);
   touch-action: pan-y;
 }
 
@@ -213,15 +198,11 @@
   font-size: var(--og-text-meta);
 }
 
-.og-routes__card-credit {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-caption);
-}
+.og-routes__card-credit { color: var(--og-ink-2); font-size: var(--og-text-caption); }
 
 .og-routes__card-close {
   position: absolute;
-  top: 0;
-  right: 0;
+  inset: 0 0 auto auto;
   color: var(--og-ink-2);
 }
 
