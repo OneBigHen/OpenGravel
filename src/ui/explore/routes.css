@@ -250,7 +250,7 @@
   .og-routes__card-credit,
   .og-routes__strip-credit,
   .og-routes__strip-title,
-  .og-routes__strip-shape,
+  .og-routes__stripwrap .og-routes__strip-shape,
   .og-routes__strip-body > :nth-child(3) {
     display: none;
   }
