@@ -15,6 +15,7 @@ import { trafficCamerasProvider, relevantTrafficCameraAdapters } from "@/server/
 import { roadAuthoritySourcesFromEnv } from "@/server/planning/road-authority";
 import { isSpotifyClientId } from "@/server/spotify/config";
 import { keyFromConfig } from "@/server/spotify/crypto";
+import { valhallaUpstreamFromEnv } from "@/infrastructure/routing/valhalla/router";
 
 export type ProviderEnv = Readonly<Record<string, string | undefined>>;
 export type ProviderStatus = "ok" | "unknown" | "missing" | "unavailable" | "unconfigured" | "disabled";
@@ -58,7 +59,7 @@ const FAILURE_BEHAVIOR: Readonly<Record<string, string>> = {
   graphhopper: "Bounded routing failure; existing hosted fallback may be attempted. Never fabricate route geometry.",
   "graphhopper-hosted": "Unavailable or exhausted fallback leaves the existing primary routing path and error behavior intact.",
   photon: "Place and address search reports unavailable; nearby-business answers stay independent and no result is fabricated.",
-  valhalla: "No production adapter or fallback is composed.",
+  valhalla: "Basic routes report busy or unreachable to the rider; no route line is ever invented, and rides inside our graph keep using GraphHopper.",
   tomtom: "Traffic stays unknown; stop, incident and nearby-business search report unavailable independently, so place search answers with Photon places and addresses alone.",
   nws: "Weather and alerts remain unknown/unavailable, never clear-weather evidence.",
   "curvature-db": "Production queries gracefully return no catalogue evidence; missing health is distinct from an empty query.",
@@ -91,13 +92,16 @@ function descriptor(
     caveat: "Configuration does not prove availability, freshness, coverage or legal access.", ...options };
 }
 
-/** Valhalla is retained explicitly as absent, not advertised as a fallback. */
+/**
+ * Valhalla is the basic-route service for rides our graph cannot answer: Stadia
+ * Maps with `STADIA_API_KEY`, otherwise the paced FOSSGIS public server.
+ */
 export const PROVIDER_REGISTRY: readonly ProviderDescriptor[] = [
   descriptor("graphhopper", "GraphHopper", "operational", ["route planning", "rerouting"], ["GRAPHHOPPER_URL"], "Deployed routing graph", { required: true, canHardGateRouting: true }),
   descriptor("graphhopper-hike", "GraphHopper hiking", "operational", ["hike planning", "trail snapping"], ["OGV_HIKE_GRAPHHOPPER_URL", "OGV_HIKE_GRAPHHOPPER_API_KEY"], "Deployed foot graph", { canHardGateRouting: true }),
   descriptor("graphhopper-hosted", "GraphHopper hosted fallback", "operational", ["bounded routing fallback"], ["GRAPHHOPPER_API_KEY", "GRAPHHOPPER_HOSTED_DAILY_BUDGET"], "Supported hosted requests", { canHardGateRouting: true }),
   descriptor("photon", "Photon", "enrichment", ["location search"], ["PHOTON_URL"], "Configured Photon index or public endpoint"),
-  descriptor("valhalla", "Valhalla", "operational", [], [], "No production composition"),
+  descriptor("valhalla", "Valhalla basic routes", "operational", ["basic motorcycle routes outside the routing graph", "basic routes while the main router is down"], ["STADIA_API_KEY"], "Worldwide OpenStreetMap roads; no surface, closure or access checks"),
   descriptor("tomtom", "TomTom", "operational", ["traffic", "incidents", "map stops", "place search POIs"], ["TOMTOM_API_KEY", "TOMTOM_TRAFFIC_API_KEY"], "Provider coverage; minor roads may be absent", { visibleOnMap: true, cacheTtls: { "map-stops": tomtomStopsProvider.ttlMs, "map-incidents": tomtomIncidentsProvider.ttlMs } }),
   descriptor("nws", "National Weather Service", "operational", ["ride weather", "weather alerts", "wind arrows"], ["NWS_USER_AGENT"], "US; map alerts check the viewport center", { visibleOnMap: true, cacheTtls: { "map-alerts": nwsAlertsProvider.ttlMs, "map-wind": windProvider.ttlMs } }),
   descriptor("curvature-db", "Curvature catalogue", "derived", ["known curvy roads", "Great Roads layer"], ["CURVATURE_DB_PATH"], "Installed regional catalogue", { artifact: "sqlite", visibleOnMap: true }),
@@ -122,7 +126,11 @@ function configuration(item: ProviderDescriptor, env: ProviderEnv): Pick<Provide
   let activeSources: readonly string[] = [];
   switch (item.id) {
     case "graphhopper": case "photon": case "nws": case "wikimedia": case "overpass": configured = true; break; // Keyless/default compositions.
-    case "valhalla": disabled = true; break;
+    case "valhalla":
+      // Keyless default (the FOSSGIS public server); a Stadia key takes over.
+      configured = true;
+      activeSources = [valhallaUpstreamFromEnv(env).id];
+      break;
     case "graphhopper-hike": configured = present(env, "OGV_HIKE_GRAPHHOPPER_URL"); break;
     case "graphhopper-hosted": configured = present(env, "GRAPHHOPPER_API_KEY"); break;
     case "tomtom": configured = present(env, "TOMTOM_API_KEY") || present(env, "TOMTOM_TRAFFIC_API_KEY"); break;

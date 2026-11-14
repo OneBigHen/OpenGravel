@@ -8,6 +8,11 @@
   /* A weather warning stays whole at half (owner safety rule): the sheet is
      one warning line taller rather than slicing it, also at 320 x 568. */
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"]:not(:has(.og-phone-summary[data-comparing="true"])):has(.og-phone-summary__weather) { max-height: min(var(--og-sheet-half), max(40dvh, 252px) + 56px); }
+  /* The daylight chip ("before dark", "before sunrise") wraps to a row of its own
+     on a 320px phone, so the sheet is one chip row taller rather than cutting
+     Compare rides. Without it (midday) the cap is untouched. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"]:not(:has(.og-phone-summary[data-comparing="true"])):has(.og-route-daylight) { max-height: min(var(--og-sheet-half), max(40dvh, 252px) + 28px); }
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"]:not(:has(.og-phone-summary[data-comparing="true"])):has(.og-route-daylight):has(.og-phone-summary__weather) { max-height: min(var(--og-sheet-half), max(40dvh, 252px) + 84px); }
   /* The grab strip is the whole width and 32px tall (plus the 12px lip). */
   .og-planner .og-planner__sheet button.og-sheet__handle { height: 32px; min-height: 32px; }
   .og-planner .og-planner__sheet { transition: height var(--og-dur-base) var(--og-ease), max-height var(--og-dur-base) var(--og-ease); }
