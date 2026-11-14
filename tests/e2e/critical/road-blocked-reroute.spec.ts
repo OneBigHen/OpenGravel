@@ -35,17 +35,28 @@ function inside(ring: readonly Coordinate[], point: Coordinate): boolean {
   return point.lon > Math.min(...lons) && point.lon < Math.max(...lons) && point.lat > Math.min(...lats) && point.lat < Math.max(...lats);
 }
 
-/** After the report: answer the reroute with a bent line from the rider, or with a router error. */
-async function answerRerouteWith(page: Page, answer: "a new line" | "no way"): Promise<void> {
-  await page.route("**/api/route-plan", async (route) => {
-    if (answer === "no way") {
+/**
+ * Answers plan requests. Before the report it passes the fixture's own answer
+ * through and keeps it; after the report (`state.after`) it answers the reroute
+ * itself from that kept answer, because the fixture server rightly refuses to
+ * return its canned line past an avoid area.
+ */
+function answerPlans(page: Page, answer: "a new line" | "no way"): { after: boolean } {
+  const state = { after: false };
+  let kept: RoutePlanSuccessBody | null = null;
+  void page.route("**/api/route-plan", async (route) => {
+    if (!state.after) {
+      const response = await route.fetch();
+      const body = await response.json() as RoutePlanSuccessBody;
+      if (body.bundle !== undefined) kept = body;
+      await route.fulfill({ response, json: body });
+      return;
+    }
+    if (answer === "no way" || kept === null) {
       await route.fulfill({ status: 503, json: { error: { code: "router-unavailable", message: "The routing service could not plan this trip.", recoverable: true } } });
       return;
     }
-    const response = await route.fetch();
-    const body = await response.json() as RoutePlanSuccessBody;
     const { request } = route.request().postDataJSON() as RoutePlanRequestBody;
-    if (body.bundle === undefined) throw new Error(`reroute answer: ${response.status()} ${JSON.stringify(body).slice(0, 600)} for ${JSON.stringify(request).slice(0, 500)}`);
     const from = request.origin;
     const to = request.destination;
     const bend: Coordinate = {
@@ -55,8 +66,8 @@ async function answerRerouteWith(page: Page, answer: "a new line" | "no way"): P
     const metersBetween = (a: Coordinate, b: Coordinate): number => Math.hypot((a.lon - b.lon) * 85_000, (a.lat - b.lat) * 111_000);
     const first = metersBetween(from, bend);
     const second = metersBetween(bend, to);
-    await route.fulfill({ response, json: { ...body, bundle: { ...body.bundle,
-      candidates: body.bundle.candidates.map((candidate, index) => ({ ...candidate,
+    await route.fulfill({ json: { ...kept, bundle: { ...kept.bundle,
+      candidates: kept.bundle.candidates.map((candidate, index) => ({ ...candidate,
         geometry: [from, bend, to],
         distanceMeters: first + second,
         durationSeconds: (first + second) / 12,
@@ -69,6 +80,7 @@ async function answerRerouteWith(page: Page, answer: "a new line" | "no way"): P
       })),
     } } });
   });
+  return state;
 }
 
 const CASES = [
@@ -87,9 +99,10 @@ for (const { size, look, answer } of CASES) {
       try { bodies.push(request.postDataJSON() as Posted); } catch { /* not JSON */ }
     });
 
+    const plans = answerPlans(page, answer);
     await startRide(page);
     await expect(page.locator("html")).toHaveAttribute("data-theme", look);
-    await answerRerouteWith(page, answer);
+    plans.after = true;
     bodies.length = 0;
 
     // Reachable while riding: the Menu row is on screen, enabled and glove-sized.
