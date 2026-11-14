@@ -948,7 +948,6 @@
 @media (max-width: 360px) {
   /* The title, the Ride / Things switch and the menu button have to fit 288px of a 320px phone. */
   .og-explore__heading-row { gap: var(--og-space-2); }
-  .og-explore h1 { font-size: calc(var(--og-text-title) * 0.9); }
   .og-explore__lens > [role="tab"] {
     min-width: 56px;
     padding-inline: var(--og-space-2);
