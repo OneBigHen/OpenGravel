@@ -139,6 +139,11 @@ export interface CatalogEntry {
   readonly longTripFacts?: LongTripFacts;
   /** The source document is retained only for personal/import derivatives. */
   readonly sourceDocument?: RideDocument;
+  /**
+   * True for a national-library ride: the line is another site's recorded
+   * track, a reference to follow, never a route we checked or built.
+   */
+  readonly referenceTrack?: true;
 }
 
 interface RawCatalogEntry {
@@ -171,6 +176,7 @@ interface RawCatalogEntry {
   readonly longTripFacts?: unknown;
   readonly story?: unknown;
   readonly storyTeaser?: unknown;
+  readonly referenceTrack?: unknown;
 }
 
 const SOURCE_ORDER: Readonly<Record<CatalogSource, number>> = {
@@ -608,6 +614,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(teaser === undefined ? {} : { storyTeaser: teaser }),
     ...(estimatedTimeMinutes === undefined ? {} : { estimatedTimeMinutes }),
     ...(parsedLongTripFacts === undefined ? {} : { longTripFacts: parsedLongTripFacts }),
+    ...(raw.referenceTrack === true ? { referenceTrack: true as const } : {}),
   };
   const roadData = roadReadModel(raw.roadSummary, raw.roadDetails) ?? roadDetails(raw.roads, base);
   return roadData === null

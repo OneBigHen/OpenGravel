@@ -1,0 +1,63 @@
+{
+ "id": "ne-desoto-trail",
+ "name": "DeSoto Trail",
+ "states": [
+  "NE"
+ ],
+ "lane": "scenic",
+ "source": {
+  "url": "https://www.motorcycleroads.com/motorcycle-roads/nebraska/desoto-trail",
+  "name": "MotorcycleRoads.com",
+  "fetched_via": "direct-download"
+ },
+ "author_credit": {
+  "author": "OmahaMedic",
+  "credit_line": "Track by OmahaMedic via MotorcycleRoads.com"
+ },
+ "terms": {
+  "quote": "MotorcycleRoads.com grants you a personal, non-transferable, non-exclusive, revocable, limited license to use and access the Services solely as permitted by these Terms. Your license does not include the right to: license, sell, transfer, assign, distribute, host, or otherwise commercially exploit the Services or Content.",
+  "terms_url": "https://www.motorcycleroads.com/motorcycle-articles/motorcycleroadscom-terms-conditions",
+  "allows_rehost": "no",
+  "checked_at": "2026-11-13T07:30:00-05:00"
+ },
+ "publishability": {
+  "status": "link-only",
+  "permission_contact": "webmaster@MotorcycleRoads.com (per terms page)",
+  "permission_notes": "MCR terms exclude distribution/hosting — link-only; GPX URL is the public download link, file is NOT hosted. Distance measured from the fetched track."
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved, final 3.8 mi gravel",
+  "difficulty": "unknown",
+  "permits": "none stated",
+  "seasonality": "unknown",
+  "surface_claim_source": "MotorcycleRoads.com route page (author: final 3.8 miles all gravel and loose rocks)"
+ },
+ "summary": "27.8 km measured run on DeSoto Ave between Blair and Missouri Valley, through DeSoto National Wildlife Refuge along the Missouri River; final 3.8 mi is gravel and loose rock per the author. Unrated on MCR.",
+ "value_score": 3,
+ "value_reason": "27.8 km measured refuge road along the Missouri River and DeSoto Lake (final 3.8 mi gravel per the author); unrated but a named corridor.",
+ "scraped_at": "2026-11-13T07:30:00-05:00",
+ "last_verified": "2026-11-13T07:30:00-05:00",
+ "scraper": {
+  "adapter": "generic-gpx",
+  "query": "MotorcycleRoads.com Nebraska sitemap — full enumeration (14 routes)",
+  "notes": "terms_source: sources-registry.yaml motorcycleroads row (terms page verified 2026-11-13 by MO deep pass); unrated (MCR: no rider rating); distance measured from the fetched public GPX (not hosted); states[] from point-wise classification of the track; download_url is the /downloadgpx/<id> endpoint where the direct file returned HTML, else the direct /sites/default/files/ link."
+ },
+ "gpx": {
+  "availability": "link-only",
+  "download_url": "https://www.motorcycleroads.com/sites/default/files/desoto-trail.gpx",
+  "points": 247,
+  "distance_km": 27.828,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -96.04774,
+   "south": 41.49069,
+   "east": -95.91785,
+   "north": 41.551300000000005
+  },
+  "sha256": "a19aaa89ae0b76e187bf05f78d64013fe023547f443565a01da8f4042f0516fc",
+  "track_names": [],
+  "requires_login": false,
+  "track_vintage": "2012"
+ }
+}

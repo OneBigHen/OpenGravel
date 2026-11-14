@@ -64,9 +64,13 @@ function encodePolylineValue(value: number): string {
   return encoded + String.fromCharCode(remaining + 63);
 }
 
-/** Encodes a route line at six decimal places (about 0.11 m per latitude unit). */
-export function encodeCatalogPolyline(points: readonly Coordinate[]): string {
-  const scale = 10 ** POLYLINE_PRECISION;
+/**
+ * Encodes a route line at six decimal places (about 0.11 m per latitude unit).
+ * The national ride library passes 5 (about 1.1 m), which its pack uses for
+ * every stored line.
+ */
+export function encodeCatalogPolyline(points: readonly Coordinate[], precision: number = POLYLINE_PRECISION): string {
+  const scale = 10 ** precision;
   let previousLatitude = 0;
   let previousLongitude = 0;
   let encoded = "";
@@ -82,8 +86,8 @@ export function encodeCatalogPolyline(points: readonly Coordinate[]): string {
 }
 
 /** Decodes a catalog polyline without browser or provider dependencies. */
-export function decodeCatalogPolyline(encoded: string): Coordinate[] {
-  const scale = 10 ** POLYLINE_PRECISION;
+export function decodeCatalogPolyline(encoded: string, precision: number = POLYLINE_PRECISION): Coordinate[] {
+  const scale = 10 ** precision;
   let index = 0;
   let latitude = 0;
   let longitude = 0;
