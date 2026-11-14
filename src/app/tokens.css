@@ -26,6 +26,11 @@
 
   /* Derived, never new hues: a wash of a token for a tint or a press. */
   --og-primary-soft: color-mix(in srgb, var(--og-primary) 12%, var(--og-surface));
+  /* The surface strip's two ends: paved is a solid green, unknown is a neutral
+     grey drawn as diagonal hatching (QA-10). They used to be the same grey, so
+     the bar and the legend could not say which was which. */
+  --og-surface-paved: #2f6b50;
+  --og-surface-unknown: #6f7a75;
   --og-selected: #fdfcf9;
   --og-selected-ring: #0f1a15;
   --og-route-soft: color-mix(in srgb, var(--og-route) 10%, var(--og-surface));
@@ -94,6 +99,8 @@
   --og-warn: #e5c07a;
 
   --og-primary-soft: color-mix(in srgb, var(--og-primary) 22%, var(--og-surface));
+  --og-surface-paved: #74c79b;
+  --og-surface-unknown: #8a958f;
   --og-selected: #2b3833;
   --og-selected-ring: #9aa19d;
   --og-route-soft: color-mix(in srgb, var(--og-route) 16%, var(--og-surface));
