@@ -292,7 +292,7 @@ describe("three lines for six routes on three bikes", () => {
       bike: TOURING,
     });
     expect(surface.tone).toBe("warn");
-    expect(surface.text).toBe("5% gravel · 2 mi unknown");
+    expect(surface.text).toBe("5% gravel · 2 mi surface unknown");
     expect(bike).toEqual({
       tone: "unknown",
       text: "Not checked for your bike: 2 mi unknown surface",

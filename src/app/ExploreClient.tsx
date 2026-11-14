@@ -26,6 +26,7 @@ import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
+import { requestApproach } from "@/application/ride-session/approach-request";
 import { openCatalogRide } from "@/application/explore/ride-this";
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 import { RouteDetailSkeleton } from "@/ui/explore/RouteDetailSkeleton";
@@ -212,11 +213,14 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
    * planner opens on that line with Start ride already there instead of planning
    * the same ride again. The title is the route's own name.
    */
-  async function useRide(entry: CatalogEntry): Promise<void> {
+  async function openRideFromExplore(entry: CatalogEntry, options: { readonly fromHere?: boolean } = {}): Promise<void> {
     const garage = garageStorage.read();
-    await openCatalogRide(entry, library, geometryStore, {
+    const opened = await openCatalogRide(entry, library, geometryStore, {
       bike: snapshotOf(activeGarageBike(garage)),
     });
+    // "Ride to the start": the planner starts the ride by itself and the ride
+    // screen plans the way there (approach-request.ts).
+    if (options.fromHere === true) requestApproach(String(opened.rideId));
     router.push("/");
   }
 
@@ -247,7 +251,8 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
           entry={detail}
           variants={detailVariants}
           activeBike={bike}
-          onUse={useRide}
+          onUse={(entry) => openRideFromExplore(entry)}
+          onRideToStart={(entry) => openRideFromExplore(entry, { fromHere: true })}
           onSave={saveRide}
           {...(mapboxToken === undefined ? {} : { mapboxToken })}
           {...(basemap === undefined

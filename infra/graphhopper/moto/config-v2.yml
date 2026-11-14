@@ -1,0 +1,70 @@
+# Motorcycle router v2 (RM-1). Production's config (switchback infra/graphhopper/config.yml, sha256
+# 7473189d63bb68076039dbf918359ad92de0b5087c0b2b757f9a2d986c783242) with three changes only:
+#   - paths are relative to the build folder (build-graph.sh lays it out);
+#   - graph.location is graph-cache-v2;
+#   - graph.encoded_values adds osm_way_id, og_curve, og_through, og_through_street.
+# RM-2 (profiles v2): motorcycle_fastest is byte-identical to production (the baseline). Twisty and scenic
+# read og_curve and drop prefer-curvature.json and motorcycle-base.json (their access lines are copied in);
+# twisty, scenic and adventure merge og-clock.json last, so paved roads take the same time in every
+# profile (speed limits obeyed). Needs og-ext.jar on the classpath.
+graphhopper:
+  datareader.file: pa-nj-motorcycle.osm.pbf
+  graph.location: graph-cache-v2
+  custom_models.directory: custom-models
+
+  profiles:
+    - name: motorcycle_fastest
+      custom_model_files: [motorcycle-fastest.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+    - name: motorcycle_twisty
+      custom_model_files: [motorcycle-twisty.json, og-clock.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+    - name: motorcycle_scenic
+      custom_model_files: [motorcycle-scenic.json, og-clock.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+    - name: motorcycle_adventure
+      custom_model_files: [motorcycle-adventure.json, og-clock.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+
+  profiles_ch: []
+  profiles_lm:
+    - profile: motorcycle_fastest
+    - profile: motorcycle_twisty
+    - profile: motorcycle_scenic
+    - profile: motorcycle_adventure
+
+  graph.encoded_values: car_access,car_average_speed,road_access,road_class,road_environment,curvature,toll,max_speed,surface,smoothness,track_type,urban_density,country,osm_way_id,og_curve,og_through,og_through_street
+  graph.urban_density.threads: 4
+  max_speed_calculator.enabled: true
+  prepare.lm.threads: 2
+  prepare.min_network_size: 100
+  prepare.subnetworks.threads: 2
+  routing.snap_preventions_default: tunnel,bridge,ferry
+  routing.non_ch.max_waypoint_distance: 1000000
+  routing.timeout_ms: 30000
+  import.osm.ignored_highways: footway,construction,cycleway,path,steps
+
+server:
+  application_connectors:
+    - type: http
+      port: 8989
+      bind_host: 127.0.0.1
+  request_log:
+    appenders: []
+  admin_connectors:
+    - type: http
+      port: 8990
+      bind_host: 127.0.0.1
+
+logging:
+  level: INFO
+  appenders:
+    - type: console

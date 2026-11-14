@@ -18,7 +18,7 @@ describe("map layer catalogue provenance", () => {
 
     for (const id of TOMTOM_STOP_LAYERS) {
       expect(definitions.get(id)?.source).toBe("TomTom Search");
-      expect(definitions.get(id)?.caveat).toMatch(/Provider POI/);
+      expect(definitions.get(id)?.caveat).toMatch(/not (checked|shown|verified)|out of date/);
     }
   });
 

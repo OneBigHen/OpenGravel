@@ -1,5 +1,6 @@
 "use client";
 
+import { setRouteComparing } from "@/ui/stores/route-compare-store";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
@@ -98,15 +99,26 @@ export interface PlannerResultPanelProps {
   readonly hike?: HikeSummaryModel | null;
   /** The place a one-tap save is named after: the loop's start or the destination. */
   readonly placeLabel?: string;
+  /**
+   * A new answer is being found and the ride on screen is the previous one
+   * (OG-05): the summary's numbers become skeletons until the answer lands.
+   */
+  readonly computing?: boolean;
 }
 
-export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null, placeLabel }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null, placeLabel, computing = false }: PlannerResultPanelProps) {
   const activity = useActivityMode();
   const hikeView = activity === "hike" ? hike : null;
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
   const compact = useCompactPlanner();
   const [comparing, setComparing] = useState(false);
+  // The map lifts the other choices while the sheet compares them (PF-8).
+  const comparingShown = comparing && choices.cards.length > 1;
+  useEffect(() => {
+    setRouteComparing(comparingShown);
+    return () => setRouteComparing(false);
+  }, [comparingShown]);
   const [weatherLine, setWeatherLine] = useState<string | null>(null);
   // No route on screen means no traffic claim about one: the caller clears it,
   // and that has to survive the briefing (and its provider tree) being deferred.
@@ -135,6 +147,7 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     key={selectedCard.routeId}
     card={selectedCard}
     cards={choices.cards}
+    computing={computing}
     start={actions.start}
     title={destinationLine ?? "Your ride"}
     automaticName={automaticName}
@@ -150,6 +163,9 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     {...(rideStyle === undefined ? {} : { rideStyle })}
     showQuickStyle={phone}
     weatherLine={weatherLine}
+    /* The directions view shows this summary with no choices list under it, so
+       the plan's own sentences (a basic route) have to be in the summary. */
+    showPlanNotices={showOptions && compact}
     {...(quick === undefined ? {} : { quick })}
     // On a phone the sheet is short; "Why this ride?" stays on the wide tier.
     explanation={phone ? null : choices.explanation}

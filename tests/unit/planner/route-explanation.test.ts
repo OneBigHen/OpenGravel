@@ -190,7 +190,7 @@ describe("buildRouteExplanation — the headline states the measured trade", () 
     expect(EXPLANATION_MATERIALITY).toBeLessThan(0.2);
     expect(MAX_HEADLINE_BENEFITS).toBe(2);
     expect(explanation.headline).toBe(
-      "Adds 11 minutes for lower traffic and fewer junctions.",
+      "Adds 11 minutes for lower traffic and quieter roads.",
     );
   });
 

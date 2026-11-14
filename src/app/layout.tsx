@@ -28,6 +28,7 @@ import "@/ui/safety/emergency.css";
 import "@/ui/places/places.css";
 import "@/ui/weather/route-weather.css";
 import "@/ui/planner/gmaps-layout.css";
+import "@/ui/planner/peek-sheet.css";
 import { version as appVersion } from "../../package.json";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import { resolveTelemetryConfig } from "@/infrastructure/telemetry/config";

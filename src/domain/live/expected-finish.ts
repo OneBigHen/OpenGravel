@@ -18,6 +18,7 @@
  */
 
 import type { LiveExpectedFinish, LiveRideStatus } from "./types";
+import { formatWholeMinutes } from "@/domain/format/duration";
 
 /** The margin a rider's screen adds to the route's own estimate by default. */
 export const EXPECTED_FINISH_MARGIN_MS = 30 * 60_000;
@@ -132,9 +133,5 @@ export function timeOfDayValue(atMs: number): string {
 
 /** `18 * 60_000 → "18 min"`, `4_500_000 → "1 h 15 min"`: time is left, in words. */
 export function timeLeftText(ms: number): string {
-  const minutes = Math.max(0, Math.round(ms / MINUTE_MS));
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+  return formatWholeMinutes(ms / MINUTE_MS);
 }

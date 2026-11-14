@@ -48,6 +48,12 @@ export interface PlannerWorkspaceStatusProps {
   readonly onEditConflictArea: (areaId: AvoidAreaId) => void;
   readonly onRemoveConflictArea: (areaId: AvoidAreaId) => void;
   readonly errorMessage: string | null;
+  /**
+   * The one retry of a failed plan (OG-04). Offered inside the error row, so the
+   * message and its action read as one line; absent while the failed-update
+   * banner is on screen, because that banner already carries its own Retry.
+   */
+  readonly onRetryPlan?: (() => void) | undefined;
   readonly renderError: MapRenderError | null;
   readonly mapLoadStatus: MapLoadStatus;
   readonly onRetryMap: () => void;
@@ -72,10 +78,12 @@ export function PlannerWorkspaceStatus({
   onEditConflictArea,
   onRemoveConflictArea,
   errorMessage,
+  onRetryPlan,
   renderError,
   mapLoadStatus,
   onRetryMap,
 }: PlannerWorkspaceStatusProps) {
+  const errorRetry = onRetryPlan !== undefined && (updateRecovery === null || recoveryActions === null);
   const hiking = useActivityMode() === "hike";
   // "No plan yet." is pure filler in the rail's head: the composer already says
   // what to do next. The live region stays mounted (empty) so the next real
@@ -176,10 +184,25 @@ export function PlannerWorkspaceStatus({
         onRemoveArea={onRemoveConflictArea}
       />
 
+      {/*
+        OG-04: one error row — the whole message, never clipped, and (when no
+        banner already offers it) the one Retry beside it.
+      */}
       {errorMessage === null ? null : (
-        <p className="og-planner__error" data-testid="planner-error" role="alert">
-          {errorMessage}
-        </p>
+        <div className="og-planner__error-row" data-testid="planner-error-row">
+          <svg className="og-planner__error-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7.5v5.5M12 16.5v.01" />
+          </svg>
+          <p className="og-planner__error" data-testid="planner-error" role="alert">
+            {errorMessage}
+          </p>
+          {errorRetry ? (
+            <button type="button" className="og-secondary og-planner__error-retry" data-testid="planner-error-retry" onClick={onRetryPlan}>
+              Retry
+            </button>
+          ) : null}
+        </div>
       )}
 
       {/* A renderer notice yields to the fuller failure surface when the map is down. */}

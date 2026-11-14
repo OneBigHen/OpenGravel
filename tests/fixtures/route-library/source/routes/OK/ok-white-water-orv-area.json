@@ -1,0 +1,50 @@
+{
+ "id": "ok-white-water-orv-area",
+ "name": "White Water ORV Area",
+ "states": [
+  "OK"
+ ],
+ "lane": "dual-sport",
+ "source": {
+  "url": "https://www.riderplanet-usa.com/atv/trails/oklahoma_list_p3.htm",
+  "name": "RiderPlanet USA",
+  "fetched_via": "manual"
+ },
+ "author_credit": {
+  "author": "unknown",
+  "author_unknown_reason": "Public recreation area (USACE), not an authored route"
+ },
+ "terms": {
+  "quote": "No reuse/redistribution terms stated on the RiderPlanet trail pages as checked 2026-11-12. Pages describe the trail systems and link the managing agency (USFS) and Avenza map products; no GPX is hosted.",
+  "terms_url": "https://www.riderplanet-usa.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T05:57:47Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "RiderPlanet USA via site contact page",
+  "permission_notes": ""
+ },
+ "value_score": 3,
+ "value_reason": "80-acre USACE open area below Keystone Dam on the Arkansas River, open to all vehicle types, day use only.",
+ "summary": "White Water ORV Area — ~80-acre open area next to Keystone Dam on the Arkansas River (Sand Springs), US Army Corps of Engineers. Open to all vehicle types including dirt bikes; day use only, overnight parking prohibited.",
+ "surface": {
+  "legal_status": "designated-ohv",
+  "mix": "open sandy/rocky area along the Arkansas River",
+  "difficulty": "unknown",
+  "difficulty_source": "not stated on source page",
+  "permits": "none stated",
+  "seasonality": "unknown",
+  "surface_claim_source": "RiderPlanet USA"
+ },
+ "gpx": {
+  "availability": "none"
+ },
+ "scraper": {
+  "adapter": "riderplanet",
+  "query": "",
+  "notes": "terms_source: RiderPlanet Oklahoma trails list (page 3)."
+ },
+ "scraped_at": "2026-11-13T05:57:47Z",
+ "last_verified": "2026-11-13T05:57:47Z"
+}

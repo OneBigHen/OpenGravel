@@ -287,7 +287,7 @@ test("an area over the start raises the conflict surface, which never resolves i
   // Move endpoint: the placement is armed and the instruction says what the next
   // tap does. The endpoint itself has not moved yet.
   await page.getByTestId("conflict-move-0").click();
-  await expect(page.getByTestId("map-hint")).toHaveText("Tap the map to set your start.");
+  await expect(page.getByTestId("map-hint")).toHaveText("Tap the map to move your start.");
   await expectDrawnScene(page, { areas: "1" });
   expectCoordinateNear(await readCoordinate(page, "start-value"), startBefore);
 

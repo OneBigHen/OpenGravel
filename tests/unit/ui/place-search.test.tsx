@@ -297,6 +297,32 @@ describe("PlaceSearchField", () => {
     });
   });
 
+  it("Enter on a town with its state opens the town, not a list of nearby businesses (QA-16)", async () => {
+    vi.useFakeTimers();
+    const onPick = vi.fn();
+    const onSubmitList = vi.fn();
+    const station: PlaceMatch = {
+      ...JIM_THORPE,
+      id: "fixture:jim-thorpe-station",
+      label: "Jim Thorpe Station, PA",
+      name: "Jim Thorpe Station",
+      coordinate: { lat: 40.876, lon: -75.733 },
+    };
+    render(
+      <PlaceSearchField
+        slot="finish"
+        search={fakePort([JIM_THORPE, station])}
+        onPick={onPick}
+        onSubmitList={onSubmitList}
+      />,
+    );
+    const input = screen.getByRole("combobox");
+    await typeAndSettle(input, "Jim Thorpe PA");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onPick).toHaveBeenCalledWith(JIM_THORPE, "Jim Thorpe PA");
+    expect(onSubmitList).not.toHaveBeenCalled();
+  });
+
   it("offers Current location first on the start field", () => {
     const onUse = vi.fn();
     render(

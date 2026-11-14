@@ -5,6 +5,7 @@ import { createRideDocument } from "@/domain/ride/create";
 import { newPointId } from "@/domain/ride/ids";
 import type { RoadEntity } from "@/domain/roads/road-entity";
 import type { RoadDiscoveryRoad, RoadDiscoveryScope } from "@/application/roads/discovery";
+import { parseRideCredit, type RideCredit } from "@/domain/ride/credit";
 import { deepFreeze } from "@/domain/util/freeze";
 import {
   aggregateRoadEvidence,
@@ -22,6 +23,7 @@ import {
 } from "@/application/roads/route-road-summary";
 import { createRoadEntity } from "@/domain/roads/road-entity";
 import { haversine } from "@/domain/geometry/analysis";
+import { LOOP_CLOSE_METERS } from "@/domain/sketch/types";
 import { parseRideStory, parseStoryTeaser, type CatalogRideStory, type CatalogStoryTeaser } from "@/application/explore/ride-story";
 import type {
   LongTripCatalogFact,
@@ -104,6 +106,12 @@ export interface CatalogEntry {
   readonly stats?: CatalogStats;
   readonly provenance: string;
   /**
+   * Whose work the route is: the author's name (null when the source never named
+   * one), where it was shared, and a link to the original post when we have one.
+   * Absent only on a ride the rider made themselves.
+   */
+  readonly credit?: RideCredit;
+  /**
    * The mechanics behind `provenance`, for the rider who wants them (09 §6 step
    * 8): what produced the geometry and what has not been checked about it. It is
    * shown behind a disclosure, because a rider choosing a ride needs the one-line
@@ -132,6 +140,11 @@ export interface CatalogEntry {
   readonly longTripFacts?: LongTripFacts;
   /** The source document is retained only for personal/import derivatives. */
   readonly sourceDocument?: RideDocument;
+  /**
+   * True for a national-library ride: the line is another site's recorded
+   * track, a reference to follow, never a route we checked or built.
+   */
+  readonly referenceTrack?: true;
 }
 
 interface RawCatalogEntry {
@@ -148,6 +161,7 @@ interface RawCatalogEntry {
   readonly stats?: unknown;
   readonly provenance?: unknown;
   readonly provenanceDetail?: unknown;
+  readonly credit?: unknown;
   readonly surfaceSummary?: unknown;
   readonly curvatureSummary?: unknown;
   readonly catalogGroupId?: unknown;
@@ -163,6 +177,7 @@ interface RawCatalogEntry {
   readonly longTripFacts?: unknown;
   readonly story?: unknown;
   readonly storyTeaser?: unknown;
+  readonly referenceTrack?: unknown;
 }
 
 const SOURCE_ORDER: Readonly<Record<CatalogSource, number>> = {
@@ -570,6 +585,8 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
   const story = parseRideStory(raw.story);
   const teaser = parseStoryTeaser(raw.storyTeaser);
   if (story === null || teaser === null) return null;
+  const credit = parseRideCredit(raw.credit);
+  if (credit === null) return null;
   const parsedLongTripFacts = longTripFacts(raw.longTripFacts);
   const base: CatalogEntry = {
     id: raw.id,
@@ -583,6 +600,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(raw.geometryComplete === false ? { geometryComplete: false } : {}),
     ...(previewGeometry === undefined ? {} : { previewGeometry }),
     provenance: raw.provenance,
+    ...(credit === undefined ? {} : { credit }),
     ...(typeof raw.provenanceDetail === "string" ? { provenanceDetail: raw.provenanceDetail } : {}),
     ...(typeof raw.surfaceSummary === "string" ? { surfaceSummary: raw.surfaceSummary } : {}),
     ...(typeof raw.curvatureSummary === "string" ? { curvatureSummary: raw.curvatureSummary } : {}),
@@ -597,6 +615,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(teaser === undefined ? {} : { storyTeaser: teaser }),
     ...(estimatedTimeMinutes === undefined ? {} : { estimatedTimeMinutes }),
     ...(parsedLongTripFacts === undefined ? {} : { longTripFacts: parsedLongTripFacts }),
+    ...(raw.referenceTrack === true ? { referenceTrack: true as const } : {}),
   };
   const roadData = roadReadModel(raw.roadSummary, raw.roadDetails) ?? roadDetails(raw.roads, base);
   return roadData === null
@@ -656,6 +675,7 @@ export function entryFromLibraryRide(ride: LibraryExploreRide): CatalogEntry {
     bounds: boundsForGeometry(geometry),
     geometry,
     provenance: libraryProvenance(ride.summary),
+    ...(ride.summary.credit === undefined ? {} : { credit: ride.summary.credit }),
     sourceDocument: ride.document,
   };
 }
@@ -736,13 +756,14 @@ function endpoint(kind: "start" | "finish", coordinate: Coordinate, sourceId: st
 }
 
 function sourceProvenance(entry: CatalogEntry): RideDocument["provenance"] {
+  const credit = entry.credit === undefined ? {} : { credit: entry.credit };
   switch (entry.source) {
     case "catalog":
-      return { type: "catalog", sourceId: entry.id };
+      return { type: "catalog", sourceId: entry.id, ...credit };
     case "import":
-      return { type: "import", sourceId: entry.id };
+      return { type: "import", sourceId: entry.id, ...credit };
     case "personal":
-      return { type: "derived", sourceId: entry.id };
+      return { type: "derived", sourceId: entry.id, ...credit };
   }
 }
 
@@ -763,9 +784,15 @@ export function createExploreDerivative(
   const shaping = sourceIntent?.shaping.length
     ? sourceIntent.shaping
     : routeAlongShapingPoints(entry.geometry);
+  // A published line that comes back to where it started is a loop, whatever
+  // the catalog called it. Saying "A → B" for it read as a different ride from
+  // the one on the map, and the trip card named a finish the rider would never
+  // arrive at: it is their own start.
+  const closes = start !== null && finish !== null && haversine(start.coordinate, finish.coordinate) <= LOOP_CLOSE_METERS;
   const intent = deepFreeze({
     ...base.intent,
     ...(sourceIntent === undefined ? {} : sourceIntent),
+    shape: sourceIntent?.shape ?? (closes ? ("loop" as const) : base.intent.shape),
     ...(bike === undefined ? {} : { bike }),
     start,
     finish,

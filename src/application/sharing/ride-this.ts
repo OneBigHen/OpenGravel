@@ -81,7 +81,7 @@ export function sharedRideDocument(
   const base = createRideDocument({
     now,
     title: snapshot.title,
-    provenance: { type: "shared", sourceId },
+    provenance: { type: "shared", sourceId, ...(snapshot.credit === undefined ? {} : { credit: snapshot.credit }) },
   });
   const intent = deepFreeze({
     ...base.intent,

@@ -244,7 +244,7 @@ export function selectUpdateRecovery(
   return {
     attemptedCommandLabel: entry?.label ?? UNIDENTIFIED_CHANGE_LABEL,
     code: error.code,
-    message: planningErrorCopy(error.code, document, error.riderMessage),
+    message: planningErrorCopy(error.code, document, error.riderMessage, error.timedOut),
     recoverable: error.recoverable,
     rideRevision: document.revision,
   };

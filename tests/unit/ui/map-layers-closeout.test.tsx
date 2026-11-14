@@ -24,7 +24,7 @@ describe("closeout layers sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
     expect(screen.getByTestId("map-lens-fun")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("map-lens-weather")).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId("map-lens-weather")).toHaveAccessibleName(/Partial/);
+    expect(screen.getByTestId("map-lens-weather")).toHaveAccessibleName(/1 of 3 on/);
     expect(screen.getByText("5 active")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("map-lens-weather"));
     expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "wind", "weather"]);
@@ -49,7 +49,7 @@ describe("closeout layers sheet", () => {
     panel({ "weather-radar": "stale", "public-land": "unavailable", gravel: "ready" });
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
     expect(screen.getByText("Out of date")).toBeInTheDocument();
-    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Couldn’t load")).toBeInTheDocument();
     expect(screen.getByText(/May be out of date · Updated/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About Rain radar" }));
     expect(screen.getByText(/NOAA \/ IEM · Observed/)).toBeInTheDocument();

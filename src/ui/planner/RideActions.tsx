@@ -101,6 +101,7 @@ export function RideActions({
       geometry: route.geometry,
       waypoints,
       createdTime: document.createdAt,
+      ...(document.provenance.credit === undefined ? {} : { credit: document.provenance.credit }),
     };
     const xml = mode === "planned-route" ? buildPlannedRouteGpx(input) : buildPlannedTrackGpx(input);
     downloadExport(new TextEncoder().encode(xml), exportFilename(exportTitle, mode));

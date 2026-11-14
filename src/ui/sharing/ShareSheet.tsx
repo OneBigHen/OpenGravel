@@ -249,6 +249,7 @@ export function ShareSheet({ service, source, waypoints, onClose }: ShareSheetPr
         geometry: source.route.segments.flatMap((segment) => segment),
         ...(waypoints === undefined ? {} : { waypoints }),
         createdTime: new Date().toISOString(),
+        ...(source.credit === undefined ? {} : { credit: source.credit }),
       });
       downloadExport(new TextEncoder().encode(xml), exportFilename(name, "planned-track"));
     } catch {

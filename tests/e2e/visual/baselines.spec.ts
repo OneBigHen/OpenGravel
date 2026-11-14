@@ -65,6 +65,8 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
   "route-sheet-expanded": async (page, device) => {
     await plannedRoute(page);
     if (device.compact) {
+      // Options waits in the full sheet (at half it would be cut by the edge).
+      await page.getByTestId("sheet-handle").press("ArrowUp");
       await page.getByTestId("route-options-settings").click();
       await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
     }
@@ -139,6 +141,10 @@ for (const device of DEVICES) {
 
       for (const [state, reach] of Object.entries(STATES)) {
         test(state, async ({ page }) => {
+          // Pin the look: Auto follows the sun, so a baseline recorded after dark
+          // would show Night chrome under a "light" name.
+          const look = theme === "dark" ? "night" : "day";
+          await page.addInitScript((value) => { try { window.localStorage.setItem("og-appearance", value); } catch { /* storage off */ } }, look);
           if (state !== "active-ride") await page.clock.setFixedTime(FIXED_TIME);
           await reach(page, device);
           await quiet(page);

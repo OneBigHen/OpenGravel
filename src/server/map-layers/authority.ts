@@ -74,7 +74,7 @@ export const authorityProvider: LayerProvider = {
         // A partial answer (a feed that did not answer, or a state with no
         // feed) is not "unavailable", but the rider still reads why it is thin.
         const reasons = relevant.flatMap(({ snapshot }) => snapshot.reason === null ? [] : [snapshot.reason]);
-        return { layerId, source: relevant.map(({ info }) => info.label).join(" / ") || "Canonical road authority", fetchedAt: dates[0] ?? assessment.at, observedAt: null, stale: relevant.some(({ snapshot }) => snapshot.status === "stale"), note: `Snapshot retrieval; individual source observation dates vary. ${reasons.length === 0 ? "" : `${reasons.join(" ")} `}${unavailable ? "One or more requested authority sources unavailable. " : ""}Coverage is regional; unreported roads and coverage gaps remain unknown. Online only.` };
+        return { layerId, source: relevant.map(({ info }) => info.label).join(" / ") || "State and federal road data", fetchedAt: dates[0] ?? assessment.at, observedAt: null, stale: relevant.some(({ snapshot }) => snapshot.status === "stale"), note: `Snapshot retrieval; individual source observation dates vary. ${reasons.length === 0 ? "" : `${reasons.join(" ")} `}${unavailable ? "One or more requested authority sources unavailable. " : ""}Coverage is regional; unreported roads and coverage gaps remain unknown. Online only.` };
       }),
     };
   },

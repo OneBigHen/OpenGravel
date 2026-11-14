@@ -13,6 +13,7 @@
  *   own full line through the Explore handoff.
  */
 
+import type { RideCredit } from "@/domain/ride/credit";
 import type { InfoFeature, LngLat, MapLayerBounds } from "./types";
 
 /** The credit Explore shows for these rides; kept verbatim on the map card. */
@@ -44,6 +45,8 @@ export interface CuratedRideFacts {
    * is "unknown", and nothing downstream may turn it into "paved".
    */
   readonly surface: CuratedRideSurface | null;
+  /** Whose route this is; shown on the map card as "Route by <author> · <source>". */
+  readonly credit?: RideCredit;
 }
 
 /** The shape `curatedRideFeature` needs; a `CatalogEntry` satisfies it. */
@@ -55,6 +58,7 @@ export interface CuratedRideSeed {
   readonly bounds: MapLayerBounds | null;
   readonly geometry: readonly { readonly lon: number; readonly lat: number }[];
   readonly surfaceSummary?: string | null;
+  readonly credit?: RideCredit;
 }
 
 /** One outline plus the box it covers, so a view filters without redrawing. */
@@ -206,6 +210,7 @@ export function curatedRideFeature(seed: CuratedRideSeed): CuratedRideItem | nul
     routeId: seed.id,
     miles,
     surface: curatedRideSurface(seed.surfaceSummary),
+    ...(seed.credit === undefined ? {} : { credit: seed.credit }),
   };
   const line = simplifyCuratedLine(seed.geometry.map((point): LngLat => [round(point.lon), round(point.lat)]));
   return {

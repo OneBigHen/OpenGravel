@@ -26,7 +26,10 @@
  */
 
 import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
-import { PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
+import { alternativeTintMatch } from "@/application/map/route-colors";
+import { ALTERNATIVE_COLORS, PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
+
+export { ALTERNATIVE_COLORS };
 import { PUCK_IMAGE_ID } from "./puck-image";
 import { MARKER_IMAGE_IDS, ROUTE_ARROW_IMAGE_ID } from "./marker-images";
 import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_OFF_ROUTE_FEATURE_STATE, ROUTE_STEEP_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
@@ -261,6 +264,8 @@ const LINE_LAYOUT = { "line-join": "round", "line-cap": "round" } as const;
 const OFF_ROUTE_LAYOUT = { "line-join": "round", "line-cap": "butt" } as const;
 
 /** The palette's width multiplier, clamped to a sane range (1 when unreadable). */
+const PUCK_ICON_SIZE = 1.35;
+
 function emphasisOf(palette: MapPalette): number {
   const value = Number.parseFloat(palette.emphasis);
   return Number.isFinite(value) ? Math.min(2, Math.max(1, value)) : 1;
@@ -310,8 +315,9 @@ function surfaceBandColor(palette: MapPalette): unknown {
   return [
     "match",
     ["get", "surface"],
-    "paved",
-    palette.topoSage,
+    // Paved draws nothing: the line keeps its own bold colour on asphalt, and
+    // only dirt and gravel paint over it (owner, 2026-11-12: a sage band inside
+    // the line read as "everything is a white line" on satellite).
     "gravel",
     palette.goldenHour,
     "dirt",
@@ -349,9 +355,10 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "travelled"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.topoSage,
-        "line-width": 5,
-        "line-opacity": palette.routeCasing === "auto" ? 0.5 : 0.62,
+        // PF-7: ridden road is flat grey at 55%, the same width as the line ahead.
+        "line-color": "#68716f",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 14, 7 * emphasisOf(palette), 15, 10, 15.4, 14, 16, 15, 17, 18],
+        "line-opacity": 0.55,
       },
     },
     {
@@ -373,9 +380,12 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "alternative"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.paper,
-        "line-width": 8,
-        "line-opacity": 0.9,
+        // A dark edge, not a paper one: a white edge vanished into satellite
+        // roads and made every choice look like the basemap.
+        "line-color": palette.deepSpruce,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 7, 12, 9, 15, 12],
+        // Comparing lifts every choice to full strength (PF-8); otherwise quiet.
+        "line-opacity": ["case", ["==", ["get", "compare"], true], 0.9, 0.55],
       },
     },
     {
@@ -385,9 +395,11 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "alternative"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.slate,
-        "line-width": 5,
-        "line-opacity": 0.8,
+        // Each choice gets its own colour, matched by its label and its row in
+        // Compare, so two rides can be told apart at a glance on any basemap.
+        "line-color": alternativeTintMatch(ALTERNATIVE_COLORS),
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 4, 12, 5.5, 15, 8],
+        "line-opacity": ["case", ["==", ["get", "compare"], true], 1, 0.95],
       },
     },
     {
@@ -441,8 +453,12 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         "line-color": routeCasingColor(palette),
         // Street zoom (riding) draws the line bold, like turn-by-turn apps;
         // overview zooms keep the planner's weight.
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 15, 14 * emphasisOf(palette), 17, 20 * emphasisOf(palette)],
-        "line-opacity": palette.routeCasing === "auto" ? 0.9 : 1,
+        // PF-7: at riding zooms the line is glove-sized, 10 / 14 / 18 px at zoom
+        // 15 / 16 / 17, and its edge is always the core plus 6 px.
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 14, 13 * emphasisOf(palette), 15, 16, 15.4, 20, 16, 21, 17, 24],
+        // 0.9 on both looks: Night's plum-black edge (PF-5) lets a hint of the
+        // dark map through, so the bright core reads as the line, not the edge.
+        "line-opacity": 0.9,
       },
     },
     {
@@ -453,7 +469,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       layout: LINE_LAYOUT,
       paint: {
         "line-color": selectedRouteColor(palette, false),
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 15, 8 * emphasisOf(palette), 17, 13 * emphasisOf(palette)],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 14, 7 * emphasisOf(palette), 15, 10, 15.4, 14, 16, 15, 17, 18],
       },
     },
     {
@@ -532,7 +548,9 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       paint: {
         "line-color": routeCasingColor(palette),
         // As wide as the casing, so both the core and its edge dim together.
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 15, 14 * emphasisOf(palette), 17, 20 * emphasisOf(palette)],
+        // PF-7: at riding zooms the line is glove-sized, 10 / 14 / 18 px at zoom
+        // 15 / 16 / 17, and its edge is always the core plus 6 px.
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 14, 13 * emphasisOf(palette), 15, 16, 15.4, 20, 16, 21, 17, 24],
         "line-opacity": 0.55,
       },
     },
@@ -581,7 +599,8 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         "text-allow-overlap": false,
         "text-padding": 4,
         // The chosen ride's tag carries a plum dot, the others a grey one.
-        "icon-image": ["case", equals("state", "selected"), ROUTE_LABEL_IMAGE_IDS[0], ROUTE_LABEL_IMAGE_IDS[1]],
+        "icon-image": ["case", equals("state", "selected"), ROUTE_LABEL_IMAGE_IDS[0],
+          alternativeTintMatch([ROUTE_LABEL_IMAGE_IDS[1], ROUTE_LABEL_IMAGE_IDS[2], ROUTE_LABEL_IMAGE_IDS[3]])],
         "icon-text-fit": "both",
         "icon-text-fit-padding": [3, 8, 3, 8],
         // The chosen route's name wins a collision.
@@ -1011,7 +1030,8 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       },
       paint: {
         "text-color": ["match", ["get", "tone"], "quiet", palette.slate, palette.ink],
-        "text-opacity": ["match", ["get", "tone"], "quiet", 0.72, 1],
+        // The quiet pill is quieter by its colour and its faded dot, not by
+        // thinning the text: 72% of slate on paper fell under 4.5:1 (QA-05).
         "icon-opacity": ["match", ["get", "tone"], "quiet", 0.7, 1],
       },
     },
@@ -1169,11 +1189,15 @@ export function riderPositionLayers(palette: MapPalette): readonly MapLayerSpec[
       filter: ["has", "heading"],
       layout: {
         "icon-image": PUCK_IMAGE_ID,
-        // About 46 px on screen: GM-sized, readable in a glance on a mount.
-        "icon-size": 1.3 * emphasisOf(palette),
+        // PF-7: the arrow and its white ring measure 44 px on screen on both
+        // looks (the image is 72 px at ratio 2, the ring is 65 of its 72).
+        "icon-size": PUCK_ICON_SIZE,
         "icon-rotate": ["get", "heading"],
         "icon-rotation-alignment": "map",
-        "icon-pitch-alignment": "map",
+        // Upright on the screen, not laid on the tilted ground: a map-aligned
+        // icon z-fights with the street names' depth and a road name painted
+        // over the puck (PF-7).
+        "icon-pitch-alignment": "viewport",
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },

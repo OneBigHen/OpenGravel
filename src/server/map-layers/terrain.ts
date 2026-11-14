@@ -16,7 +16,7 @@ function source(context: ProviderContext, zoom: number): ReturnType<typeof creat
 }
 
 export const terrainProvider: LayerProvider = {
-  id: "terrain", layers: ["contours", "slope"], ttlMs: 24 * 60 * 60_000,
+  id: "terrain", layers: ["contours"], ttlMs: 24 * 60 * 60_000,
   async load() { return []; },
   async snapshot(bounds, layers, context) {
     if (bounds.east - bounds.west > MAX_LAYER_SPAN_DEGREES.lon + 1e-6 || bounds.north - bounds.south > MAX_LAYER_SPAN_DEGREES.lat + 1e-6 || Math.abs(bounds.north) > 85) throw new Error("Zoom in for bounded terrain detail");
@@ -33,6 +33,6 @@ export const terrainProvider: LayerProvider = {
     if (result.availability !== "available") throw new Error("DEM unavailable");
     const terrainGrid: TerrainGrid = { bounds, size, heights: result.elevationsMeters };
     const spacing = Math.max((bounds.east - bounds.west) * 111_195 * Math.cos((bounds.north + bounds.south) * Math.PI / 360), (bounds.north - bounds.south) * 111_195) / (size - 1);
-    return { features: [], terrainGrid, freshness: layers.map((layerId) => ({ layerId, source: "AWS / Mapzen Terrarium", fetchedAt: new Date((context.now ?? Date.now)()).toISOString(), observedAt: null, stale: false, note: `View-sampled Terrarium DEM (z${zoom}); derivative grid spacing up to ${Math.round(spacing)} m. Contour interval ${terrainContourInterval(terrainGrid)} m (20 m in close views). Source survey date unknown. Online only.` })) };
+    return { features: [], terrainGrid, freshness: layers.map((layerId) => ({ layerId, source: "Mapzen Terrarium terrain tiles", fetchedAt: new Date((context.now ?? Date.now)()).toISOString(), observedAt: null, stale: false, note: `View-sampled Terrarium DEM (z${zoom}); derivative grid spacing up to ${Math.round(spacing)} m. Contour interval ${terrainContourInterval(terrainGrid)} m (20 m in close views). Source survey date unknown. Online only.` })) };
   },
 };

@@ -45,7 +45,7 @@ describe("toblerTime", () => {
     expect(estimate.factors.combinedFactor).toBe(1);
     expect(estimate.measuredGradeMeters).toBe(1000);
     expect(estimate.unknownGradeMeters).toBe(0);
-    expect(estimate.explanation).toBe("About 12 m (Tobler).");
+    expect(estimate.explanation).toBe("About 12 min (Tobler).");
   });
 
   it("times a 5% descent at exactly 10 minutes per kilometre", () => {
@@ -92,7 +92,7 @@ describe("toblerTime", () => {
   it("formats an estimate over an hour", () => {
     const estimate = toblerTime(profile([0, 100], [8000, 100]));
     expect(estimate.minutes).toBe(95);
-    expect(estimate.explanation).toBe("About 1 h 35 m (Tobler).");
+    expect(estimate.explanation).toBe("About 1 h 35 min (Tobler).");
   });
 
   it("times unknown grades as flat and says how much of the line that is", () => {

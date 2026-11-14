@@ -66,6 +66,8 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
 test("small-phone ride style has a named entry and the plan stays visible while editing", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await chooseEndpoints(page);
+  // Options waits in the full sheet (at half it would be cut by the edge).
+  await page.getByTestId("sheet-handle").press("ArrowUp");
   await page.getByTestId("route-options-settings").click();
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
   await page.getByRole("button", { name: /Ride style and lenses/ }).click();

@@ -31,6 +31,7 @@
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { CatalogEntry } from "@/application/explore/catalog";
 import { createExploreDerivative, parseCatalogEntry, sourceKindForEntry } from "@/application/explore/catalog";
+import { estimatedRideSeconds } from "@/application/explore/ride-time-estimate";
 import type { LibraryServicePort, SavedRideLine } from "@/application/library/library-service";
 import type { ClientPlanningService } from "@/application/planner/client-planning-service";
 import { UNSCORED_POLICY_VERSION } from "@/application/planner/planning-controller";
@@ -43,6 +44,7 @@ import type {
   RouteCandidate,
   RouteEvidence,
   RouteInstruction,
+  RoutePublishedFacts,
   RouteScore,
   RouteScoreComponents,
 } from "@/domain/route/types";
@@ -70,12 +72,12 @@ export const KEPT_ROUTE_STORAGE_KEY = "opengravel.explore.kept-route";
 export const PREPARED_ROUTE_TTL_MS = 90_000;
 
 /**
- * The mile pace used when the catalog carries no ride time, and the rounding the
- * route page states its estimate with. Both surfaces must read the same number
- * for the same route (`RouteDetail`'s "Est. time" and the planner's card).
+ * The ride time a line nobody timed is estimated at, and the round the ride
+ * page states it with. Both surfaces read the same module
+ * (`application/explore/ride-time-estimate.ts`), so the planner's card and the
+ * route page cannot state two numbers for the same line.
  */
-const ESTIMATE_MPH = 28;
-const ESTIMATE_STEP_MINUTES = 15;
+export { estimatedRideSeconds };
 
 /** The slice of Web Storage this module needs; the browser's sessionStorage. */
 export interface PreparedRouteStorage {
@@ -101,6 +103,12 @@ export interface PreparedRoute {
   readonly sourceRideId?: RideId;
   /** Measured facts kept with a saved line; a catalog line carries none. */
   readonly evidence?: RouteEvidence;
+  /**
+   * The route's own published summary (surface, curves), kept so the planner
+   * states the ride's facts instead of "surface unknown". Catalog rides only:
+   * a saved or imported line carries its measured evidence instead.
+   */
+  readonly publishedFacts?: RoutePublishedFacts;
   readonly instructions?: readonly RouteInstruction[];
 }
 
@@ -145,22 +153,23 @@ function routeNumbers(entry: CatalogEntry): { readonly distanceMeters: number; r
   if (knownMeters(entry.estimatedTimeMinutes)) {
     return { distanceMeters, durationSeconds: entry.estimatedTimeMinutes * 60 };
   }
-  // The catalog carries no ride time: borrow the route page's estimate, rounded
-  // the same way, so the planner's card does not state a second number.
+  // The catalog carries no ride time: borrow the route page's estimate so the
+  // planner's card does not state a second number.
   return { distanceMeters, durationSeconds: estimatedRideSeconds(distanceMeters) };
 }
 
 /**
- * The route page's ride-time estimate for a line nobody timed (a catalog route
- * with no published time, an imported track with no timestamps), rounded to a
- * quarter hour so it never reads as a measurement.
+ * The surface and curves a catalog route publishes, in its own words, or
+ * `undefined` when it publishes neither.
  */
-export function estimatedRideSeconds(distanceMeters: number): number {
-  const minutes = Math.max(
-    ESTIMATE_STEP_MINUTES,
-    Math.round((distanceMeters / 1609.344 / ESTIMATE_MPH) * 60 / ESTIMATE_STEP_MINUTES) * ESTIMATE_STEP_MINUTES,
-  );
-  return minutes * 60;
+function publishedFactsOf(entry: CatalogEntry): RoutePublishedFacts | undefined {
+  const surface = entry.surfaceSummary?.trim() ?? "";
+  const curves = entry.curvatureSummary?.trim() ?? "";
+  if (surface === "" && curves === "") return undefined;
+  return {
+    ...(surface === "" ? {} : { surfaceSummary: surface }),
+    ...(curves === "" ? {} : { curvatureSummary: curves }),
+  };
 }
 
 /** Write the one handoff record; `false` when this storage refuses it. */
@@ -196,6 +205,7 @@ export async function prepareExploreRoute(
   if (storage === null) return null;
   const now = options.now ?? ((): string => new Date().toISOString());
   const preparedAt = now();
+  const publishedFacts = publishedFactsOf(entry);
   const record = await geometryStore.put(
     { kind: "line", coordinates: entry.geometry.map(copyCoordinate) },
     { kind: "route", now: preparedAt },
@@ -207,6 +217,7 @@ export async function prepareExploreRoute(
     geometryRef: record.geometryRef,
     ...numbers,
     preparedAt,
+    ...(publishedFacts === undefined ? {} : { publishedFacts }),
   };
   return handOver(prepared, storage) ? prepared : null;
 }
@@ -477,6 +488,29 @@ export function takeRideToRestoreRequestOnce(): RideToRestore | null {
   return pendingRideRestore;
 }
 
+/** A parsed field that was present but malformed, distinct from an absent one. */
+const INVALID_FACTS = Symbol("invalid-published-facts");
+
+/**
+ * The published summary as it was stored. Only strings survive: a record from
+ * an older version, or one this store was never meant to hold, is ignored
+ * rather than trusted into rider copy.
+ */
+function parsePublishedFacts(value: unknown): RoutePublishedFacts | undefined | typeof INVALID_FACTS {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return INVALID_FACTS;
+  const record = value as Record<string, unknown>;
+  const surface = record["surfaceSummary"];
+  const curves = record["curvatureSummary"];
+  if (surface !== undefined && typeof surface !== "string") return INVALID_FACTS;
+  if (curves !== undefined && typeof curves !== "string") return INVALID_FACTS;
+  const kept: { surfaceSummary?: string; curvatureSummary?: string } = {
+    ...(typeof surface === "string" && surface.trim() !== "" ? { surfaceSummary: surface } : {}),
+    ...(typeof curves === "string" && curves.trim() !== "" ? { curvatureSummary: curves } : {}),
+  };
+  return Object.keys(kept).length === 0 ? undefined : kept;
+}
+
 function parsePreparedRoute(value: unknown): PreparedRoute | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
@@ -493,6 +527,8 @@ function parsePreparedRoute(value: unknown): PreparedRoute | null {
   if (sourceRideId !== undefined && (typeof sourceRideId !== "string" || sourceRideId.length === 0)) return null;
   const evidence = record["evidence"];
   if (evidence !== undefined && (typeof evidence !== "object" || evidence === null || Array.isArray(evidence))) return null;
+  const publishedFacts = parsePublishedFacts(record["publishedFacts"]);
+  if (publishedFacts === INVALID_FACTS) return null;
   const instructions = record["instructions"];
   if (instructions !== undefined && !Array.isArray(instructions)) return null;
   return {
@@ -506,6 +542,7 @@ function parsePreparedRoute(value: unknown): PreparedRoute | null {
     ...(origin === undefined ? {} : { origin }),
     ...(sourceRideId === undefined ? {} : { sourceRideId: sourceRideId as RideId }),
     ...(evidence === undefined ? {} : { evidence: evidence as RouteEvidence }),
+    ...(publishedFacts === undefined ? {} : { publishedFacts }),
     ...(instructions === undefined ? {} : { instructions: instructions as readonly RouteInstruction[] }),
   };
 }
@@ -654,6 +691,7 @@ export function preparedRouteAnswer(prepared: PreparedRoute): RouteBundle {
     // Only what was measured and kept with the line; a catalog line has none.
     evidence: prepared.evidence ?? {},
     ...(prepared.instructions === undefined ? {} : { instructions: prepared.instructions }),
+    ...(prepared.publishedFacts === undefined ? {} : { publishedFacts: prepared.publishedFacts }),
     score: unscoredScore(),
     warnings: [],
     fingerprint: `${providerId}:${prepared.geometryRef}`,

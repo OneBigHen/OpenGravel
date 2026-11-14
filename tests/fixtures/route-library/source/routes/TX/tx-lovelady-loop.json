@@ -1,0 +1,82 @@
+{
+ "id": "tx-lovelady-loop",
+ "name": "Lovelady Loop (Huntsville–Crockett)",
+ "states": [
+  "TX"
+ ],
+ "lane": "adv",
+ "lanes_secondary": [
+  "gravel"
+ ],
+ "source": {
+  "name": "Two Wheeled Texans",
+  "url": "https://www.twtex.com/forums/threads/east-texas-lovelady-loop-ds-adv-ride-9-00am-11-15-25.139725/",
+  "page_title": "East Texas Lovelady Loop DS/Adv Ride 9:00am 11/15/25 | Two Wheeled Texans",
+  "fetched_via": "scrapling-fetcher"
+ },
+ "author_credit": {
+  "author": "Tourmeister",
+  "author_url": "https://www.twtex.com/forums/threads/east-texas-lovelady-loop-ds-adv-ride-9-00am-11-15-25.139725/",
+  "credit_line": "Track by Tourmeister via Two Wheeled Texans"
+ },
+ "terms": {
+  "quote": "This ride will be starting at the Smiley's Shell station at the intersection of FM 980/247 on the North side of Huntsville. The route will be a ton of back roads all around Lovelady, up to Crockett for lunch, and then a meandering return to Huntsville. There WILL be some sand. You will not want to be on 50/50 tires, especially if you are on a big bike, unless you are Chris Birch... This is not really a good ride for people new to adventure riding unless they have a good history of riding dirt bikes before jumping into adventure riding.",
+  "terms_url": "https://www.twtex.com/forums/threads/east-texas-lovelady-loop-ds-adv-ride-9-00am-11-15-25.139725/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T03:52:44Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "Tourmeister via https://www.twtex.com/forums/threads/east-texas-lovelady-loop-ds-adv-ride-9-00am-11-15-25.139725/",
+  "permission_notes": "Author posted the GPX for the Nov 15 2025 group ride; re-hosting in the library still needs the author's OK."
+ },
+ "value_score": 3,
+ "value_reason": "A 212-mile East Texas DS/ADV loop with sand sections, run as a group ride. Good East Texas back-road coverage.",
+ "summary": "About 212 miles of East Texas back roads around Lovelady up to Crockett for lunch and a meandering return to Huntsville. Starts at Smiley's Shell, FM 980/247 north of Huntsville. Author warns: 'There WILL be some sand. You will not want to be on 50/50 tires, especially if you are on a big bike.' Not for new ADV riders.",
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "back roads with sand sections",
+  "surface_claim_source": "Thread post by Tourmeister, Nov 14 2025",
+  "difficulty": "difficult",
+  "difficulty_source": "Thread post: 'This is not really a good ride for people new to adventure riding unless they have a good history of riding dirt bikes.'",
+  "seasonality": "unknown",
+  "permits": "none stated"
+ },
+ "scraped_at": "2026-11-13T03:52:44Z",
+ "last_verified": "2026-11-13T03:52:44Z",
+ "scraper": {
+  "adapter": "twtex",
+  "query": "Texas ADV motorcycle route GPX download",
+  "notes": "GPX posted for the Nov 15 2025 group ride. Attachment downloads without login. [fixture: GPX trimmed to 280 points]"
+ },
+ "gpx": {
+  "availability": "hosted",
+  "local_file": "tx-lovelady-loop.gpx",
+  "download_url": "https://www.twtex.com/forums/attachments/lovelady-loop-111525-gpx.443721/",
+  "requires_login": false,
+  "points": 280,
+  "distance_km": 318.91,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -95.63499927520752,
+   "south": 30.753543376922607,
+   "east": -95.19455909729004,
+   "north": 31.318373680114746
+  },
+  "sha256": "a51cfa0d941e60f46b8a80b4cd34af840002cb5be41d59e37bb2e5428064e202",
+  "track_names": [
+   "Lovelady Loop 111525"
+  ]
+ },
+ "ancillary": {
+  "fuel": [
+   {
+    "name": "Smiley's Shell, FM 980/247, Huntsville (start)",
+    "source": "https://www.twtex.com/forums/threads/east-texas-lovelady-loop-ds-adv-ride-9-00am-11-15-25.139725/"
+   }
+  ]
+ },
+ "discussion": {
+  "comments_url": "https://www.twtex.com/forums/threads/east-texas-lovelady-loop-ds-adv-ride-9-00am-11-15-25.139725/"
+ }
+}

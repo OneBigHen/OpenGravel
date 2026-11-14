@@ -1,0 +1,90 @@
+{
+ "id": "az-arizona-bdr",
+ "name": "Arizona Backcountry Discovery Route (AZBDR)",
+ "states": [
+  "AZ"
+ ],
+ "lane": "bdr",
+ "lanes_secondary": [
+  "adv"
+ ],
+ "source": {
+  "name": "ridebdr.com",
+  "url": "https://ridebdr.com/AZBDR",
+  "page_title": "Arizona Backcountry Discovery Route",
+  "fetched_via": "scrapling-fetcher"
+ },
+ "author_credit": {
+  "author": "Backcountry Discovery Routes",
+  "credit_line": "Route by Backcountry Discovery Routes via ridebdr.com"
+ },
+ "terms": {
+  "quote": "Permission is granted to temporarily download one copy of the materials (information or software) on Backcountry Discovery Routes' website for personal, non-commercial transitory viewing only.",
+  "terms_url": "https://ridebdr.com/terms/",
+  "allows_rehost": "no",
+  "checked_at": "2026-11-13T14:01:16Z"
+ },
+ "publishability": {
+  "status": "link-only",
+  "permission_contact": "BDR — https://ridebdr.com/contact/ (ask for re-host permission per route)",
+  "permission_notes": "BDR terms forbid re-hosting tracks. GPX is free from ridebdr.com (free account required); this record links only."
+ },
+ "value_score": 5,
+ "value_reason": "The Arizona BDR: 750 miles, Mexico border to Utah border, 4-6 days, BDR difficulty Difficult — the state's signature ADV route.",
+ "summary": "The Arizona Backcountry Discovery Route runs 750 miles from the Mexico border to the Utah border in 4-6 days. Difficulty: Difficult (per ridebdr.com). Best time: May, June, September, October. Permits (Mar 2026): AZ State Land Trust Recreation Permit ($15 individual), CO Bar Ranch permit (free, Section 5), Navajo Nation permit ($25/person, Sections 5 & 6). No OHV permit needed for a licensed/plated street-legal motorcycle. Link-only per BDR terms — get the free GPX at ridebdr.com.",
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "pavement, gravel and dirt two-track",
+  "surface_claim_source": "ridebdr.com AZBDR page",
+  "difficulty": "difficult",
+  "difficulty_source": "ridebdr.com: Difficulty: Difficult",
+  "seasonality": "May, June, September, October",
+  "permits": "AZ State Land Trust Recreation Permit $15 individual; CO Bar Ranch permit free (Section 5); Navajo Nation permit $25/person (Sections 5 & 6); no OHV permit needed for licensed/plated street-legal motorcycle"
+ },
+ "scraped_at": "2026-11-13T14:01:16Z",
+ "last_verified": "2026-11-13T14:01:16Z",
+ "scraper": {
+  "adapter": "ridebdr",
+  "query": "site:ridebdr.com Arizona",
+  "notes": "terms_source: ridebdr.com/terms §2 (verbatim). Plain Fetcher returned the page (200). Sections, permits and alternates from the ridebdr.com AZBDR page (checked 2026-11-13)."
+ },
+ "gpx": {
+  "availability": "link-only",
+  "download_url": "https://ridebdr.com/download-tracks/",
+  "requires_login": true,
+  "track_names": [
+   "Section 1: Mexico border to Benson (128 mi)",
+   "Section 2: Benson to Globe (127 mi)",
+   "Section 3: Globe to Young (86 mi)",
+   "Section 4: Young to Winona (135 mi)",
+   "Section 5: Winona to Cameron (123 mi)",
+   "Section 6: Cameron to Utah border (151 mi)"
+  ]
+ },
+ "alternates": [
+  {
+   "label": "ALT Harder over Pioneer Pass (6,154 ft)",
+   "difficulty": "expert",
+   "gpx_url": "https://ridebdr.com/download-tracks/",
+   "notes": "Harder alternate over Pioneer Pass, per ridebdr.com AZBDR page."
+  },
+  {
+   "label": "Optional Harder section to Young",
+   "difficulty": "expert",
+   "gpx_url": "https://ridebdr.com/download-tracks/",
+   "notes": "Optional harder section on the way to Young, per ridebdr.com AZBDR page."
+  },
+  {
+   "label": "Optional Harder section near Kinnikinick Lake",
+   "difficulty": "expert",
+   "gpx_url": "https://ridebdr.com/download-tracks/",
+   "notes": "Optional harder section near Kinnikinick Lake, per ridebdr.com AZBDR page."
+  },
+  {
+   "label": "Easier routes around challenging sections",
+   "difficulty": "easier",
+   "gpx_url": "https://ridebdr.com/download-tracks/",
+   "notes": "Easier routes around the challenging sections, per ridebdr.com AZBDR page."
+  }
+ ]
+}

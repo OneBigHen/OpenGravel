@@ -546,7 +546,8 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(plannerUiStore.getState().placementTool).toBe("place-start");
     expect(screen.getByTestId("start-chip")).toHaveAttribute("data-armed", "true");
     const hint = screen.getByTestId("map-hint");
-    expect(hint).toHaveTextContent("Tap the map to set your start.");
+    // Both ends are placed, so the next tap moves the start (OG-04).
+    expect(hint).toHaveTextContent("Tap the map to move your start.");
     expect(hint).toHaveRole("note");
     expect(hint.tagName).not.toBe("BUTTON");
     expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
@@ -555,7 +556,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(plannerUiStore.getState().placementTool).toBe("place-finish");
     expect(screen.getByTestId("finish-chip")).toHaveAttribute("data-armed", "true");
     expect(screen.getByTestId("map-hint")).toHaveTextContent(
-      "Tap the map to set your destination.",
+      "Tap the map to move your destination.",
     );
   });
 
@@ -832,7 +833,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     // to leave the map still owning the next tap (4.0 review finding 5).
     fireEvent.click(screen.getByTestId("start-chip"));
     expect(plannerUiStore.getState().placementTool).toBe("place-start");
-    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your start.");
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to move your start.");
 
     act(() => {
       fireEvent.keyDown(window, { key: "Escape" });
@@ -1105,14 +1106,16 @@ describe("PlannerWorkspace — a failed plan (owner review 2026-09-17)", () => {
       screen.getByTestId("planner-error"),
     );
     expect(screen.getByTestId("planner-error")).toHaveAttribute("role", "alert");
-    const plan = screen.getByTestId("compose-create");
-    expect(plan).toHaveTextContent("Plan again");
-    expect(plan).toBeEnabled();
+    // OG-04: one retry, in the error row beside the message — never a second
+    // "Plan again" in the composer.
+    expect(screen.getByTestId("planner-error-retry")).toHaveTextContent("Retry");
+    expect(screen.getByTestId("planner-error-retry")).toBeEnabled();
+    expect(screen.queryByTestId("compose-create")).not.toBeInTheDocument();
 
     // The recovery action is the way out, and it arms the tool it names.
     fireEvent.click(screen.getByTestId("plan-recovery"));
     expect(screen.getByTestId("map-hint")).toHaveTextContent(
-      "Tap the map to set your destination.",
+      "Tap the map to move your destination.",
     );
   });
 

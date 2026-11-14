@@ -114,8 +114,11 @@ function LayeredMapWith({
   const [panelOpen, setPanelOpen] = useState(false);
   const view = useMapLayers(layers.source, cameraRoute, mapReady);
   const { enabled, selected } = view;
-  const legendVisible = map.scene.mode !== "ride" && selected === null && (enabled.includes("gravel") || enabled.includes("great-roads"));
-  const legend = legendVisible ? <MapLegendChip onOpen={() => setPanelOpen(true)} /> : undefined;
+  // While a ride is shown the discovery layers are dimmed to a third, so the
+  // legend explains nothing and would sit on the ride's destination pin.
+  const rideShown = map.scene.routes.some((route) => route.state === "selected");
+  const legendVisible = map.scene.mode !== "ride" && !rideShown && selected === null && (enabled.includes("gravel") || enabled.includes("great-roads"));
+  const legend = legendVisible ? <MapLegendChip onOpen={() => setPanelOpen(true)} mapReady={mapReady} /> : undefined;
   const scene = useMemo(
     () => (view.scene === undefined ? map.scene : { ...map.scene, infoLayers: view.scene }),
     [map.scene, view.scene],

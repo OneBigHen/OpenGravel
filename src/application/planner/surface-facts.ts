@@ -19,14 +19,14 @@ export interface SurfaceFacts {
   readonly unpavedShare: number;
   /** Miles of unknown surface; `null` when the ride length is not known. */
   readonly unknownMiles: number | null;
-  /** e.g. `41% gravel · 3 mi unknown`, `all paved`, `surface unknown`. */
+  /** e.g. `41% gravel · 3 mi surface unknown`, `all paved`, `surface unknown`. */
   readonly line: string;
 }
 
 function unknownPart(share: number, distanceMeters: number | undefined): string {
-  if (distanceMeters === undefined || !(distanceMeters > 0)) return `${Math.max(1, Math.round(share * 100))}% unknown`;
+  if (distanceMeters === undefined || !(distanceMeters > 0)) return `${Math.max(1, Math.round(share * 100))}% surface unknown`;
   const miles = (share * distanceMeters) / METERS_PER_MILE;
-  return miles < 0.5 ? "<1 mi unknown" : `${Math.round(miles)} mi unknown`;
+  return miles < 0.5 ? "<1 mi surface unknown" : `${Math.round(miles)} mi surface unknown`;
 }
 
 export function surfaceFacts(strip: SurfaceShares | undefined, distanceMeters?: number): SurfaceFacts {
@@ -45,7 +45,8 @@ export function surfaceFacts(strip: SurfaceShares | undefined, distanceMeters?: 
   } else if (unknown === 0) {
     parts.push("all paved");
   } else {
-    parts.push("no gravel found");
+    // Never "no gravel found" beside an unknown stretch: what is known is paved.
+    parts.push("paved where known");
   }
   if (unknown > 0) parts.push(unknownPart(unknown, distanceMeters));
   return { unpavedShare: unpaved, unknownMiles, line: parts.join(" · ") };

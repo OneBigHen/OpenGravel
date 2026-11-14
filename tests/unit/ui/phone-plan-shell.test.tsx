@@ -113,6 +113,35 @@ describe("RideSummary", () => {
     expect(screen.getByTestId("ride-truth").querySelectorAll(".og-truth__line")).toHaveLength(3);
   });
 
+  it("keeps the arrival time steady when the page is reopened with no new input (QA-25)", () => {
+    vi.useFakeTimers();
+    try {
+      const planned = { ...cards[0]!, durationSeconds: 3_600, plannedAt: "2026-11-14T01:00:00.000Z" };
+      vi.setSystemTime(new Date("2026-11-14T01:00:00.000Z"));
+      const first = render(<RideSummary {...base} card={planned} />);
+      const arrival = screen.getByTestId("route-summary").textContent;
+      expect(arrival).toContain("Arrive");
+      first.unmount();
+
+      // A refresh 37 minutes later, same plan: the arrival is the plan's own.
+      vi.setSystemTime(new Date("2026-11-14T01:37:00.000Z"));
+      render(<RideSummary {...base} card={planned} />);
+      expect(screen.getByTestId("route-summary").textContent).toBe(arrival);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells the rider a basic route is basic, as a sentence above Start and in the meta line", () => {
+    const message = "Basic route — OpenGravel's curvy and gravel tuning covers PA, NJ and NY only.";
+    render(<RideSummary {...base} showPlanNotices card={{ ...cards[0]!, notices: [message], badges: ["Basic routing"] }} />);
+    // The phone directions view is the summary with no choices list under it,
+    // so the plan's own sentence has to be in the summary, above the buttons.
+    expect(screen.getByTestId("route-plan-notice").textContent).toBe(message);
+    expect(screen.getByTestId("route-summary").querySelector(".og-phone-summary__meta")).toHaveTextContent("Basic routing");
+  });
+
+
   it("hides the compare switch when there is only one ride", () => {
     render(<RideSummary {...base} cards={[cards[0]!]} />);
     expect(screen.queryByTestId("compare-rides")).toBeNull();
@@ -121,12 +150,24 @@ describe("RideSummary", () => {
   it("says how much is gravel and how much is unknown, with a bar, when the surface was measured", () => {
     const measured = { ...cards[0]!, distanceMeters: 62 * 1609.344, surfaceStrip: { paved: 0.54, gravel: 0.41, dirt: 0, unknown: 0.05 } };
     render(<RideSummary {...base} card={measured} />);
-    expect(screen.getByTestId("phone-surface-line")).toHaveTextContent("41% gravel · 3 mi unknown");
+    expect(screen.getByTestId("phone-surface-line")).toHaveTextContent("41% gravel · 3 mi surface unknown");
     expect(screen.getByTestId("phone-surface-strip").getAttribute("aria-label")).toBe("Surface: 54% paved, 41% gravel, 0% dirt, 5% unknown");
   });
 
-  it("says where the ride goes above the time", () => {
-    render(<RideSummary {...base} title="To Hawk Mountain Sanctuary" />);
+  it("marks an unmeasured surface as unknown, not as a gravel-toned warning (QA-10)", () => {
+    const measured = { ...cards[0]!, distanceMeters: 62 * 1609.344, surfaceStrip: { paved: 0.54, gravel: 0.41, dirt: 0, unknown: 0.05 } };
+    render(<RideSummary {...base} card={measured} />);
+    // The amber dot is the gravel swatch's colour. "Some of this was not
+    // measured" gets the unknown mark, which is the hatch the bar uses.
+    const line = screen.getByTestId("phone-surface-line").closest(".og-truth__line");
+    expect(line?.getAttribute("data-tone")).toBe("unknown");
+    expect(line?.querySelector(".og-truth__dot")?.getAttribute("data-tone")).toBe("unknown");
+    const legend = screen.getByTestId("phone-surface-legend");
+    expect(legend.querySelector('[data-surface="paved"]')).not.toBeNull();
+    expect(legend.querySelector('[data-surface="unknown"]')).not.toBeNull();
+  });
+
+  it("says where the ride goes above the time", () => {    render(<RideSummary {...base} title="To Hawk Mountain Sanctuary" />);
     expect(screen.getByTestId("phone-destination").textContent).toBe("To Hawk Mountain Sanctuary");
   });
 

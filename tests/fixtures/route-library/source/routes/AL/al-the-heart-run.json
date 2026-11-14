@@ -1,0 +1,66 @@
+{
+ "id": "al-the-heart-run",
+ "name": "The Heart Run",
+ "states": [
+  "AL"
+ ],
+ "lane": "scenic",
+ "source": {
+  "url": "https://www.bmwmoal.com/routes.php",
+  "name": "BMW Motorcycle Owners of Alabama",
+  "fetched_via": "direct-download"
+ },
+ "author_credit": {
+  "author": "Don Norwood",
+  "credit_line": "Track by Don Norwood via BMW Motorcycle Owners of Alabama"
+ },
+ "terms": {
+  "quote": "The members of BMW Motorcycle Owners of Alabama have collected their favorite roads and rides and have made them available here.",
+  "terms_url": "https://www.bmwmoal.com/routes.php",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T06:00:00Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BMW Motorcycle Owners of Alabama — via bmwmoal.com contact page",
+  "permission_notes": "Club GPX is free, no login; page says routes are 'made available here' but no reuse statement — ask before shipping."
+ },
+ "gpx": {
+  "availability": "hosted",
+  "download_url": "https://www.bmwmoal.com/bmwmoal_routes/download.php?file=The_Heart_Run.gpx",
+  "local_file": "al-the-heart-run.gpx",
+  "points": 7,
+  "distance_km": 145.21,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -87.8289969,
+   "south": 33.2638481,
+   "east": -87.3951244,
+   "north": 33.6988878
+  },
+  "sha256": "4f017a820ef4c05cf328c995ab3c68ebdc4e72b8ad0af4a0ec1f53fdd160bead",
+  "track_names": [
+   "Fayette to Fayette"
+  ],
+  "requires_login": false,
+  "track_vintage": "2008"
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "difficulty": "unknown",
+  "permits": "none stated",
+  "seasonality": "unknown",
+  "surface_claim_source": "BMW Motorcycle Owners of Alabama route page"
+ },
+ "summary": "The Heart Run. Don Norwood ID: ride_015 Date: 03-08-2008 ABEES: NW 2 Title: The Heart Run From Fayette down Alabama 171 to Northport, over Alabama 69, north toward Jasper at Oakman, then back to Fayette via Alabama 18. About 115 Miles. GDB GPX The Heart Run Top of Page BMW MOAL member route (NW 2), posted 03-08-2008 by Don Norwood. Garmin-era GPX (2008); verify conditions.",
+ "value_score": 3,
+ "value_reason": "Named NW-AL ride (BMW MOAL, 2008).",
+ "scraped_at": "2026-11-13T06:00:00Z",
+ "last_verified": "2026-11-13T06:00:00Z",
+ "scraper": {
+  "adapter": "generic-gpx",
+  "query": "BMW Motorcycle Owners of Alabama routes.php — full enumeration (57 routes)",
+  "notes": "terms_source: routes page wording ('The members of BMW Motorcycle Owners of Alabama have collected their favorite roads and rides and have made them available here.'). Member route NW 2, posted 03-08-2008. [fixture: GPX trimmed to 7 points]"
+ }
+}

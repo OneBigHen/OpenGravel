@@ -1,0 +1,84 @@
+{
+ "id": "ny-us-6-bear-mountain-bridge-road-peekskill",
+ "name": "US-6 / Bear Mountain Bridge Road: Peekskill",
+ "states": [
+  "NY"
+ ],
+ "lane": "paved-twisty",
+ "lanes_secondary": [
+  "scenic"
+ ],
+ "value_score": 3,
+ "value_reason": "BBR rating 4/5; scenery 4/5; 3.2-mi measured track.",
+ "summary": "US-6 / Bear Mountain Bridge Road: Peekskill (5.2 km / 3.2 mi measured track). Author: “A very good twisting biking road if you can catch it at a time when there is not so much traffic.” Posted 2010-11-12 by Android_Andy. BBR rating 4/5. Track data 2010 vintage.",
+ "scraped_at": "2026-11-13T11:33:16Z",
+ "last_verified": "2026-11-13T11:33:16Z",
+ "source": {
+  "name": "BestBikingRoads",
+  "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/new-york/ride/us-6-bear-mountain-bridge-road-peekskill",
+  "fetched_via": "scrapling-fetcher"
+ },
+ "author_credit": {
+  "author": "Android_Andy",
+  "credit_line": "Track by Android_Andy via BestBikingRoads",
+  "author_url": "https://www.bestbikingroads.com/touring-biker-community/member/219395344.html"
+ },
+ "terms": {
+  "quote": "Best Biking Roads - All the Best Motorcycle Rides : Please Credit us and help support our project",
+  "terms_url": "https://www.bestbikingroads.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T11:33:16Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BestBikingRoads — contact via https://www.bestbikingroads.com/ (site contact page; credit required)",
+  "permission_notes": "GPX is free to download from BestBikingRoads; re-hosting needs the author’s/site’s permission. Credit BestBikingRoads and the route author."
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved public roads",
+  "surface_claim_source": "BestBikingRoads route page (public state/US highways)",
+  "difficulty": "unknown",
+  "difficulty_source": "not stated on source page",
+  "seasonality": "unknown",
+  "permits": "none stated"
+ },
+ "scraper": {
+  "adapter": "bestbikingroads",
+  "query": "site:bestbikingroads.com New York",
+  "notes": "terms_source: GPX metadata credit line (verbatim, per-file; <metadata><text> grep-verified 2026-11-13, creator=MapSource 6.16.3). File shape BBR-shaped. Route uploaded 2010-11-12 by Android_Andy. GPX downloaded via downloadfile.php?code2=cbbb24 with Referer; download arrived as bare GPX (not HTML-wrapped). Track vintage 2010. Page-claimed distance 5 km vs measured 5.2 km. [fixture: GPX trimmed to 165 points]"
+ },
+ "discussion": {
+  "comments_captured": [
+   {
+    "author": "VinceR1200R",
+    "text": "My go to ride early sunday morning and a few great stops for breakfast",
+    "captured_at": "2016-02-23T12:00:00Z",
+    "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/new-york/ride/us-6-bear-mountain-bridge-road-peekskill"
+   },
+   {
+    "author": "MotoWhip",
+    "text": "Try to get here early, this is a really great stretch of fast turns but traffic can be really heavy. If you arent out to tear up the asphalt, its a nice ride even with the traffic.",
+    "captured_at": "2012-07-21T12:00:00Z",
+    "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/new-york/ride/us-6-bear-mountain-bridge-road-peekskill"
+   }
+  ]
+ },
+ "gpx": {
+  "availability": "hosted",
+  "local_file": "ny-us-6-bear-mountain-bridge-road-peekskill.gpx",
+  "download_url": "https://www.bestbikingroads.com/downloadfile.php?code2=cbbb24",
+  "requires_login": false,
+  "points": 165,
+  "distance_km": 5.19,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -73.9776,
+   "south": 41.2976,
+   "east": -73.9391,
+   "north": 41.3175
+  },
+  "sha256": "d6da6da35b25442ebd9bbd3660ae43eda8c24f938de91e80a4b0fc1749138d29",
+  "track_vintage": "2010"
+ }
+}

@@ -43,6 +43,7 @@ import {
   riderPositionLayers,
   routeLayers,
   type MapPalette,
+  ALTERNATIVE_COLORS,
 } from "@/infrastructure/map/maplibre/style";
 
 const SELECTED = asRouteCandidateId("route_selected");
@@ -758,18 +759,18 @@ describe("the cartography table", () => {
     const route = new Map(routeLayers(sun).map((layer) => [layer.id, layer]));
     const casing = route.get(MAP_LAYER_IDS.routeCasing)?.paint;
     expect(casing?.["line-color"]).toBe("#1d0b05");
-    expect((casing?.["line-width"] as unknown[]).at(-1)).toBe(25);
+    expect((casing?.["line-width"] as unknown[]).at(-1)).toBe(24); // PF-7: riding zooms are fixed pixels, not scaled
     const plain = new Map(routeLayers(DEFAULT_MAP_PALETTE).map((layer) => [layer.id, layer]));
-    expect((plain.get(MAP_LAYER_IDS.routeCasing)?.paint?.["line-width"] as unknown[]).at(-1)).toBe(20);
+    expect((plain.get(MAP_LAYER_IDS.routeCasing)?.paint?.["line-width"] as unknown[]).at(-1)).toBe(24);
     const arrow = riderPositionLayers(sun).find((layer) => layer.id === MAP_LAYER_IDS.riderHeading);
-    expect(arrow?.layout?.["icon-size"]).toBeCloseTo(1.625);
+    expect(arrow?.layout?.["icon-size"]).toBeCloseTo(1.35); // PF-7: 44 px on both looks
     // An unreadable multiplier never shrinks or explodes the scene.
     const odd = riderPositionLayers({ ...DEFAULT_MAP_PALETTE, emphasis: "banana" })
       .find((layer) => layer.id === MAP_LAYER_IDS.riderHeading);
-    expect(odd?.layout?.["icon-size"]).toBeCloseTo(1.3);
+    expect(odd?.layout?.["icon-size"]).toBeCloseTo(1.35);
   });
 
-  it("draws the chosen ride plum and every alternative one quiet grey (DESIGN.md §2)", () => {
+  it("draws the chosen ride plum and each alternative in its own colour, never plum or blue (owner 2026-11-12)", () => {
     const layers = routeLayers(DEFAULT_MAP_PALETTE);
     const byId = new Map(layers.map((layer) => [layer.id, layer]));
 
@@ -781,15 +782,21 @@ describe("the cartography table", () => {
     const colour = (layer: { paint?: Record<string, unknown> } | undefined): unknown => layer?.paint?.["line-color"];
     expect(colour(selected)).toBe(DEFAULT_MAP_PALETTE.routePlum);
     expect(colour(casing)).toBe(DEFAULT_MAP_PALETTE.routePlumStrong);
-    expect(colour(alternative)).toBe(DEFAULT_MAP_PALETTE.slate);
-    expect([colour(selected), colour(alternative)]).not.toContain(DEFAULT_MAP_PALETTE.signalBlue);
+    // Each choice has its own colour so two rides can be told apart on satellite.
+    const altColours = JSON.stringify(colour(alternative));
+    for (const hue of ALTERNATIVE_COLORS) expect(altColours).toContain(hue);
+    for (const reserved of [DEFAULT_MAP_PALETTE.routePlum, DEFAULT_MAP_PALETTE.signalBlue]) expect(altColours).not.toContain(reserved);
+    expect(colour(selected)).not.toBe(DEFAULT_MAP_PALETTE.signalBlue);
 
     // The selected line must carry the most visual weight, and the alternatives
     // must be visibly secondary rather than a second highlight.
     const width = (layer: { paint?: Record<string, unknown> } | undefined): number =>
       lineWidthAtLeast(layer?.paint?.["line-width"]);
     expect(width(selected)).toBeGreaterThan(width(alternative));
-    expect(Number(alternative?.paint?.["line-opacity"] ?? 1)).toBeLessThan(1);
+    // Resting opacity (the last arm of the compare-aware expression, PF-8).
+    const opacity = alternative?.paint?.["line-opacity"];
+    const resting = Array.isArray(opacity) ? opacity[opacity.length - 1] : opacity;
+    expect(Number(resting ?? 1)).toBeLessThan(1);
   });
 
   it("draws the whole Explore list as thin uncased overview lines", () => {
@@ -836,7 +843,8 @@ describe("the cartography table", () => {
 
     for (const layer of routeLayers(palette)) {
       const colour = layer.paint?.["line-color"];
-      if (typeof colour === "string" && colour.startsWith("#")) {
+      // "#68716f" is the ridden road's fixed grey (PF-7), not a palette colour.
+      if (typeof colour === "string" && colour.startsWith("#") && colour !== "#68716f") {
         expect(Object.values(palette)).toContain(colour);
       }
     }

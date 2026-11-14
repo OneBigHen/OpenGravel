@@ -228,6 +228,31 @@ the primary button.
   server rows (weather, gas or food, new route) shown disabled with "No signal". Settings lists kept rides
   with their size and Remove, and is silent when none are kept.
 
+- 2026-11-12 Owner ("the phone is the primary experience… the map is so damn small… everything is a
+  white line"; #221 map first, with Fable's PF-1 and ship list): the ride line is the top line. It is
+  drawn above every basemap road, bridge and path line and under road names and place labels, so no
+  street stripe runs through it. Choices are teal / amber / sky with a dark edge, and the bar on each
+  Compare row is its line's colour. While a ride is shown the discovery layers drop to 35% and the
+  Gravel / Twisty legend hides. On a phone the directions sheet at half is capped at
+  `max(40dvh, 252px)` and holds the answer, Start / Save / Share and Compare rides (44px); Options,
+  Edit route and the weather line wait in the full sheet so half never cuts a row. Peek has the same
+  cap with less in it (answer and Start), so it is never taller than half. Compare at half drops the
+  Roads / Surface chips (still in full and Options), grows to `max(40dvh, 300px)`, uses 56px rows and
+  pins Start / Save / Share at the bottom.
+
+- 2026-11-12 Owner: credit for imported rides. Every ride we did not make shows one quiet caption-sized
+  line, "Route by <author> · <source>", with the source linked to the original when we have a URL
+  ("Route from Roost GPX locker · author not named" when the source names nobody). It sits on the
+  Explore card (plain text, the card is a link), the ride page header, the map card, the ride story
+  byline and the shared-ride page, and is written into GPX exports. A ride the rider made shows no
+  line. Credit rides on the ride's provenance, so save, copy, fork and share never drop it.
+
+- 2026-11-14 QA sweep (QA-10): a surface strip has four possible states, and paved and unknown used
+  the same grey, so the bar and its legend could not say which was which. Paved is now one solid
+  green (`--og-surface-paved`), unknown is a grey hatch (`--og-surface-unknown`) and never a solid
+  swatch, and the same pair is used in the bar, the legend dots and the surface line's own dot —
+  including "some of this was not measured", which used to wear the gravel tone's amber.
+
 ## Open proposals
 
 (none)

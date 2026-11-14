@@ -16,7 +16,7 @@ export const RIDE_EXPORT_AVAILABLE = false;
 export function saveIndicatorCopy(state: SaveIndicatorState): string {
   switch (state) {
     case "unsaved":
-      return "Not saved yet";
+      return "Not saved";
     case "saving":
       return "Saving…";
     case "saved":

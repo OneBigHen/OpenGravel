@@ -141,7 +141,7 @@ const MEASURED_FACTS: Readonly<Record<FactAxis, string>> = {
   surfaceFit: "Surface match is measured for this route.",
   elevation: "Elevation variation is measured for this route.",
   traffic: "Traffic cost is measured for this route.",
-  junctionFriction: "Junction friction is measured for this route.",
+  junctionFriction: "Time in towns and on main roads is measured for this route.",
   novelty: "Novelty is measured for this route.",
   closureRisk: "Closure risk is measured for this route.",
 };
@@ -183,7 +183,7 @@ const BENEFITS: readonly BenefitSpec[] = [
   { axis: "surfaceFit", lowerIsBetter: false, phrase: "a closer surface match" },
   { axis: "elevation", lowerIsBetter: false, phrase: "more elevation change" },
   { axis: "traffic", lowerIsBetter: true, phrase: "lower traffic" },
-  { axis: "junctionFriction", lowerIsBetter: true, phrase: "fewer junctions" },
+  { axis: "junctionFriction", lowerIsBetter: true, phrase: "quieter roads" },
   { axis: "novelty", lowerIsBetter: false, phrase: "more new-to-you road" },
   { axis: "closureRisk", lowerIsBetter: true, phrase: "a lower closure risk" },
 ];

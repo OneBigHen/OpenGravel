@@ -12,6 +12,8 @@
  * change the sentence (04 §13, `OGV-D-250`).
  */
 
+import { formatWholeMinutes } from "@/domain/format/duration";
+
 /** What a missing measurement prints as; never `0`, never an empty cell. */
 export const UNKNOWN_VALUE = "Unknown";
 
@@ -25,11 +27,7 @@ export function isKnownMeasurement(value: number): boolean {
 /** `6480 → "1 h 48 min"`, `2880 → "48 min"`, unknown stays unknown. */
 export function formatDuration(seconds: number): string {
   if (!isKnownMeasurement(seconds)) return UNKNOWN_VALUE;
-  const totalMinutes = Math.round(seconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes} min`;
-  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
+  return formatWholeMinutes(seconds / 60);
 }
 
 /** `96 h+` reads in days: `273600 → "3 d 4 h"`; shorter spans read like {@link formatDuration}. */

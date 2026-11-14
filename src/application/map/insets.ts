@@ -71,6 +71,12 @@ export interface InsetsInput {
   readonly safeArea: EdgeInsets;
   /** Breathing room between the fitted content and the composition. */
   readonly gutter?: number;
+  /**
+   * More room at the bottom only: a pin drawn above its coordinate (the
+   * destination flag, anchored at its foot) needs its height clear of the
+   * sheet's top edge, not just the point.
+   */
+  readonly extraBottom?: number;
 }
 
 /** The breathing room between fitted content and the composition edges. */
@@ -222,6 +228,7 @@ export function computeInsets(input: InsetsInput): MapInsets {
     }
   }
 
+  result.bottom += input.extraBottom === undefined ? 0 : sane(input.extraBottom);
   return clampInsetsToViewport(result, viewport);
 }
 

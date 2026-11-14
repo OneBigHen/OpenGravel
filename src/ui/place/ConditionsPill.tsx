@@ -7,6 +7,7 @@
  * /api/weather (free, cached server-side); nothing shows when it is unavailable.
  */
 
+import { formatTempF, formatWeatherLine } from "@/application/weather/weather-line";
 import { useEffect, useRef, useState } from "react";
 
 import { calculateSunrise, calculateSunset, sunState } from "@/application/long-trip/daylight";
@@ -142,7 +143,7 @@ export function ConditionsPill({ at, embedded = false }: { readonly at: Coordina
   const light = day && sunsetMs !== null && sunsetMs > now ? `Sunset ${clock(sunsetMs)}` : nextSunrise === null ? null : `Sunrise ${clock(nextSunrise)}`;
   const sky = skyOf(current.shortForecast);
   const note = headsUp(snapshot, upcoming.slice(0, 6), sunsetMs, now, day);
-  const summary = `${current.temperatureF}°, ${current.shortForecast}${note === null ? "" : `. ${note.text}`}`;
+  const summary = `${formatWeatherLine({ shortForecast: current.shortForecast, tempF: current.temperatureF })}${note === null ? "" : `. ${note.text}`}`;
 
   return (
     <div className="og-conditions" ref={root} data-testid="conditions">
@@ -155,13 +156,13 @@ export function ConditionsPill({ at, embedded = false }: { readonly at: Coordina
         onClick={() => setOpen((value) => !value)}
       >
         <SkyGlyph sky={sky} night={!day} />
-        <span className="og-conditions__temp">{current.temperatureF}°</span>
+        <span className="og-conditions__temp">{formatTempF(current.temperatureF)}</span>
         {note === null ? null : <span className="og-conditions__note">{note.text}</span>}
       </button>}
       {open || embedded ? (
         <section className="og-conditions__panel" aria-label="Conditions in the next hours">
           <header>
-            <strong>{current.shortForecast}</strong>
+            <strong>{formatWeatherLine({ shortForecast: current.shortForecast, rainChancePct: (current.precipChance ?? 0) >= 20 ? current.precipChance ?? null : null, tempF: current.temperatureF })}</strong>
             <span>{[current.windMph === undefined ? null : current.windMph === 0 ? "Calm" : `Wind ${current.windMph} mph`, light].filter(Boolean).join(" · ")}</span>
           </header>
           {snapshot.alerts.map((alert) => (
@@ -174,7 +175,7 @@ export function ConditionsPill({ at, embedded = false }: { readonly at: Coordina
                 <li key={period.startTime}>
                   <span className="og-conditions__hour">{start <= now ? "Now" : hourLabel(period.startTime)}</span>
                   <SkyGlyph sky={skyOf(period.shortForecast)} night={sunState(place, start) === "night"} />
-                  <span className="og-conditions__hour-temp">{period.temperatureF ?? "–"}°</span>
+                  <span className="og-conditions__hour-temp">{period.temperatureF === null || period.temperatureF === undefined ? "–" : formatTempF(period.temperatureF)}</span>
                   <span className="og-conditions__hour-rain">{period.precipChance ? `${period.precipChance}%` : ""}</span>
                 </li>
               );

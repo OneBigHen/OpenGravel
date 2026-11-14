@@ -18,6 +18,7 @@
 
 import { useCallback } from "react";
 
+import { requestApproach } from "@/application/ride-session/approach-request";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import {
   fetchCatalogRide,
@@ -60,17 +61,20 @@ function loadPlanner(): void {
 export function useOpenSavedRide(options: {
   readonly libraryService: LibraryServicePort | undefined;
   readonly geometryStore: GeometryStore | undefined;
-}): (rideId: RideId, options?: { readonly announcement?: string | null }) => Promise<void> {
+}): (rideId: RideId, options?: { readonly announcement?: string | null; readonly approach?: boolean }) => Promise<void> {
   const { libraryService, geometryStore } = options;
   return useCallback(async (
     rideId: RideId,
-    openOptions: { readonly announcement?: string | null } = {},
+    openOptions: { readonly announcement?: string | null; readonly approach?: boolean } = {},
   ): Promise<void> => {
     if (libraryService === undefined) throw new Error("This page cannot open rides.");
     const opened = await openLibraryRide(rideId, libraryService, geometryStore ?? null);
     const announcement = openOptions.announcement ?? null;
     const message = [opened.message, announcement].filter((part): part is string => part !== null && part !== "").join(" ");
     markRideToRestore(opened.rideId, { message: message === "" ? null : message });
+    // "Ride to the start": the planner starts the ride and the ride screen
+    // plans the way there (approach-request.ts).
+    if (openOptions.approach === true) requestApproach(String(opened.rideId));
     loadPlanner();
   }, [geometryStore, libraryService]);
 }

@@ -14,15 +14,19 @@
  * value, and a line of four absences is not a fact a rider can use.
  */
 
-/**
- * The mileage pace a catalog route with no stored ride time is estimated at.
- * `application/explore/ride-this.ts` rounds the planner's card with the same
- * pace, so one route does not read two different times on two screens.
- */
-export const RIDE_TIME_PACE_MPH = 28;
+import { formatWholeMinutes } from "@/domain/format/duration";
+import {
+  estimatedRideMinutes,
+  RIDE_TIME_PACE_MPH,
+} from "@/application/explore/ride-time-estimate";
 
-/** The estimate is stated to the quarter hour, never to the minute. */
-const RIDE_TIME_STEP_MINUTES = 15;
+/**
+ * The pace and the estimate live in `application/explore/ride-time-estimate.ts`
+ * so the ride page, the planner's card and the weekend cards cannot state three
+ * different times for the same ride. Re-exported here because this is the page's
+ * fact vocabulary.
+ */
+export { estimatedRideMinutes, RIDE_TIME_PACE_MPH };
 
 export type RideFactKey = "distance" | "time" | "surface" | "curvature";
 
@@ -36,23 +40,7 @@ export interface RideFact {
 
 /** `95` → `1 h 35 min`, `120` → `2 h`; a ride under a minute is a minute. */
 export function formatRideMinutes(minutes: number): string {
-  const rounded = Math.max(1, Math.round(minutes));
-  if (rounded < 60) return `${rounded} min`;
-  const hours = Math.floor(rounded / 60);
-  const rest = rounded % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
-}
-
-/**
- * The ride time a distance implies at the stated pace, to the quarter hour.
- * A distance nobody measured has no estimate rather than a made-up number.
- */
-export function estimatedRideMinutes(distanceKm: number | null | undefined): number | null {
-  if (distanceKm === undefined || distanceKm === null || !Number.isFinite(distanceKm) || distanceKm <= 0) {
-    return null;
-  }
-  const minutes = ((distanceKm / 1.609344) / RIDE_TIME_PACE_MPH) * 60;
-  return Math.max(RIDE_TIME_STEP_MINUTES, Math.round(minutes / RIDE_TIME_STEP_MINUTES) * RIDE_TIME_STEP_MINUTES);
+  return formatWholeMinutes(Math.max(1, minutes));
 }
 
 export interface RideFactsInput {

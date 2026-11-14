@@ -1,0 +1,67 @@
+{
+ "id": "pa-pa-151-south-heights-hookstown",
+ "name": "PA 151: South Heights to Hookstown",
+ "states": [
+  "PA"
+ ],
+ "lane": "paved-twisty",
+ "lanes_secondary": [],
+ "source": {
+  "name": "BestBikingRoads",
+  "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/pennsylvania/ride/pa-151-south-heights-hookstown",
+  "fetched_via": "scrapling-fetcher"
+ },
+ "author_credit": {
+  "author": "PenDutch",
+  "credit_line": "Track by PenDutch via BestBikingRoads (Dec 7, 2010)"
+ },
+ "terms": {
+  "quote": "Best Biking Roads - All the Best Motorcycle Rides : Please Credit us and help support our project",
+  "terms_url": "https://www.bestbikingroads.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T12:27:31Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BestBikingRoads — contact via https://www.bestbikingroads.com/ (site contact page; credit required)",
+  "permission_notes": "BBR GPX carries a credit line in its metadata; the site asks for credit and support. Re-hosting permission not confirmed — needs-permission."
+ },
+ "value_score": 4,
+ "value_reason": "BBR 4.0/5; 17.8 km measured from the track; Rural roads. PA 151: South Heights to Hookstown.",
+ "summary": "18 km run — PA 151: South Heights to Hookstown — on rural roads.",
+ "scraped_at": "2026-11-13T12:27:31Z",
+ "last_verified": "2026-11-13T12:27:31Z",
+ "scraper": {
+  "adapter": "bestbikingroads",
+  "query": "BestBikingRoads Pennsylvania index + county bundle pages — full enumeration",
+  "notes": "terms_source: GPX metadata <link><text> credit line, grep-verified in the local file (BBR-shaped GPX, creator MapSource 6.16.3). BBR 4.0/5; page length 18 km; measured 17.8 km from <trkpt>s. Author PenDutch, Dec 7, 2010. [fixture: GPX trimmed to 269 points]"
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "surface_claim_source": "BestBikingRoads route page",
+  "difficulty": "unknown",
+  "seasonality": "unknown",
+  "permits": "none stated"
+ },
+ "gpx": {
+  "availability": "hosted",
+  "local_file": "pa-pa-151-south-heights-hookstown.gpx",
+  "download_url": "https://www.bestbikingroads.com/downloadfile.php?code2=f8cd24",
+  "distance_km": 17.77,
+  "points": 269,
+  "bounds": {
+   "west": -80.439,
+   "south": 40.5429,
+   "east": -80.2714,
+   "north": 40.5693
+  },
+  "elevation_gain_m": null,
+  "sha256": "e9b49fd5d945e13f2734ba5183399f3986e06a1d79cb20099b5765cd69312545",
+  "requires_login": false,
+  "track_names": [
+   "PA151Sou"
+  ],
+  "track_vintage": "2010"
+ }
+}

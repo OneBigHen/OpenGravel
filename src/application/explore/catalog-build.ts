@@ -1,3 +1,4 @@
+import type { RideCredit } from "@/domain/ride/credit";
 import type { Coordinate } from "@/domain/ride/types";
 import type { CatalogRideStory } from "@/application/explore/ride-story";
 
@@ -7,6 +8,8 @@ export interface CatalogBuildInput {
   readonly sourceProject?: string;
   readonly sourceFile?: string;
   readonly author?: string;
+  /** Link to the original post or page this route came from, when there is one. */
+  readonly sourceUrl?: string;
   readonly license?: string;
   readonly redistribution?: string;
   readonly gpx: string;
@@ -34,6 +37,8 @@ export interface CatalogBuildRecord {
   readonly geometry: readonly Coordinate[];
   readonly geometryPolyline: string;
   readonly provenance: string;
+  /** Who made the route and where it was shared; "unknown" author is `null`, never guessed. */
+  readonly credit: RideCredit;
   readonly provenanceDetail: string;
   readonly evidenceNote: string;
   readonly surfaceSummary?: string;
@@ -59,9 +64,13 @@ function encodePolylineValue(value: number): string {
   return encoded + String.fromCharCode(remaining + 63);
 }
 
-/** Encodes a route line at six decimal places (about 0.11 m per latitude unit). */
-export function encodeCatalogPolyline(points: readonly Coordinate[]): string {
-  const scale = 10 ** POLYLINE_PRECISION;
+/**
+ * Encodes a route line at six decimal places (about 0.11 m per latitude unit).
+ * The national ride library passes 5 (about 1.1 m), which its pack uses for
+ * every stored line.
+ */
+export function encodeCatalogPolyline(points: readonly Coordinate[], precision: number = POLYLINE_PRECISION): string {
+  const scale = 10 ** precision;
   let previousLatitude = 0;
   let previousLongitude = 0;
   let encoded = "";
@@ -77,8 +86,8 @@ export function encodeCatalogPolyline(points: readonly Coordinate[]): string {
 }
 
 /** Decodes a catalog polyline without browser or provider dependencies. */
-export function decodeCatalogPolyline(encoded: string): Coordinate[] {
-  const scale = 10 ** POLYLINE_PRECISION;
+export function decodeCatalogPolyline(encoded: string, precision: number = POLYLINE_PRECISION): Coordinate[] {
+  const scale = 10 ** precision;
   let index = 0;
   let latitude = 0;
   let longitude = 0;
@@ -362,6 +371,11 @@ export function buildCatalogRecords(inputs: readonly CatalogBuildInput[]): reado
       geometry: preview(fullGeometry),
       geometryPolyline: encodeCatalogPolyline(fullGeometry),
       provenance,
+      credit: {
+        author: title.author || input.story?.sharedBy?.trim() || null,
+        sourceName: input.story?.source.name ?? title.site ?? input.sourceProject?.trim() ?? "Unknown source",
+        ...(input.sourceUrl ?? input.story?.source.url ? { sourceUrl: (input.sourceUrl ?? input.story?.source.url)! } : {}),
+      },
       provenanceDetail,
       evidenceNote: input.evidenceNote ?? "Road surface and curvature have not been measured for this catalog route.",
       ...(input.surfaceSummary === undefined ? {} : { surfaceSummary: input.surfaceSummary }),

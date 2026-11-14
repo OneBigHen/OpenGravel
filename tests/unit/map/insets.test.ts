@@ -212,6 +212,19 @@ describe("computeInsets", () => {
     expect(insets.bottom).toBe(232 + 24);
   });
 
+  it("adds room at the bottom only for a pin drawn above its point (PF-4)", () => {
+    const insets = computeInsets(phoneInput({ gutter: 28, extraBottom: 20 }));
+    expect(insets.top).toBe(52 + 28);
+    expect(insets.left).toBe(28);
+    expect(insets.right).toBe(28);
+    expect(insets.bottom).toBe(232 + 28 + 20);
+  });
+
+  it("still clamps when the pin room would leave no map", () => {
+    const insets = computeInsets(phoneInput({ dock: { top: 120, left: 0, width: 390, height: 724 }, extraBottom: 20 }));
+    expect(PHONE.height - insets.top - insets.bottom).toBeGreaterThanOrEqual(MIN_VISIBLE_MAP_PX);
+  });
+
   it("measures a DOMRect without losing the origin", () => {
     const measured = toRect({ top: 612.5, left: 0, width: 390, height: 231.5 });
     expect(measured).toEqual({ top: 612.5, left: 0, width: 390, height: 231.5 });

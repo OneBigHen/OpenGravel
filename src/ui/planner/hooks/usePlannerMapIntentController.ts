@@ -11,6 +11,8 @@ import type { MapIntent, MapObjectRef } from "@/application/map/types";
 import type { Coordinate } from "@/domain/ride/types";
 import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
+import { autoPeekDetent, textFieldFocused } from "@/ui/planner/auto-peek";
+import { isCompactViewport } from "@/ui/planner/usePhonePlanner";
 
 const CLEARS_CHANGED_SPAN: ReadonlySet<MapIntent["type"]> = new Set([
   "map-click",
@@ -97,6 +99,17 @@ export function usePlannerMapIntentController(input: {
 
       if (intent.type === "camera-changed") {
         ui.setCameraUserOwned(true);
+        // PF-2: a drag or pinch at half hands the map back (the sheet drops to peek).
+        const session = planningSessionStore.getState().snapshot;
+        const next = autoPeekDetent({
+          detent: ui.sheetDetent,
+          compact: isCompactViewport(),
+          hasRide: (session.committedBundle ?? session.lastGoodBundle) !== null,
+          panning: ui.activeTool === "pan",
+          typing: typeof document !== "undefined" && textFieldFocused(document.activeElement),
+          placeOpen: typeof document !== "undefined" && document.querySelector(".og-planner__sheet[data-place=\"true\"]") !== null,
+        });
+        if (next !== null) ui.setSheetDetent(next);
         return;
       }
 

@@ -143,6 +143,12 @@ describe("speed.current", () => {
     expect(noFix).toMatchObject({ state: "waiting", displayValue: NO_VALUE });
     const noSpeed = read("speed.current", { position: { ...context().position, speedMps: null } });
     expect(noSpeed).toMatchObject({ state: "waiting", displayValue: NO_VALUE });
+    // OG-20: the dash still says what it will be in, never a bare dash.
+    expect(noFix.unit).toBe("mph");
+    expect(noSpeed.unit).toBe("mph");
+    expect(read("speed.current", { units: "metric", position: { ...context().position, speedMps: null } }).unit).toBe("km/h");
+    const expired = read("speed.current", { position: { ...context().position, observedAtMs: NOW_MS - 16_000 } });
+    expect(expired).toMatchObject({ displayValue: NO_VALUE, unit: "mph" });
   });
 
   it("holds an ageing value as stale, then expires it to a dash", () => {

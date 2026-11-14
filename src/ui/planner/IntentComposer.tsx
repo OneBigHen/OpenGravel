@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useActivityMode } from "@/ui/stores/activity-mode";
 
 /**
@@ -37,6 +37,7 @@ import {
   type RideStyleControlsModel,
 } from "@/ui/planner/RideStyleControls";
 import {
+  DISABLED_IN_FLIGHT,
   DISABLED_MISSING_FINISH,
   DISABLED_MISSING_START,
   NO_FINISH_LABEL,
@@ -73,6 +74,29 @@ const MAP_UNAVAILABLE_FALLBACK =
   "The map didn't load, so points can't be placed on it until it comes back. Retry the map.";
 const MAP_UNAVAILABLE_WITH_SEARCH =
   "The map didn't load, so points can't be placed on it until it comes back. Search for a place, or retry the map.";
+
+/** After this long the progress line says it is still looking, and that Cancel works. */
+export const SLOW_PLAN_NOTICE_SECONDS = 8;
+
+/**
+ * How long the current attempt has been looking, ticking once a second (OG-01):
+ * a stalled request must never look like a frozen screen. Mounted only while a
+ * plan is in flight, so each attempt counts from zero.
+ */
+function PlanElapsed() {
+  const [started] = useState(() => Date.now());
+  const [now, setNow] = useState(started);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const elapsed = Math.max(0, Math.floor((now - started) / 1000));
+  return (
+    <span className="og-composer__elapsed" data-testid="plan-elapsed">
+      {elapsed >= SLOW_PLAN_NOTICE_SECONDS ? ` Still looking · ${elapsed} s. You can cancel.` : ` ${elapsed} s`}
+    </span>
+  );
+}
 
 /** One reading of why the commitment is blocked, shared by the button and its chips. */
 function commitmentState(
@@ -145,6 +169,8 @@ export function PlanCommitment({
     mapUnavailableReason,
     placeSearch !== undefined,
   );
+  // OG-01: a ride on its way shows motion and how long it has been looking.
+  const inFlight = disabledReason === DISABLED_IN_FLIGHT;
   return (
     <div className="og-composer__commitment" data-current={viewModel.planIsCurrent ? "true" : "false"}>
       <div className="og-composer__commitment-actions">
@@ -159,8 +185,10 @@ export function PlanCommitment({
             data-testid="compose-create"
             disabled={!viewModel.canPlan}
             {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
+            {...(inFlight ? { "aria-busy": true, "data-busy": "true" } : {})}
             onClick={onPlan}
           >
+            {inFlight ? <span className="og-composer__spinner" aria-hidden="true" /> : null}
             {planLabel}
           </button>
         ) : null}
@@ -195,6 +223,7 @@ export function PlanCommitment({
           data-testid="plan-disabled-reason"
         >
           {disabledReason}
+          {inFlight ? <PlanElapsed /> : null}
         </p>
       )}
 
@@ -631,7 +660,7 @@ export function IntentComposer({
           type="button"
           className="og-chip og-composer__loop-quick"
           data-testid="loop-near-me"
-          aria-label={hasStart ? "Loop from here, then choose the ride time" : "Loop near me, then choose the ride time"}
+          aria-label={hasStart ? "Plan a loop from here" : "Plan a loop near me"}
           onClick={() => shapeModel.actions.setShape("loop")}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

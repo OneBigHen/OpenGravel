@@ -73,31 +73,22 @@ describe("the travelled line", () => {
     expect(layer.filter).toEqual(["==", ["get", "state"], "travelled"]);
   });
 
-  it("is dim Topo Sage with no casing and a flat 5 px, so the road ahead stays heaviest", () => {
+  it("is flat grey at 55% (PF-7), the same width as the line ahead, with no casing", () => {
     const layer = byId(MAP_LAYER_IDS.routeTravelled);
     const aheadLayer = byId(MAP_LAYER_IDS.routeSelected);
 
-    expect(layer.paint?.["line-color"]).toBe(DEFAULT_MAP_PALETTE.topoSage);
-    expect(layer.paint?.["line-width"]).toBe(5);
+    expect(layer.paint?.["line-color"]).toBe("#68716f");
+    expect(layer.paint?.["line-width"]).toEqual(aheadLayer.paint?.["line-width"]);
     expect(layer.paint?.["line-dasharray"]).toBeUndefined();
-    expect(layer.paint?.["line-opacity"]).toBe(0.5);
-    // The ahead line still grows with zoom from a heavier base, so it always
-    // reads as the line being followed.
-    const widths = aheadLayer.paint?.["line-width"] as unknown[];
-    expect(widths[0]).toBe("interpolate");
-    expect(Number(widths[4])).toBeGreaterThan(5);
-    expect(Number(widths.at(-1))).toBeGreaterThan(5);
+    expect(layer.paint?.["line-opacity"]).toBe(0.55);
   });
 
-  it("lifts to 0.62 on the brighter Day ride map and stays 0.5 at Night", () => {
+  it("holds 0.55 on Day and Night alike", () => {
     const day: MapPalette = { ...DEFAULT_MAP_PALETTE, routeCasing: "#1d0b05", emphasis: "1.25" };
     const opacity = (palette: MapPalette): unknown =>
-      routeLayers(palette).find((layer) => layer.id === MAP_LAYER_IDS.routeTravelled)?.paint?.[
-        "line-opacity"
-      ];
-
-    expect(opacity(day)).toBe(0.62);
-    expect(opacity(DEFAULT_MAP_PALETTE)).toBe(0.5);
+      routeLayers(palette).find((layer) => layer.id === MAP_LAYER_IDS.routeTravelled)?.paint?.["line-opacity"];
+    expect(opacity(day)).toBe(0.55);
+    expect(opacity(DEFAULT_MAP_PALETTE)).toBe(0.55);
   });
 
   it("is drawn under the selected route's casing and core", () => {

@@ -45,6 +45,8 @@ export interface RideGlanceInput {
   readonly failed: boolean;
   /** A plan is in flight: the metrics read as "still measuring". */
   readonly planning: boolean;
+  /** A new answer is being found: the pill measures again rather than show old numbers (OG-05). */
+  readonly computing?: boolean;
   /** Ask again for this revision — the composer's own plan command. */
   readonly onRetry: () => void;
   readonly plannerUiStore: PlannerUiStore;
@@ -60,7 +62,7 @@ export interface RideGlanceController {
 const NO_LINE: readonly Coordinate[] = [];
 
 export function useRideGlance(input: RideGlanceInput): RideGlanceController {
-  const { cards, route, elevationSource, failed, planning, onRetry, plannerUiStore } = input;
+  const { cards, route, elevationSource, failed, planning, computing = false, onRetry, plannerUiStore } = input;
   /** The ride the rider is looking at: the selected card, never a guess at another. */
   const card = useMemo(
     () => cards.find((entry) => entry.isSelected) ?? cards[0] ?? null,
@@ -91,6 +93,7 @@ export function useRideGlance(input: RideGlanceInput): RideGlanceController {
       placement={placement}
       summary={summary}
       planning={planning}
+      computing={computing}
       failed={failed}
       onOpenRide={onOpenRide}
       onRetry={onRetry}

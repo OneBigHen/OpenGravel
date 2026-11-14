@@ -24,7 +24,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_MAP_EXTENT, sceneExtent } from "@/application/map/build-map-scene";
 import type { MapScene } from "@/application/map/types";
 import { asRouteCandidateId } from "@/domain/route/ids";
-import { PlannerMap } from "@/ui/map/PlannerMap";
+import { MAP_SLOW_LABEL, MAP_SLOW_MS, PlannerMap } from "@/ui/map/PlannerMap";
 import {
   createStubMapHostFactory,
   type StubMapHostFactory,
@@ -114,6 +114,33 @@ describe("the map surface", () => {
     // 04 §9: a plan in flight keeps the previous route and marks it as stale.
     await renderMap({ dimmed: true });
     expect(screen.getByTestId("map-host")).toHaveAttribute("data-dimmed", "true");
+  });
+});
+
+describe("the loading card (OG-26)", () => {
+  it("says the map is slow instead of sitting on \"Loading map…\" forever", async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <PlannerMap
+          scene={scene()}
+          onIntent={vi.fn() as never}
+          hostFactory={createStubMapHostFactory().factory}
+          activeTool="pan"
+        />,
+      );
+      const veil = screen.getByTestId("map-veil");
+      expect(veil).toHaveTextContent("Loading map…");
+      act(() => { vi.advanceTimersByTime(MAP_SLOW_MS - 1); });
+      expect(veil).toHaveTextContent("Loading map…");
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(veil).toHaveTextContent(MAP_SLOW_LABEL);
+      expect(veil.querySelector(".og-map__veil-label")).toHaveAttribute("data-slow", "true");
+      expect(MAP_SLOW_LABEL).toMatch(/your ride is safe/);
+      expect(cssRule('.og-map__veil-label[data-slow="true"]')).toMatch(/animation:\s*none/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

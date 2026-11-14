@@ -344,8 +344,8 @@
 /* Phones: Google's slimmer sheet head and the directions view's sizes. */
 @media (max-width: 760px) and (min-height: 501px) {
   .og-planner .og-planner__sheet button.og-sheet__handle {
-    height: 24px;
-    min-height: 24px;
+    height: 32px;
+    min-height: 32px;
   }
 
   /* 24px plus a 12px lip over the rounded edge; the map keeps the rest. */
@@ -354,7 +354,7 @@
   }
 
   .og-planner .og-planner__sheet .og-sheet__handle::before {
-    top: 10px;
+    top: 12px;
   }
 
   /* The body scrolls only in the full sheet; below that a vertical drag
@@ -412,21 +412,16 @@
   right: 0;
   display: grid;
   place-items: center;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  min-height: 36px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: 50%;
   background: var(--og-glass-well);
   color: var(--og-ink);
 }
 
-/* The 36px disc keeps a 48px target. */
-.og-planner .og-place-sheet .og-place-sheet__close::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-}
+/* A 44x44 disc (PF-6): the whole disc is the target. */
 
 .og-planner .og-place-sheet .og-place-sheet__actions {
   flex-wrap: nowrap;
@@ -734,5 +729,40 @@
   .og-planner:has(.og-planner__sheet[data-idle="true"][data-detent="peek"]) .og-planner__nav-shell {
     border-top: 0;
     background: color-mix(in srgb, var(--og-surface) 97%, transparent);
+  }
+}
+
+/* PF-3: once a ride is drawn the card is one 52px glass pill (Your location >
+   Destination, swap, close) and the map's button column starts under it. */
+@media (max-width: 1180px) {
+  .og-trip[data-compact="true"] {
+    padding: 0 var(--og-space-1) 0 0;
+    height: 52px;
+    border-radius: var(--og-radius-pill);
+    gap: 0;
+  }
+  .og-trip[data-compact="true"] .og-trip__lines.og-trip__one {
+    display: flex;
+    align-items: center;
+    gap: var(--og-space-2);
+    height: 100%;
+    padding: 0 var(--og-space-2) 0 var(--og-space-4);
+    border-radius: var(--og-radius-pill);
+    font-size: var(--og-text-body);
+    font-weight: 600;
+  }
+  .og-trip[data-compact="true"] .og-trip__label { flex: 0 1 auto; min-width: 0; }
+  .og-trip[data-compact="true"] .og-trip__label--finish { flex: 1 1 0; }
+  .og-trip[data-compact="true"] .og-trip__label--start { color: var(--og-primary-text); max-width: 50%; }
+  .og-trip[data-compact="true"] .og-trip__arrow { flex: none; color: var(--og-ink-2); }
+  .og-trip[data-compact="true"] .og-trip__tools { flex-direction: row; }
+  .og-trip[data-compact="true"] .og-trip__tool { width: 44px; height: 44px; }
+}
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner[data-trip="true"]:has(.og-trip[data-compact="true"]) .og-planner__map-slot .og-layers {
+    top: calc(var(--og-safe-top) + 76px);
+  }
+  .og-planner[data-trip="true"]:has(.og-trip[data-compact="true"]) .og-planner__map-slot .og-map__cluster {
+    top: calc(var(--og-safe-top) + 132px);
   }
 }

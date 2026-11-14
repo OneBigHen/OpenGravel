@@ -100,6 +100,7 @@ function view(input: {
   readonly environment?: RideFocusEnvironmentSnapshot;
   readonly telemetry?: Parameters<typeof buildRideFocusViewModel>[0]["telemetry"];
   readonly recordingSummary?: RecordingSummary | null;
+  readonly recordingTelemetry?: Parameters<typeof buildRideFocusViewModel>[0]["recordingTelemetry"];
   readonly recordingStatus?: Parameters<typeof buildRideFocusViewModel>[0]["recordingStatus"];
   readonly bufferedRecordingPointCount?: number;
   readonly recordingLibraryCommitted?: Parameters<typeof buildRideFocusViewModel>[0]["recordingLibraryCommitted"];
@@ -118,6 +119,7 @@ function view(input: {
     environment: input.environment ?? environment(),
     telemetry: input.telemetry ?? null,
     recordingSummary: input.recordingSummary,
+    recordingTelemetry: input.recordingTelemetry,
     recordingStatus: input.recordingStatus,
     bufferedRecordingPointCount: input.bufferedRecordingPointCount,
     recordingLibraryCommitted: input.recordingLibraryCommitted,
@@ -363,6 +365,43 @@ describe("maneuver copy (08 §2, §6)", () => {
       saveWarningText: null,
       canRetrySave: false,
     });
+  });
+
+  it("reports the filtered average, not a GPS jump, in the ride menu (QA-17)", () => {
+    const recordingId = asRecordingId("rec_jump_hud");
+    const { recording } = view({
+      navigation: navigation({
+        activity: "free",
+        plan: { rideId: newRideId(), rideRevision: 0, route: null },
+        recordingId,
+      }),
+      // The raw trace says 41 km in 2 minutes (249 mph) because a simulated
+      // 51-mile jump is in it. The filtered telemetry dropped the jump.
+      recordingSummary: {
+        distanceMeters: 41_000,
+        elapsedSeconds: 240,
+        movingSeconds: 120,
+        pointCount: 30,
+      },
+      recordingTelemetry: {
+        acceptedDistanceMeters: 900,
+        movingMs: 90_000,
+        maxSpeedMps: null,
+        movement: "moving",
+        movingSinceMs: null,
+        lastSampleAtMs: null,
+        elevation: { currentMeters: null, sampledAtMs: null, gainMeters: 0, lossMeters: 0, sampleCount: 0 },
+        rejected: { poorAccuracy: 0, jumps: 1, speedSpikes: 0, verticalJumps: 0 },
+      },
+      now: NOW,
+    });
+
+    expect(recording?.averageSpeedText).toBe("22 mph");
+    expect(recording?.averageSpeedText).not.toBe("249 mph");
+    // Distance and moving time are the same filtered facts, so the three
+    // numbers in the menu agree with each other.
+    expect(recording?.distanceText).toBe("0.6 mi");
+    expect(recording?.movingTimeText).toBe("1:30");
   });
 
   it("speaks the recording's elapsed time in hours, minutes and seconds", () => {

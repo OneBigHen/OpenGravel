@@ -20,12 +20,9 @@
  */
 
 import type { WeatherForecastPeriod } from "@/application/preparation/providers";
+import { estimatedRideMinutes } from "./ride-time-estimate";
 import type { CatalogEntry } from "./catalog";
 import { distanceToStartKm } from "./query";
-
-/** The same pace the Explore cards estimate an unstated ride time at. */
-const RIDE_TIME_PACE_MPH = 28;
-const RIDE_TIME_STEP_MINUTES = 15;
 
 const KM_PER_MILE = 1.609344;
 
@@ -189,18 +186,11 @@ function isTwisty(entry: CatalogEntry): boolean {
     && !/few curves|unknown|not measured/i.test(entry.curvatureSummary);
 }
 
-/** The ride time a distance implies at the card's pace, to the quarter hour. */
-function estimatedMinutes(distanceKm: number | null): number | null {
-  if (distanceKm === null || !Number.isFinite(distanceKm) || distanceKm <= 0) return null;
-  const miles = distanceKm / KM_PER_MILE;
-  const minutes = (miles / RIDE_TIME_PACE_MPH) * 60;
-  return Math.max(RIDE_TIME_STEP_MINUTES, Math.round(minutes / RIDE_TIME_STEP_MINUTES) * RIDE_TIME_STEP_MINUTES);
-}
-
+/** The ride time a distance implies, at the one pace the app states. */
 function rideMinutes(entry: CatalogEntry): { readonly minutes: number; readonly estimated: boolean } | null {
   const stated = entry.estimatedTimeMinutes;
   if (typeof stated === "number" && Number.isFinite(stated) && stated > 0) return { minutes: stated, estimated: false };
-  const estimate = estimatedMinutes(entry.distanceKm);
+  const estimate = estimatedRideMinutes(entry.distanceKm);
   return estimate === null ? null : { minutes: estimate, estimated: true };
 }
 

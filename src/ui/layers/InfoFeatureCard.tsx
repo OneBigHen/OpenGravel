@@ -9,6 +9,7 @@
  * its two via points are handed to the host, which adds them as stops.
  */
 
+import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import { useState } from "react";
 
 import {
@@ -99,12 +100,15 @@ export function InfoFeatureCard({
           </div>
         </dl>
       )}
+      {ride === null ? null : <RideCreditLine credit={ride.credit} />}
       {feature.media === undefined || feature.media === null ? null : (
         <InfoFeatureMedia media={feature.media} name={feature.name} />
       )}
-      <p className="og-info-card__source">
-        {layer.source}. {layer.caveat}
-      </p>
+      {feature.layerId === "contours" ? null : (
+        <p className="og-info-card__source">
+          {layer.source}. {layer.caveat}
+        </p>
+      )}
       {ride === null || onRideThisRoute === undefined ? null : (
         <div className="og-info-card__actions">
           <button

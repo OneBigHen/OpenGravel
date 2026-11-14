@@ -30,6 +30,7 @@
 import { RideTruthLines } from "./RideTruthLines";
 import { useState, type ReactNode } from "react";
 
+import { alternativeColorIndex } from "@/application/map/route-colors";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import type { EvidenceStatus } from "@/domain/evidence/types";
@@ -72,6 +73,23 @@ function isUnknownLabel(label: string | null | undefined): boolean {
 }
 
 /**
+ * The sentences a ride's plan states about itself (a basic route, a final
+ * approach), in the ride's own words.
+ *
+ * Rendered where the chosen ride is: under the ride choices, and in the phone
+ * directions view, which shows the summary alone — so without it here the rider
+ * is never told their ride is a basic route.
+ */
+export function RoutePlanNotices({ card }: { readonly card?: RouteCardVm | undefined }) {
+  if (card?.notices === undefined) return null;
+  return <>{card.notices.map(message => (
+    <p className="og-route-choices__note" role="status" data-testid="route-plan-notice" key={message}>
+      {message}
+    </p>
+  ))}</>;
+}
+
+/**
  * The route list. Surface uncertainty is on each card's own badge; the only
  * list-wide note is why traffic is shown for the selected ride alone.
  */
@@ -97,11 +115,7 @@ export function RouteChoices({
       <ul className="og-route-list" data-testid="route-list">
         {children}
       </ul>
-      {cards.find(card => card.isSelected)?.notices?.map(message => (
-        <p className="og-route-choices__note" role="status" data-testid="route-plan-notice" key={message}>
-          {message}
-        </p>
-      ))}
+      <RoutePlanNotices card={cards.find(card => card.isSelected)} />
       {trafficNote === null ? null : (
         <p className="og-route-choices__note" data-testid="route-traffic-note">
           {trafficNote}
@@ -198,6 +212,7 @@ export function RouteDecisionCard({
   if (compact) return <li>
     <button type="button" className="og-phone-choice" data-testid={`route-option-${card.roleKey}`}
       data-role={card.roleKey} data-tint={card.tint ?? 0} data-selected={card.isSelected ? "true" : "false"}
+      data-line-color={card.isSelected ? "selected" : alternativeColorIndex(card.tint)}
       aria-pressed={card.isSelected} onClick={() => onSelect(card.routeId)}>
       <span className="og-phone-choice__swatch" aria-hidden="true" />
       <span className="og-phone-choice__body">

@@ -126,6 +126,8 @@ import {
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
 import { scaleOpacity } from "@/infrastructure/map/maplibre/scale-opacity";
+import { type RoadOpacityEntry, basemapRoadChanges, basemapRoadOpacityFactor, rideFocusChanges } from "@/infrastructure/map/maplibre/ride-focus-dim";
+import { routeLineAnchorId, routeLineBelowRoads } from "@/infrastructure/map/maplibre/route-anchor";
 import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
 import { createWindArrowImages } from "@/infrastructure/map/maplibre/wind-arrow-image";
@@ -139,6 +141,7 @@ import {
   nightScrimLayer,
   osmBasemapStyle,
   overlayLayers,
+  placeLayers,
   readMapPalette,
   routeLayers as styleRouteLayers,
   type MapStyleSpec,
@@ -183,7 +186,7 @@ const CONTROL_CAMERA_DURATION_MS = 220;
 /** One fix a second: the follow camera glides from one to the next. */
 const FOLLOW_DURATION_MS = 950;
 /** Where the rider sits in the open map, from its top: low, to show the road ahead. */
-const FOLLOW_RIDER_HEIGHT = 0.8;
+const FOLLOW_RIDER_HEIGHT = 0.78;
 /** How often a following camera reports its viewport to what loads for it. */
 const FOLLOW_VIEWPORT_MS = 8_000;
 /** A press that moves this far over a following map is the rider panning. */
@@ -306,6 +309,13 @@ export const MAP_ATTEMPT_CLASS = "og-map__attempt";
 export const BOOT_WATCHDOG_MS = 15_000;
 
 /**
+ * How long after the first map data the "Loading map…" veil waits for the map
+ * to settle before it lifts anyway (OG-26). The map is drawing by then; a tile
+ * still on its way must not hide the whole map behind a loading card.
+ */
+export const PAINT_FALLBACK_MS = 3_000;
+
+/**
  * How long the tiles may starve after `style.load` before the load is a failure
  * (4.0s; 05 §22).
  *
@@ -404,7 +414,12 @@ interface MapLibreMap {
   remove(): void;
   isStyleLoaded?(): boolean;
   loaded?(): boolean;
-  dragPan?: { enable(): void; disable(): void };
+  dragPan?: {
+    enable(): void;
+    disable(): void;
+    /** MapLibre's touch half of drag-pan; enabled alone, two-finger only, while drawing. */
+    _touchPan?: TwoFingerCapableTouchPan;
+  };
   boxZoom?: { enable(): void; disable(): void };
   doubleClickZoom?: { enable(): void; disable(): void };
 }
@@ -416,6 +431,16 @@ const PIN_HOLD_MS = 300;
 const GESTURE_QUIET_MS = 300;
 /** How far from the selected route line a press still picks it up. */
 const ROUTE_GRAB_RADIUS_PX = 9;
+/**
+ * How far from another choice's line or tag a tap still picks that ride (PF-8):
+ * a glove misses a 5px line by more than its width.
+ */
+const CHOICE_TAP_RADII_PX = [6, 12, 20] as const;
+const CHOICE_TAP_LAYER_IDS: readonly string[] = [
+  MAP_LAYER_IDS.routeLabel,
+  MAP_LAYER_IDS.routeAlternative,
+  MAP_LAYER_IDS.routeAlternativeCasing,
+];
 const GRAB_POINT_LAYER_IDS: readonly string[] = [
   MAP_LAYER_IDS.pointStart,
   MAP_LAYER_IDS.pointFinish,
@@ -469,6 +494,11 @@ export function routeDetailVisible(tool: PointerTool): boolean {
 /** The basemap's first label layer (never one of ours), or `undefined`. */
 function firstBasemapLabelId(map: MapLibreMap): string | undefined {
   return map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol" && !layer.id.startsWith("ogv-"))?.id;
+}
+
+/** Where the ride's lines go: above the basemap's roads, under its labels (PF-1). */
+function routeLineAnchor(map: MapLibreMap): string | undefined {
+  return routeLineAnchorId(map.getStyle?.()?.layers ?? []);
 }
 
 /**
@@ -589,6 +619,31 @@ function rememberMapboxRefusal(): void {
 const claimedContainers = new WeakMap<HTMLElement, { dispose(): void }>();
 
 /** Which pointer tools need the map's own drag gestures switched off. */
+/** The part of MapLibre's `TouchPanHandler` the drawing tool reconfigures. */
+interface TwoFingerCapableTouchPan {
+  enable(): void;
+  disable(): void;
+  _shouldBePrevented?: (touchesCount: number) => boolean;
+}
+
+/**
+ * OG-03: with the pen armed one finger draws, so the map moved only by pinching
+ * and a rider who tried to look around drew strokes that were snapped into new
+ * routes. While drawing, two fingers pan the map: MapLibre's own touch pan is
+ * enabled on its own, told to ignore a single finger (the rule its cooperative
+ * gestures use, without their overlay). The mouse still draws.
+ */
+function setTwoFingerTouchPan(touchPan: TwoFingerCapableTouchPan | undefined, on: boolean): void {
+  if (touchPan === undefined) return;
+  if (on) {
+    touchPan._shouldBePrevented = (touchesCount: number): boolean => touchesCount < 2;
+    touchPan.enable();
+  } else {
+    // Back to the prototype's rule (one finger pans with the pan tool).
+    delete touchPan._shouldBePrevented;
+  }
+}
+
 function needsNativeGestures(tool: PointerTool): boolean {
   return tool === "pan";
 }
@@ -763,6 +818,8 @@ interface HostAttempt {
   readonly openedWhereItWas: boolean;
   /** The bounded boot/starvation watchdog for this attempt, or `null`. */
   watchdog: ReturnType<typeof setTimeout> | null;
+  /** Lifts the "Loading map…" veil once data has flowed for a while (OG-26). */
+  paintFallback: ReturnType<typeof setTimeout> | null;
 }
 
 /**
@@ -883,11 +940,18 @@ export async function createMapLibreHost(
   let booting = false;
 
   let palette = readMapPalette(container);
-  const placePillImages = createPlacePillImages(palette);
-  const puckImage = createPuckImage(palette);
+  /**
+   * The image set that carries theme colours (the place pills' paper fill, the
+   * rider's arrow, the wind bands). It is rebuilt whenever the palette changes,
+   * because a Day/Night switch repaints the *text* from the new palette while a
+   * stale pill image would keep the old theme's fill — which is how a day map
+   * showed black event boxes with dark text on them (QA-05).
+   */
+  let placePillImages = createPlacePillImages(palette);
+  let puckImage = createPuckImage(palette);
   const markerImages = [...createMarkerImages(), ...createSearchPinImages()];
   /** One arrow image per wind strength band (map-experience wave 3, item 13). */
-  const windArrowImages = createWindArrowImages(palette);
+  let windArrowImages = createWindArrowImages(palette);
   const searchLabelImages = new WeakMap<MapLibreMap, Set<string>>();
   /**
    * Which tone the route arrow image in the current renderer was drawn in.
@@ -1205,6 +1269,7 @@ export async function createMapLibreHost(
     changedSpan: 0,
     position: "none",
     surface: 0,
+    line: "none",
   };
 
   function writeSceneAttribute(): void {
@@ -1224,8 +1289,18 @@ export async function createMapLibreHost(
         `changedSpan:${sceneReport.changedSpan}`,
         `position:${sceneReport.position}`,
         `surface:${sceneReport.surface}`,
+        `line:${sceneReport.line}`,
       ].join(","),
     );
+  }
+
+  function lineFingerprint(geometry: readonly { readonly lon: number; readonly lat: number }[]): string {
+    let hash = 0;
+    for (const point of geometry) {
+      hash = (hash * 31 + Math.round(point.lon * 1e5)) | 0;
+      hash = (hash * 31 + Math.round(point.lat * 1e5)) | 0;
+    }
+    return `${geometry.length}-${(hash >>> 0).toString(36)}`;
   }
 
   function publishScene(scene: MapScene): void {
@@ -1256,6 +1331,9 @@ export async function createMapLibreHost(
       // gate can assert the band without reading pixels. An `unknown` run draws
       // nothing, so it is not counted as drawn.
       surface: selected?.surface?.filter((run) => run.kind !== "unknown").length ?? 0,
+      // OG-03: a fingerprint of the selected line's own coordinates, so a gate can
+      // prove panning and zooming redraw the same route rather than a new one.
+      line: selected === undefined ? "none" : lineFingerprint(selected.geometry),
       // 08 §2/§4: whether a present position is drawn, and how much of it the
       // renderer is willing to call current. A browser gate asserts the ride
       // surface's own mark without reading pixels.
@@ -1344,6 +1422,54 @@ export async function createMapLibreHost(
     } catch {
       // Cosmetic: a dimmer that cannot be added leaves the map as it was. The
       // chrome is dark either way, so nothing claims a night map that is not.
+    }
+  }
+
+  /**
+   * Re-draws the theme-coloured images and the two labels whose colours pair
+   * with them (QA-05).
+   *
+   * A Day/Night switch changes the palette and repaints the label *text* from it,
+   * but MapLibre keeps the image it already has under an id — so the place pills
+   * went on wearing the old theme's paper: at dawn that is a dark box with dark
+   * text on it. The set is rebuilt here and written onto the live map; a style
+   * reset drops the images anyway and `addOverlayLayers` re-adds this rebuilt set.
+   */
+  function refreshThemeColours(map: MapLibreMap): void {
+    palette = readMapPalette(container);
+    placePillImages = createPlacePillImages(palette);
+    puckImage = createPuckImage(palette);
+    windArrowImages = createWindArrowImages(palette);
+    const themed: readonly { readonly id: string; readonly data: PlacePillImage["data"]; readonly options: unknown }[] = [
+      ...placePillImages,
+      puckImage,
+      ...windArrowImages,
+    ];
+    for (const image of themed) {
+      if (!map.hasImage(image.id)) continue;
+      try {
+        if (map.updateImage !== undefined) {
+          map.updateImage(image.id, image.data);
+        } else if (map.removeImage !== undefined) {
+          map.removeImage(image.id);
+          map.addImage(image.id, image.data, image.options as PlacePillImage["options"]);
+        }
+      } catch {
+        recordError({ kind: "renderer", detail: `image:${image.id}` });
+      }
+    }
+    // The pill's text sits on that image, so the two must come from one palette
+    // even when the style itself is not reloaded (a downloaded basemap's look).
+    for (const layer of placeLayers(palette)) {
+      if (layer.id !== MAP_LAYER_IDS.placePill && layer.id !== MAP_LAYER_IDS.placeSelected) continue;
+      if (map.getLayer(layer.id) === undefined) continue;
+      for (const [name, value] of Object.entries(layer.paint ?? {})) {
+        try {
+          map.setPaintProperty?.(layer.id, name, value);
+        } catch {
+          recordError({ kind: "renderer", detail: layer.id });
+        }
+      }
     }
   }
 
@@ -1492,13 +1618,26 @@ export async function createMapLibreHost(
         }
         if (layer.id === MAP_LAYER_IDS.riderPosition && !puckReady) delete added["filter"];
         if (ROUTE_LINE_LAYER_IDS.has(layer.id)) {
-          map.addLayer(added as unknown as MapLibreLayerSpec, firstBasemapLabelId(map));
+          map.addLayer(added as unknown as MapLibreLayerSpec, routeLineAnchor(map));
         } else {
           map.addLayer(added as unknown as MapLibreLayerSpec);
         }
       } catch {
         failed.push(layer.id);
       }
+    }
+    // A kept style can hold route lines added under the old rule, below some of
+    // the basemap's roads: lift them to the anchor in their current order, so a
+    // casing stays under its core.
+    try {
+      const styleLayers = map.getStyle?.()?.layers ?? [];
+      const low = styleLayers.filter((layer) => ROUTE_LINE_LAYER_IDS.has(layer.id) && routeLineBelowRoads(styleLayers, layer.id));
+      if (low.length > 0) {
+        const anchor = routeLineAnchorId(styleLayers);
+        for (const layer of low) map.moveLayer(layer.id, anchor);
+      }
+    } catch {
+      // Cosmetic: the line still draws, a little lower in the stack.
     }
     // On Night contrast a light casing makes an alternative read as a highway.
     if (basemapLook === "night" && map.getLayer(MAP_LAYER_IDS.routeAlternativeCasing) !== undefined) {
@@ -1523,6 +1662,33 @@ export async function createMapLibreHost(
    * below the basemap's first label layer, so road names stay readable over
    * it, and hidden until the rider asks. Only on a Mapbox host with a token.
    */
+  /**
+   * On satellite, the basemap's street lines step back (owner, 2026-11-12:
+   * "everything is a white line"): the imagery already shows the roads, and the
+   * ride and its choices must be the brightest lines on screen. Same road-layer
+   * test as Hike's quiet roads; originals come back when satellite is off.
+   */
+  /**
+   * Phone first PF-5: while a ride is shown the streets step back on every look
+   * (to 0.6 on Day and Night, 0.25 over satellite), so the ride is the one
+   * bright line. The plan re-reads what the style holds on every call, so a
+   * reloaded style is dimmed again and Close route gives every street its own
+   * opacity back.
+   */
+  const basemapRoadEntries = new Map<string, RoadOpacityEntry>();
+  let basemapRoadsRideShown = false;
+  function applySatelliteRoads(map: MapLibreMap): void {
+    if (map.setPaintProperty === undefined) return;
+    try {
+      const factor = basemapRoadOpacityFactor({ satellite: satelliteVisible, rideShown: basemapRoadsRideShown });
+      for (const change of basemapRoadChanges(map.getStyle?.()?.layers ?? [], factor, basemapRoadEntries)) {
+        if (map.getLayer(change.id) !== undefined) map.setPaintProperty(change.id, change.property, change.value);
+      }
+    } catch {
+      // Cosmetic only: the streets stay at full strength.
+    }
+  }
+
   function addSatellite(map: MapLibreMap): void {
     if (mapboxToken === null) return;
     try {
@@ -1546,6 +1712,8 @@ export async function createMapLibreHost(
           },
           belowOverlay(map, firstLabel),
         );
+        // A fresh style: its streets are at full strength again.
+        applySatelliteRoads(map);
       }
     } catch {
       recordError({ kind: "source", detail: SATELLITE_ID });
@@ -1914,6 +2082,31 @@ export async function createMapLibreHost(
     }
   }
 
+  /**
+   * Map first (owner, 2026-11-12): while a ride is on the map, the discovery
+   * layers (twisty roads, gravel, curated rides, road history) step back to a
+   * third of their strength so the ride and its choices are what the eye finds.
+   * They come back in full as soon as the ride is cleared. A reloaded style
+   * re-adds the layers at full strength, so the dim is re-checked per sync
+   * against what the style actually holds.
+   */
+  const rideFocusOriginals = new Map<string, unknown>();
+  function syncRideFocusDim(current: HostAttempt, scene: MapScene): void {
+    const { map } = current;
+    if (map.setPaintProperty === undefined) return;
+    const focused = scene.mode !== "ride" && scene.routes.some((route) => route.state === "selected" && isDrawableRoute(route));
+    try {
+      for (const change of rideFocusChanges(map.getStyle?.()?.layers ?? [], focused, rideFocusOriginals)) {
+        map.setPaintProperty(change.id, change.property, change.value);
+      }
+    } catch {
+      // Cosmetic only: the layers stay at full strength.
+    }
+    // The streets also step back on the handlebar screen: there the ride line is the one bright line.
+    basemapRoadsRideShown = focused || (scene.mode === "ride" && scene.routes.some((route) => route.state === "selected" && isDrawableRoute(route)));
+    applySatelliteRoads(map);
+  }
+
   function syncScene(current: HostAttempt, scene: MapScene): void {
     syncRideDeclutter(current, scene.mode === "ride");
     const plan = planSceneSync(current.fingerprints, scene);
@@ -1926,6 +2119,7 @@ export async function createMapLibreHost(
       recordError({ kind: "source", detail: "sources" });
     }
     addOverlayLayers(current.map);
+    syncRideFocusDim(current, scene);
     const parts: readonly [string, boolean][] = [
       [MAP_SOURCE_IDS.routes, plan.routes],
       [MAP_SOURCE_IDS.points, plan.points],
@@ -2005,6 +2199,7 @@ export async function createMapLibreHost(
       map.boxZoom?.disable();
       map.doubleClickZoom?.disable();
     }
+    setTwoFingerTouchPan(map.dragPan?._touchPan, tool === "sketch");
   }
 
   /**
@@ -2382,7 +2577,39 @@ export async function createMapLibreHost(
     const hits = map.queryRenderedFeatures([pixel.x, pixel.y], {
       layers: hitLayers(map),
     });
-    emit(resolveIntent(hits, coordinate));
+    const intent = resolveIntent(hits, coordinate);
+    if (intent.type === "map-click") {
+      const near = choiceNear(map, pixel);
+      if (near !== null) {
+        emit({ type: "object-click", ref: near, coordinate });
+        return;
+      }
+    }
+    emit(intent);
+  }
+
+  /**
+   * The one other ride whose line or tag is near a tap that hit nothing, so
+   * picking a choice on the map does not need a pixel-perfect finger (PF-8).
+   * The nearest ring that finds a choice decides; two choices there is too
+   * close to call, and the tap stays a map tap.
+   */
+  function choiceNear(map: MapLibreMap, pixel: { readonly x: number; readonly y: number }): MapObjectRef | null {
+    const selected = latestScene?.selectedRouteId ?? null;
+    const layers = CHOICE_TAP_LAYER_IDS.filter((layerId) => map.getLayer(layerId) !== undefined);
+    if (layers.length === 0) return null;
+    for (const radius of CHOICE_TAP_RADII_PX) {
+      const box: [[number, number], [number, number]] = [[pixel.x - radius, pixel.y - radius], [pixel.x + radius, pixel.y + radius]];
+      const ids = new Set<string>();
+      for (const hit of map.queryRenderedFeatures(box, { layers })) {
+        const id = hit.properties?.["id"];
+        if (typeof id === "string" && id !== selected) ids.add(id);
+      }
+      if (ids.size > 1) return null;
+      const [id] = ids;
+      if (id !== undefined) return { kind: "route", routeId: id as never };
+    }
+    return null;
   }
 
   /** Rider zoom/rotate/pitch releases need time to settle before placement (05 §4). */
@@ -2530,6 +2757,16 @@ export async function createMapLibreHost(
     if (disposed || attempt !== current || status.state === "ready") return;
     clearWatchdog(current);
     publishStatus({ state: "ready", reason: null });
+    // OG-26: `load` and `idle` wait for *every* tile, so one tile that never
+    // answers (a slow phone link, a hung request) kept "Loading map…" over a
+    // map that was already drawing — forever. Once data has flowed, the veil
+    // lifts after a short grace whether or not the last tile ever lands.
+    if (current.paintFallback === null) {
+      current.paintFallback = setTimeout(() => {
+        current.paintFallback = null;
+        markPainted(current);
+      }, PAINT_FALLBACK_MS);
+    }
   }
 
   /**
@@ -2632,6 +2869,8 @@ export async function createMapLibreHost(
     // The arrows' drift loop belongs to this renderer: stop it before the map goes.
     stopWindDrift(null);
     clearWatchdog(current);
+    if (current.paintFallback !== null) clearTimeout(current.paintFallback);
+    current.paintFallback = null;
     const camera = readCameraBounds(current);
     if (camera !== null) restoredCamera = camera;
     const canvasContainer = current.map.getCanvasContainer();
@@ -3038,6 +3277,7 @@ export async function createMapLibreHost(
       fingerprints: null,
       openedWhereItWas,
       watchdog: null,
+      paintFallback: null,
     };
     attempt = current;
     // The boot backstop, replaced by the tighter data bound once the style lands.
@@ -3275,8 +3515,11 @@ export async function createMapLibreHost(
       // Night contrast is a whole dark style and the only thing `setStyle` is
       // worth for here; without the token, on a downloaded basemap, or when the
       // fetch fails, the same choice is the scrim over the map already drawn.
-      // The route, pins and labels take the new theme's map colours.
-      palette = readMapPalette(container);
+      // The route, pins and labels take the new theme's map colours, and the
+      // images that carry the old theme's colours are redrawn (QA-05).
+      const current = attempt?.map;
+      if (current === undefined) palette = readMapPalette(container);
+      else refreshThemeColours(current);
       if (!nightAvailable() || drawingOfflineBasemap) {
         const map = attempt?.map;
         if (map !== undefined) {
@@ -3309,6 +3552,7 @@ export async function createMapLibreHost(
       if (map === undefined || map.getLayer(SATELLITE_ID) === undefined) return;
       try {
         map.setLayoutProperty?.(SATELLITE_ID, "visibility", visible ? "visible" : "none");
+        applySatelliteRoads(map);
       } catch {
         recordError({ kind: "source", detail: SATELLITE_ID });
       }

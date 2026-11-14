@@ -83,7 +83,7 @@ describe("weather briefing line", () => {
 
   it("names gusty wind and a real rain chance, but not a light breeze or a stray shower", async () => {
     expect(await displayFor([{ ...clear.forecast[0]!, windMph: 25, precipChance: 40 }])).toBe(
-      "Clear · 38°F · Gusty 25 mph · 40% rain",
+      "Clear · Rain 40% · 38°F · Gusty 25 mph",
     );
     expect(await displayFor([{ ...clear.forecast[0]!, windMph: 14, precipChance: 19 }])).toBe(
       "Clear · 38°F",

@@ -6,13 +6,22 @@ import { decodeCatalogPolyline } from '../../src/application/explore/catalog-bui
 
 const escape = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const number = (v: number | null, suffix = '', scale = 1) => v === null ? 'unknown' : `${(v * scale).toFixed(1)}${suffix}`;
-export function headline(rows: Row[], verdictOf: (row: Row) => Row['verdict'] = row => row.verdict, good: (m: Measurement) => number = m => m.goodMiles): string {
+export function headline(
+  rows: Row[],
+  verdictOf: (row: Row) => Row['verdict'] = row => row.verdict,
+  good: (m: Measurement) => number = m => m.goodMiles,
+  thinOf?: (row: Row) => boolean,
+): string {
   const wins = rows.filter(r => verdictOf(r) === 'Win').length;
+  const thin = thinOf === undefined ? null : rows.filter(r => verdictOf(r) === 'Win' && thinOf(r)).length;
   const failures = rows.reduce((sum, row) => sum + (row.openGravel?.trustFailures.length ?? 0), 0);
+  const referenceFailures = rows.filter(row => row.referenceCheck.failed).length;
   const extra = rows.reduce((sum, row) => sum + (row.openGravel && row.fastest ? good(row.openGravel) - good(row.fastest) : 0), 0);
   const minutes = rows.reduce((sum, row) => sum + (row.openGravel?.extraMinutes ?? 0), 0);
-  return `Wins ${wins}/${rows.length}, trust failures ${failures}, ${extra >= 0 ? '+' : ''}${extra.toFixed(1)} good miles for +${minutes.toFixed(1)} minutes`;
+  return `Wins ${wins}/${rows.length}${thin === null ? '' : ` (${thin} thin)`}, trust failures ${failures}, fastest-reference failures ${referenceFailures}, ${extra >= 0 ? '+' : ''}${extra.toFixed(1)} good miles for +${minutes.toFixed(1)} minutes`;
 }
+/** Scorecard v4's headline: v3 wins, with the thin ones named beside them. */
+export function headlineV3(rows: Row[]): string { return headline(rows, row => row.verdict, m => m.goodMiles, row => row.margin.thin); }
 /** The headline scorecard v1 would have printed for the same routes (Franco bend miles, 25% Curvy loop share). */
 /** The headline rule v2 gives for the same routes. */
 export function headlineV2(rows: Row[]): string { return headline(rows, row => row.verdictV2); }
@@ -31,16 +40,33 @@ function sketch(row: Row): string {
   const stroke = ['#8a8496', '#2b6cb0', '#d67c1c', '#16835c'];
   return `<svg viewBox="0 0 230 130" role="img" aria-label="${escape(row.ride.label)} route comparison">${lines.map((line, i) => `<polyline points="${line.map(xy).join(' ')}" fill="none" stroke="${stroke[i]}" stroke-width="${i === 0 ? 1 : 2}" opacity="0.85"/>`).join('')}</svg>`;
 }
+/** Item c: how much room a Win had over its closest bar. Only wins get a margin. */
+function marginCell(row: Row): string {
+  if (row.verdict !== 'Win' || row.margin.aboveBar === null) return '—';
+  const above = Number.isFinite(row.margin.aboveBar) ? `+${(row.margin.aboveBar * 100).toFixed(0)}%` : 'clear';
+  return `${above}${row.margin.thin ? ' <b class="thin">thin</b>' : ''}${row.margin.bar ? `<br><small>${escape(row.margin.bar)}</small>` : ''}`;
+}
+/** Item d: say what the fastest reference is on every A-to-B ride, and shout when it is broken. */
+function referenceLine(row: Row): string {
+  const check = row.referenceCheck;
+  if (!check.applicable) return '';
+  const shown = (value: number | null) => value === null ? 'unknown' : value.toFixed(1);
+  if (check.failed) {
+    return `<br><b class="Loss">FASTEST REFERENCE FAILED: reference ${shown(check.referenceMinutes)} min, chosen line ${shown(check.chosenMinutes)} min (limit 2%)</b>`;
+  }
+  return `<br><small>Fastest reference ${shown(check.referenceMinutes)} min (motorcycle_fastest), chosen line ${shown(check.chosenMinutes)} min.</small>`;
+}
 export interface ReportSummary { yardstick: YardstickResult; load: RouterLoadSummary; curvyLoopThreshold: number }
 export function report(rows: Row[], set: string, at: string, notes: readonly string[] = [], warnings: readonly string[] = [], summary?: ReportSummary): string {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OpenGravel route scorecard</title><style>
-body{font:14px system-ui,sans-serif;margin:24px;color:#192c26;background:#fafbf9}h1{font-size:24px}h2{font-size:16px;margin:4px 0}table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:8px;border-bottom:1px solid #cdd8d0;vertical-align:top}th{font-size:12px}svg{width:230px;height:130px}small,summary{font-size:12px}details{max-width:300px}a{color:#146548}.scroll{overflow:auto}.Win{color:#087145}.Loss{color:#ad3023}@media print{body{font-size:9px;margin:0}td,th{padding:3px}svg{width:110px;height:65px}h1{font-size:16px}}</style>
-<h1>${escape(headline(rows))}</h1><h2>Previous rule (v2) for the same routes: ${escape(headlineV2(rows))}</h2><h2>Old yardstick (v1) for the same routes: ${escape(headlineV1(rows))}</h2>${warnings.map(warning => `<p role="status"><strong>${escape(warning)}</strong></p>`).join('')}${summary ? `<p>${escape(summary.yardstick.message)}</p><p>${escape(loadLine(summary.load))}</p>` : ''}<p>${escape(set)} · ride date ${escape(at)} · ${rows.filter(r => r.verdict === 'Tie').length} ties · ${rows.filter(r => r.verdict === 'Loss').length} losses · ${rows.filter(r => r.errors.length).length} planning errors</p>
+body{font:14px system-ui,sans-serif;margin:24px;color:#192c26;background:#fafbf9}h1{font-size:24px}h2{font-size:16px;margin:4px 0}table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:8px;border-bottom:1px solid #cdd8d0;vertical-align:top}th{font-size:12px}svg{width:230px;height:130px}small,summary{font-size:12px}details{max-width:300px}a{color:#146548}.scroll{overflow:auto}.Win{color:#087145}.Loss{color:#ad3023}.thin{color:#9a5b00}@media print{body{font-size:9px;margin:0}td,th{padding:3px}svg{width:110px;height:65px}h1{font-size:16px}}</style>
+<h1>${escape(headlineV3(rows))}</h1><h2>Previous rule (v2) for the same routes: ${escape(headlineV2(rows))}</h2><h2>Old yardstick (v1) for the same routes: ${escape(headlineV1(rows))}</h2>${warnings.map(warning => `<p role="status"><strong>${escape(warning)}</strong></p>`).join('')}${summary ? `<p>${escape(summary.yardstick.message)}</p><p>${escape(loadLine(summary.load))}</p>` : ''}<p>${escape(set)} · ride date ${escape(at)} · ${rows.filter(r => r.verdict === 'Tie').length} ties · ${rows.filter(r => r.verdict === 'Loss').length} losses · ${rows.filter(r => r.errors.length).length} planning errors</p>
 <p>OpenGravel versus our own fastest-profile baseline (a stand-in for Google), plus the rider's own line as a ruler. No Google results were fetched. Green: OpenGravel; orange: fastest; blue: the rider's line snapped to our roads; gray: the raw rider track. Each ride occupies one row; contestant metrics read OpenGravel / fastest / rider's line.</p>
 <p>Good miles: mapped dirt (sand excluded), or, for Curvy, the planner's own bend miles (road-bends-v1: sustained same-direction arcs under 175 m radius, tighter arcs counting more; a highway sweeper, a junction corner, a town street, a ramp or a roundabout earns nothing). Unknown never counts as gravel. A-to-B Δ minutes is against fastest; loop Δ is absolute distance from requested time. Rider match is distance-sampled track proximity within 50 m, ignores direction and is not scored; for the rider's line it shows how faithfully the snapped line follows the raw track. The rider's line is never used to plan and never scored as "match the rider": it only checks that the measure can tell a rider's favourite road from the fastest one. Trust counts are distinct failure categories per route, not the number of illegal edges. Retraced spurs are a geometry proxy for dead ends. Missing tags and unavailable feeds remain evidence gaps, not a safety clearance.</p>
 <p>Rule v3 (headline) differs from v2 in two tests only: a curvy A-to-B needs the frozen rider share and 1.5 times fastest's good miles (no +3 miles), and a loop with a measured rider line also wins at par with it (at least the rider's good miles and share, and 1.5 times fastest). v2 and v1 stay printed. Rule v2 text follows. Section 5: loss for any trust failure, over budget (35% extra A-to-B; ±15% loop time), or fewer good miles. Win additionally needs ≥1.5× and ≥3 extra good miles (loops instead need 35% dirt share, or ${summary ? `${(summary.curvyLoopThreshold * 100).toFixed(2)}%` : 'the frozen'} Curvy bend share: 75% of the median share of the riders' own tuning lines, frozen with the manifest hash), and ≤10 percentage points extra busy share. Otherwise tie. Fastest loops use the same seed and time target. Router calls count every request one plan made before it answered; first-answer seconds is how long one real first-answer request (no alternatives, as the app sends it) takes. Closure outcomes are frozen locally for repeatability; use --refresh-authority to deliberately refresh. Manual Google time/miles: not entered.</p>
+<p>Margin: a Win is labelled thin when the closest bar behind that verdict is cleared by less than 10%. The bar is named beside the number; rule v3 itself is unchanged. Fastest reference: every A-to-B row prints the fastest-profile time it was measured against; if our own chosen line is more than 2% quicker, that "fastest" line is not fastest, so the row is marked FAILED and counted in the headline.</p>
 <details><summary>Run assumptions and provenance</summary><ul>${notes.map(note => `<li>${escape(note)}</li>`).join('')}</ul></details>
-<div class="scroll"><table><thead><tr><th>Ride / result</th><th>Routes</th><th>Contestant</th><th>Good mi</th><th>Busy</th><th>Minutes / Δ</th><th>Rider match</th><th>Unknown surface</th><th>Plan s</th><th>Router calls / first answer s</th><th>Trust</th></tr></thead><tbody>${rows.map(row => {
+<div class="scroll"><table><thead><tr><th>Ride / result</th><th>Margin</th><th>Routes</th><th>Contestant</th><th>Good mi</th><th>Busy</th><th>Minutes / Δ</th><th>Rider match</th><th>Unknown surface</th><th>Plan s</th><th>Router calls / first answer s</th><th>Trust</th></tr></thead><tbody>${rows.map(row => {
     const ride = row.ride; const end = ride.end ?? ride.start;
     const url = new URL('https://www.google.com/maps/dir/');
     url.search = new URLSearchParams({ api: '1', origin: `${ride.start.lat},${ride.start.lon}`, destination: `${end.lat},${end.lon}`, travelmode: 'driving' }).toString();
@@ -51,6 +77,6 @@ body{font:14px system-ui,sans-serif;margin:24px;color:#192c26;background:#fafbf9
     const v1Differs = `<br><small>v3 ${row.verdict} · v2 ${row.verdictV2} · v1 ${row.verdictV1}</small>`;
     // Two compact contestant tables inside the same ride row preserve a single
     // scrollable row per ride while retaining all evidence and route sketches.
-    return `<tr><td><strong>${escape(ride.label)}</strong><br>${ride.mode}${ride.loopMinutes ? ` · ${ride.loopMinutes} min loop` : ''}<br><b class="${row.verdict}">${row.verdict}</b>${v1Differs}<br>${[...row.reasons, ...row.errors].map(escape).join('<br>')}<br><a href="${escape(url.href)}" target="_blank" rel="noopener noreferrer">Google Maps directions</a>${ride.loopMinutes ? '<br><small>Link opens start/end only; add a turnaround by hand.</small>' : ''}${row.riderSnap ? `<br><small>${escape(row.riderSnap.note)}</small>` : ''}</td><td>${sketch(row)}</td><td>OpenGravel<br>Fastest<br>${ride.riderTrack ? "Rider's line" : 'No rider line'}</td>${cells('goodMiles')}${cells('busyShare', '%', 100)}<td>${three.map(m => number(m?.minutes ?? null)).join(' / ')}<br>Δ ${three.map(m => number(m?.extraMinutes ?? null)).join(' / ')}</td>${cells('riderMatch', '%', 100)}${cells('unknownSurfaceShare', '%', 100)}${cells('planningSeconds', '', 1, three.slice(0, 2))}<td>${use ? `${use.calls}${use.shadowCalls ? ` (+${use.shadowCalls} shadow)` : ''} / ${number(use.firstAnswerSeconds)}` : 'unknown'}</td><td>${three.map(m => m?.trustFailures.length ?? 'unknown').join(' / ')}<details><summary>All trust evidence</summary>${evidence('OpenGravel', row.openGravel)}<br>${evidence('Fastest', row.fastest)}${row.riderLine ? `<br>${evidence("Rider's line", row.riderLine)}` : ''}</details></td></tr>`;
+    return `<tr><td><strong>${escape(ride.label)}</strong><br>${ride.mode}${ride.loopMinutes ? ` · ${ride.loopMinutes} min loop` : ''}<br><b class="${row.verdict}">${row.verdict}</b>${v1Differs}<br>${[...row.reasons, ...row.errors].map(escape).join('<br>')}${referenceLine(row)}<br><a href="${escape(url.href)}" target="_blank" rel="noopener noreferrer">Google Maps directions</a>${ride.loopMinutes ? '<br><small>Link opens start/end only; add a turnaround by hand.</small>' : ''}${row.riderSnap ? `<br><small>${escape(row.riderSnap.note)}</small>` : ''}</td><td>${marginCell(row)}</td><td>${sketch(row)}</td><td>OpenGravel<br>Fastest<br>${ride.riderTrack ? "Rider's line" : 'No rider line'}</td>${cells('goodMiles')}${cells('busyShare', '%', 100)}<td>${three.map(m => number(m?.minutes ?? null)).join(' / ')}<br>Δ ${three.map(m => number(m?.extraMinutes ?? null)).join(' / ')}</td>${cells('riderMatch', '%', 100)}${cells('unknownSurfaceShare', '%', 100)}${cells('planningSeconds', '', 1, three.slice(0, 2))}<td>${use ? `${use.calls}${use.shadowCalls ? ` (+${use.shadowCalls} shadow)` : ''} / ${number(use.firstAnswerSeconds)}` : 'unknown'}</td><td>${three.map(m => m?.trustFailures.length ?? 'unknown').join(' / ')}<details><summary>All trust evidence</summary>${evidence('OpenGravel', row.openGravel)}<br>${evidence('Fastest', row.fastest)}${row.riderLine ? `<br>${evidence("Rider's line", row.riderLine)}` : ''}</details></td></tr>`;
   }).join('')}</tbody></table></div></html>`;
 }

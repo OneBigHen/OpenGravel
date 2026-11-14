@@ -39,6 +39,6 @@ export const fireProvider: LayerProvider = {
     if (!response.ok) throw new Error("FIRMS unavailable");
     const csv = await response.text();
     if (csv.length > 2_000_000) throw new Error("FIRMS response too large");
-    return { features: parseFirmsCsv(csv, bounds, now), freshness: [{ layerId: "active-fire", source: "NASA FIRMS VIIRS SNPP NRT", fetchedAt: new Date(now).toISOString(), observedAt: null, stale: false, staleAfterMs: 30 * 60_000, note: "Last 48 h; acquisition time on each hotspot. VIIRS nominal footprint 375 m. Cloud and satellite coverage gaps remain unknown. Hotspots are not road closures. Online only." }] };
+    return { features: parseFirmsCsv(csv, bounds, now), freshness: [{ layerId: "active-fire", source: "NASA satellite fire detections", fetchedAt: new Date(now).toISOString(), observedAt: null, stale: false, staleAfterMs: 30 * 60_000, note: "Last 48 h; acquisition time on each hotspot. VIIRS nominal footprint 375 m. Cloud and satellite coverage gaps remain unknown. Hotspots are not road closures. Online only." }] };
   },
 };

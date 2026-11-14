@@ -33,6 +33,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }
       await expectDrawnScene(page, { routes: "2", points: "2" });
       await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
       await shot("route-options");
+      await page.getByTestId("sheet-handle").press("ArrowUp");
       await page.getByTestId("route-options-settings").click();
       await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
       await shot("options-rows");

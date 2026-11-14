@@ -555,3 +555,15 @@ describe("client-pixel gesture classification on an offset map", () => {
     }]);
   });
 });
+
+
+it("cancels a pen stroke when a second finger lands, so a pinch never draws (OG-03)", () => {
+  // The map still zooms under a pinch while the pen is armed. The first finger's
+  // path through that pinch used to be kept as a stroke and snapped into a new
+  // route: the ride "rerouted" because the rider zoomed.
+  const result = effects([DOWN, MOVE, { ...DOWN, pointerId: 2 }, { ...MOVE, pixel: { x: 300, y: 300 } }, UP_AFTER_MOVE], "sketch");
+  expect(result.effects).toEqual([]);
+  expect(result.state.lastCancel).toBe("multi-pointer");
+  // One finger still draws exactly as before.
+  expect(effects([DOWN, MOVE, UP_AFTER_MOVE], "sketch").effects).toHaveLength(1);
+});

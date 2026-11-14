@@ -21,6 +21,8 @@ import {
   engineRoadEvidence,
   engineRoadCharacter,
   engineSurfaceMix,
+  engineUrbanFriction,
+  engineUrbanFrictionEvidence,
   surfaceFit,
   surfaceMixLabel,
   surfaceRunSpans,
@@ -433,5 +435,40 @@ describe("road character coverage", () => {
     expect(mix.unit).toBe(1);
     expect(mix.unpavedShare).toBe(0.1);
     expect(mix.unknownMeters).toBe(9_000);
+  });
+});
+
+describe("engine urban friction", () => {
+  it("reads countryside as 0, suburbs as most of the way to a city, and the city as 1", () => {
+    // 20 mi: 10 rural, 8 through suburbs (residential density), 2 in a city.
+    const routes = runSummary([
+      roadRun(10 * MILE, "tertiary", "rural"),
+      roadRun(8 * MILE, "residential", "residential"),
+      roadRun(2 * MILE, "secondary", "city"),
+    ]);
+    const urban = engineUrbanFriction(routes);
+    expect(urban?.unit).toBeCloseTo((8 * 0.7 + 2) / 20, 5);
+    expect(urban?.coverage).toBeCloseTo(1, 5);
+    const evidence = engineUrbanFrictionEvidence(routes);
+    expect(evidence["urbanFriction"]?.status).toBe("estimated");
+    expect(evidence["urbanFriction"]?.value).toBeCloseTo(0.38, 3);
+  });
+
+  it("counts a country main road as half a city street, and never less than the town it runs through", () => {
+    const highway = runSummary([
+      roadRun(6 * MILE, "primary", "rural"),
+      roadRun(2 * MILE, "secondary", "rural", { roadClassLink: true }),
+      roadRun(10 * MILE, "tertiary", "rural"),
+      roadRun(2 * MILE, "primary", "city"),
+    ]);
+    expect(engineUrbanFriction(highway)?.unit).toBeCloseTo((8 * 0.5 + 2) / 20, 5);
+  });
+
+  it("leaves undescribed density unknown instead of calling it countryside", () => {
+    expect(engineUrbanFriction(summary())).toBeNull();
+    expect(engineUrbanFrictionEvidence(summary())).toEqual({});
+    const partly = runSummary([roadRun(5 * MILE, "tertiary", "missing"), roadRun(5 * MILE, "tertiary", "rural")]);
+    expect(engineUrbanFriction(partly)?.unit).toBe(0);
+    expect(engineUrbanFriction(partly)?.coverage).toBeCloseTo(0.5, 5);
   });
 });

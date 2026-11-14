@@ -18,6 +18,8 @@ import { buildMapScene, type MapSceneInput } from "@/application/map/build-map-s
 import { routeDaylightScene } from "@/application/map/route-daylight";
 import type { MapScene, RouteDaylightScene } from "@/application/map/types";
 import type { PlanningSessionSnapshot } from "@/application/planner/planning-session";
+import type { RouteCardVm } from "@/application/planner/planner-view-model";
+import { compareChoiceNames } from "@/application/planner/route-choice-words";
 import type { Coordinate } from "@/domain/ride/types";
 import { usePlannerDaylight } from "@/ui/planner/hooks/usePlannerDaylight";
 import { sceneAtRest } from "@/ui/planner/scene-points";
@@ -52,9 +54,19 @@ function selectedRouteLine(
   return { geometry: payload.coordinates, durationSeconds: candidate.durationSeconds };
 }
 
-export function usePlannerScene(input: MapSceneInput, editingState: PlannerSceneEditing): MapScene {
+/**
+ * `routeCards` are the sheet's choices: the map names each line the way its
+ * Compare row does (PF-8).
+ */
+export function usePlannerScene(input: MapSceneInput & { readonly routeCards?: readonly RouteCardVm[] }, editingState: PlannerSceneEditing): MapScene {
   const { document, session, uiState, preview, previewArea, previewSpan, previewSketch, changedSpan, readGeometry, riderPosition, daylight: providedDaylight } = input;
   const { refineEditing, activeTool, placementTool } = editingState;
+  const routeCards = input.routeCards;
+  const routeNamesKey = routeCards === undefined ? null : JSON.stringify(compareChoiceNames(routeCards));
+  const routeNames = useMemo(
+    () => (routeNamesKey === null ? undefined : (JSON.parse(routeNamesKey) as Readonly<Record<string, string>>)),
+    [routeNamesKey],
+  );
   const selectedObject = uiState.selectedObject;
   const departure = usePlannerDaylight({
     departure: document.intent.departure,
@@ -83,6 +95,7 @@ export function usePlannerScene(input: MapSceneInput, editingState: PlannerScene
   return useMemo(() => {
     const projected = buildMapScene({
       document, session, uiState: { selectedObject }, preview, previewArea, previewSpan, previewSketch, changedSpan, readGeometry, riderPosition, daylight,
+      ...(routeNames === undefined ? {} : { routeNames }),
     });
     const editing =
       refineEditing ||
@@ -91,5 +104,5 @@ export function usePlannerScene(input: MapSceneInput, editingState: PlannerScene
       (selectedObject?.kind === "point" &&
         document.intent.shaping.some((anchor) => anchor.id === selectedObject.pointId));
     return sceneAtRest(projected, editing);
-  }, [document, session, selectedObject, preview, previewArea, previewSpan, previewSketch, changedSpan, readGeometry, riderPosition, daylight, refineEditing, activeTool, placementTool]);
+  }, [document, session, selectedObject, preview, previewArea, previewSpan, previewSketch, changedSpan, readGeometry, riderPosition, daylight, routeNames, refineEditing, activeTool, placementTool]);
 }

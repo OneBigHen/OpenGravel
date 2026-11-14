@@ -210,7 +210,9 @@ describe("weekend picks", () => {
   it("marks a time the catalog never stated as an estimate", () => {
     const noTime = entry({ id: "no-time", name: "No Stated Time", geometry: at(0.01), estimatedTimeMinutes: undefined });
     const picks = weekendPicks({ entries: [noTime], position: AT, dayLabels: ["Sat"] }) ?? [];
-    expect(picks[0]).toMatchObject({ timeIsEstimate: true, timeMinutes: 165 });
+    // 120 km is 74.6 mi, which at the stated 28 mph is 160 minutes; the card
+    // reads the same estimate as the ride page and the planner (QA-24).
+    expect(picks[0]).toMatchObject({ timeIsEstimate: true, timeMinutes: 160 });
   });
 
   it("leaves personal and imported rides out of the catalog strip", () => {

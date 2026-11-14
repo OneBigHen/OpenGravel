@@ -1,0 +1,11 @@
+--- a/GraphHopperManaged.java	2026-11-12 02:41:10.595146122 -0500
++++ b/GraphHopperManaged.java	2026-11-12 02:41:10.596488993 -0500
+@@ -34,7 +34,7 @@
+         if (configuration.has("gtfs.file")) {
+             graphHopper = new GraphHopperGtfs(configuration);
+         } else {
+-            graphHopper = new GraphHopper();
++            graphHopper = new com.opengravel.gh.OgGraphHopper();
+         }
+         graphHopper.init(configuration);
+     }

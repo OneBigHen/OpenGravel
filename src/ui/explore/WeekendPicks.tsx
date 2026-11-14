@@ -14,7 +14,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { staticRouteMapUrl } from "@/application/map/static-map";
-import { formatDistance } from "@/application/planner/measurements";
 import type { CatalogEntry } from "@/application/explore/catalog";
 import type { WeatherSnapshot } from "@/application/preparation/providers";
 import {
@@ -30,7 +29,7 @@ import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { rememberListPosition } from "@/ui/explore/list-position";
 import { awayLabel } from "@/ui/explore/rider-distance";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
-import { formatRideMinutes } from "@/ui/explore/route-facts";
+import { RideCardFacts } from "@/ui/explore/RideCardFacts";
 
 import "./weekend-picks.css";
 
@@ -93,7 +92,6 @@ function PickCard({ pick, mapboxToken, night }: {
   readonly night: boolean;
 }) {
   const away = awayLabel(pick.distanceKm);
-  const distance = pick.entry.distanceKm === null ? null : formatDistance(pick.entry.distanceKm * 1000);
   return (
     <li className="og-weekend__card" data-testid="weekend-pick">
       <Link
@@ -107,13 +105,7 @@ function PickCard({ pick, mapboxToken, night }: {
         <PickPreview entry={pick.entry} mapboxToken={mapboxToken} night={night} />
         <span className="og-weekend-card__body">
           <strong className="og-weekend-card__title">{pick.entry.name}</strong>
-          <span className="og-weekend-card__facts">
-            {distance === null ? null : <span>{distance}</span>}
-            <span {...(pick.timeIsEstimate ? { title: "Estimated at 28 mph" } : {})}>
-              {pick.timeIsEstimate ? "~" : ""}{formatRideMinutes(pick.timeMinutes)}
-            </span>
-          </span>
-          {pick.character === null ? null : <span className="og-weekend-card__character">{pick.character}</span>}
+          <RideCardFacts entry={pick.entry} className="og-weekend-card__facts" />
           <span className="og-weekend-card__weather" data-testid="weekend-pick-weather">
             {pick.weather.map((phrase, index) => <span key={`${index}-${phrase}`}>{phrase}</span>)}
           </span>

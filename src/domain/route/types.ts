@@ -269,6 +269,20 @@ export const ROUTE_EVIDENCE_KEYS = [
 export type RouteEvidence = Readonly<Record<string, EvidenceValue<unknown>>>;
 
 /** One route the pipeline produced (§14), ready for eligibility and scoring. */
+/**
+ * Facts a ride was published with, carried onto its answer verbatim.
+ *
+ * A curated catalog ride states its surface and curves as a summary that was
+ * measured when the route was built ("Mostly paved · 1.6 mi dirt", "2.1 mi of
+ * curves"). Opening that ride must keep those facts rather than re-measuring
+ * them or falling back to "surface unknown". They are the ride's own words,
+ * not a fresh verdict, so nothing here scores or qualifies the route.
+ */
+export interface RoutePublishedFacts {
+  readonly surfaceSummary?: string;
+  readonly curvatureSummary?: string;
+}
+
 export interface RouteCandidate {
   readonly hike?: import("../hike/route-summary").HikeRouteSummary;
   readonly id: RouteCandidateId;
@@ -285,6 +299,8 @@ export interface RouteCandidate {
   readonly durationSeconds: number;
   readonly eligibility: EligibilityResult;
   readonly evidence: RouteEvidence;
+  /** The ride's own published summary, when it has one (see above). */
+  readonly publishedFacts?: RoutePublishedFacts;
   readonly score: RouteScore;
   readonly warnings: readonly RouteWarning[];
   /**

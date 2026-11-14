@@ -24,6 +24,7 @@ coverage/
 *.p12
 *.pfx
 *.sqlite
+!tests/fixtures/route-library/pack.sqlite
 *.sqlite-*
 *.db
 *.db-*

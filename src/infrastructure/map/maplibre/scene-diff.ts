@@ -170,7 +170,7 @@ function changedSpanKey(scene: MapScene): string {
 /** The fingerprints of one scene. Pure; the same scene always hashes the same. */
 export function fingerprintScene(scene: MapScene): SceneFingerprints {
   return {
-    routes: scene.routes
+    routes: (scene.comparing === true ? "compare;" : "") + scene.routes
       .map(
         (route) =>
           `${route.id}|${route.state}|${route.role ?? "none"}|${route.tint ?? 0}|${route.label === undefined ? "" : `${route.label.text}@${coordinateKey(route.label.at)}`}|${(route.surface ?? [])

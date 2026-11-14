@@ -248,31 +248,6 @@ export function pickRide(input: {
   return { chosen: shortest(entries), overBudget: true, fellBackToFastest: false, referenceSeconds, budgetSeconds, entries };
 }
 
-/** Loops keep their own time window; they share the scorer and the pick rule. */
-export function pickLoop<T extends ProviderCandidate>(input: {
-  readonly candidates: readonly T[];
-  readonly incumbent?: T;
-  readonly discovery: NonNullable<ProviderRouteRequest["discovery"]>;
-  readonly mode: RidePickMode;
-  readonly protectBusy: boolean;
-}): T | null {
-  const { candidates, discovery, mode } = input;
-  const leader = input.incumbent ?? candidates[0];
-  if (leader === undefined || mode === "time") return null;
-  const leaderFun = candidateGeometryFun(leader);
-  const fits = (candidate: T): boolean => Math.abs(candidate.durationSeconds / 60 - discovery.targetMinutes) <= discovery.toleranceMinutes;
-  const allowed = (candidate: T): boolean => {
-    if (mode === "dirt" || candidate === leader) return true;
-    const fun = candidateGeometryFun(candidate);
-    return fun !== null && geometryFunExposureAllowed(fun, leaderFun, input.protectBusy);
-  };
-  const good = (candidate: T): number => candidateGoodMeters(candidate, mode);
-  const best = candidates.filter(candidate => fits(candidate) && allowed(candidate))
-    .sort((a, b) => (Math.abs(good(b) - good(a)) >= 1 ? good(b) - good(a) : 0) || a.durationSeconds - b.durationSeconds)[0];
-  if (best === undefined || best === leader) return null;
-  return !fits(leader) || good(best) >= good(leader) + 1 ? best : null;
-}
-
 /** One line per wave candidate, for diagnostics and the scorecard's row table. */
 export interface WaveTrial {
   readonly factor: number;

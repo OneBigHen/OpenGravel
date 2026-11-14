@@ -43,6 +43,7 @@ OGV_DISCOVER_OSM_PLACES=
 CURVATURE_DB_PATH=
 GRAVEL_ATLAS_DB_PATH=
 OGV_ROAD_AUTHORITY_CACHE_DIR=
+OGV_ROUTE_LIBRARY_PACK=/root/Vibe/opengravel-data/route-library/current.sqlite
 ```
 
 If current production relies on the development defaults under the repo's `data/` directory, migrate only after making and verifying backups.

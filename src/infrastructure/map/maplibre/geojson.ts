@@ -102,6 +102,7 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
         state: route.offRoute !== undefined && route.state === "selected" ? ROUTE_OFF_ROUTE_FEATURE_STATE : route.state,
         role: route.role,
         tint: route.tint ?? 0,
+        ...(scene.comparing === true && route.state === "alternative" ? { compare: true } : {}),
         selected: isSelected(scene.selectedObject, { kind: "route", routeId: route.id }),
         ...(surface === null ? {} : { surface }),
       },
@@ -128,7 +129,7 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
     features.push({
       type: "Feature",
       id: scene.routes.length + index,
-      properties: { id: route.id, state: route.state, tint: Math.min(3, route.tint ?? 0), label: route.label.text },
+      properties: { id: route.id, state: route.state, tint: route.tint ?? 0, label: route.label.text },
       geometry: { type: "Point", coordinates: [route.label.at.lon, route.label.at.lat] },
     });
   });

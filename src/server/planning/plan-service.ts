@@ -8,9 +8,11 @@ import type { LoopHeadingPreference } from "@/application/planner/loop-heading";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { deadEndSpurEligibility } from "@/application/planner/dead-end-spur-eligibility";
 import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
+import { DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { BALANCED_DETOUR_CAP, searchBalancedEnvelope } from "@/application/planner/balanced-search";
+import { CURVY_SWEEP, searchCurvyEnvelope } from "@/application/planner/curvy-search";
 import { rideBudgetFactor } from "@/application/planner/ride-budget";
 import {
-  pickLoop,
   pickRide,
   ridePickMode,
   runWave,
@@ -61,7 +63,10 @@ import { roadAuthorityFromEnv } from "./road-authority";
 import {
   createFallbackRouteProvider,
   engineCoverage,
+  type CoverageBox,
 } from "@/infrastructure/routing/graphhopper/fallback-provider";
+import { createValhallaRouter, type ValhallaRouter } from "@/infrastructure/routing/valhalla/router";
+import { leavesCoverage, planBasicRide } from "./basic-plan";
 import { newRouteCandidateId } from "@/domain/route/ids";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
@@ -96,6 +101,12 @@ import {
 const FAST_FIRST_MIN_LANES = 3;
 /** Engine seeds a loop's first answer tries (NEXT-PLAN section 6). */
 const FIRST_ANSWER_LOOP_SEEDS = 1;
+/**
+ * The rider envelope search's own budget. It no longer borrows an experiment's
+ * settings: two router calls and twelve seconds, the values the planner used.
+ */
+const RIDER_SEARCH_CALLS = 2;
+const RIDER_SEARCH_DEADLINE_MS = 12_000;
 /** The dirt-loop atlas probes' own deadline. */
 const ATLAS_DEADLINE_MS = 12_000;
 
@@ -114,7 +125,7 @@ import {
   type PipelineDiagnostic,
 } from "@/application/planner/pipeline";
 import type { ConstraintContext } from "@/domain/route/eligibility";
-import { engineRoadEvidence } from "@/application/roads/engine-road-evidence";
+import { engineRoadEvidence, engineUrbanFrictionEvidence } from "@/application/roads/engine-road-evidence";
 import type { KnownRoadsPort } from "@/application/roads/known-roads";
 import { knownRoadsFromEnv } from "@/server/roads/known-roads-db";
 import type { PipelineIntent } from "@/domain/route/intent";
@@ -209,6 +220,14 @@ export interface PlanServiceDeps {
    * source). Absent: the wave is fastest, the rider's profile and strong.
    */
   readonly detourAnchors?: DetourAnchorsPort;
+  /**
+   * Basic routing (Valhalla) for rides our graph cannot answer. On by default
+   * for the deployment provider; `null` turns it off. Off when a provider is
+   * injected or the planning fixture is active, unless a router is injected too.
+   */
+  readonly basicRouter?: ValhallaRouter | null;
+  /** The GraphHopper graph's coverage box; the router's own `/info` by default. */
+  readonly coverage?: () => Promise<CoverageBox | null>;
 }
 
 /**
@@ -697,11 +716,59 @@ function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
 
 export async function planRide(input: PlanRideInput, deps: PlanServiceDeps = {}): Promise<PlanServiceResult> {
   const signal = deps.signal ?? new AbortController().signal;
-  try {
-    return await planRideAttempt(input, { ...deps, signal });
-  } catch (error) {
-    return { ok: false, error: normalizePlanFailure(error, signal.aborted) };
+  const env = deps.env ?? process.env;
+  const basic = basicRouterFor(deps, env);
+  const parsed = basic === null ? null : parseRoutePlanRequestBody(input);
+  const ride = parsed?.ok === true && parsed.value.request.profile !== "hike" ? parsed.value : null;
+  const basicOptions = { signal, graphVersion: deps.versions?.graph ?? DEFAULT_PLAN_VERSIONS.graph };
+  // GraphHopper answers wherever its graph reaches; a ride that leaves the
+  // graph's box gets a basic route instead of an outside-coverage refusal.
+  if (basic !== null && ride !== null) {
+    const box = await (deps.coverage ?? coverageFromEnv(env))().catch(() => null);
+    if (leavesCoverage(ride.request, box)) return planBasicRide(ride, basic, "outside-coverage", basicOptions);
   }
+  let result: PlanServiceResult;
+  try {
+    result = await planRideAttempt(input, { ...deps, signal });
+  } catch (error) {
+    result = { ok: false, error: normalizePlanFailure(error, signal.aborted) };
+  }
+  if (result.ok || basic === null || ride === null || signal.aborted) return result;
+  // Off our graph inside its box (GraphHopper could not place a point): the
+  // basic answer, or its own clearer refusal, replaces "outside the coverage".
+  if (result.error.code === "outside-coverage") return planBasicRide(ride, basic, "outside-coverage", basicOptions);
+  // Our router is down: a labelled basic route beats "No route yet". If the
+  // basic service fails too, the rider sees our router's own error.
+  if (ROUTER_DOWN_CODES.has(result.error.code) && ride.request.discovery === undefined) {
+    const fallback = await planBasicRide(ride, basic, "router-down", basicOptions);
+    return fallback.ok ? fallback : result;
+  }
+  return result;
+}
+
+/** Plan failures that mean our own router could not answer at all. */
+const ROUTER_DOWN_CODES: ReadonlySet<string> = new Set(["provider-unavailable", "provider-timeout", "network"]);
+
+let sharedBasicRouter: { readonly key: string; readonly router: ValhallaRouter } | null = null;
+const sharedCoverage = new Map<string, () => Promise<CoverageBox | null>>();
+
+function basicRouterFor(deps: PlanServiceDeps, env: Readonly<Record<string, string | undefined>>): ValhallaRouter | null {
+  if (deps.basicRouter !== undefined) return deps.basicRouter;
+  if (deps.provider !== undefined || fixturePlanModeFromEnv(env) !== null) return null;
+  const key = env["STADIA_API_KEY"]?.trim() ?? "";
+  if (sharedBasicRouter?.key !== key) sharedBasicRouter = { key, router: createValhallaRouter({ env }) };
+  return sharedBasicRouter.router;
+}
+
+/** One cached `/info` reader per router address, shared across requests. */
+function coverageFromEnv(env: Readonly<Record<string, string | undefined>>): () => Promise<CoverageBox | null> {
+  const baseUrl = graphHopperUrlFromEnv(env);
+  let reader = sharedCoverage.get(baseUrl);
+  if (reader === undefined) {
+    reader = engineCoverage({ baseUrl });
+    sharedCoverage.set(baseUrl, reader);
+  }
+  return reader;
 }
 
 async function planRideAttempt(
@@ -802,7 +869,7 @@ async function planRideAttempt(
     parsed.value.request.stops.length === 0 && (parsed.value.request.roadSpans?.length ?? 0) === 0;
   let riderCalls = 0;
   let riderFactor: number | undefined;
-  let riderTrials: readonly WaveTrial[] = [];
+  let riderTrials: readonly (WaveTrial | import("@/application/planner/rider-mode-search").RiderModeTrial)[] = [];
   let overBudgetLine: readonly Coordinate[] | null = null;
   let fallbackLine: readonly Coordinate[] | null = null;
 
@@ -848,10 +915,10 @@ async function planRideAttempt(
     candidates: from,
     intent,
     policy: ROUTE_POLICY,
-    ...(balancedFun ? { recommendationDetourCap: rideBudgetFactor(requestOptions.rideBudget) } : {}),
+    ...(balancedFun ? { recommendationDetourCap: oneWave ? rideBudgetFactor(requestOptions.rideBudget) : BALANCED_DETOUR_CAP } : {}),
     ...(geometryFun ? {
       candidateValueFor: (_candidate, source, fastestSeconds, reference) => geometryFunRecommendation(source, fastestSeconds, reference, requestOptions.traffic === "protect-ride"),
-      recommendationDetourCap: rideBudgetFactor(requestOptions.rideBudget),
+      recommendationDetourCap: oneWave ? rideBudgetFactor(requestOptions.rideBudget) : 1.35,
       // Curvy uses the actual fastest eligible ETA, across lanes.
       recommendationProfile: undefined,
     } : {}),
@@ -861,6 +928,10 @@ async function planRideAttempt(
       const verdict = verdictFor(candidate);
       return {
         ...engineRoadEvidence(candidate.roadSummary, intent.surface?.preference ?? "mixed"),
+        // Time in towns (owner 2026-11-13: a Hatboro loop ran into Philadelphia
+        // because suburb and countryside scored alike). Fast keeps its old
+        // ranking: there the quicker road through town is the point.
+        ...(intent.roadCharacter === "efficient" ? {} : engineUrbanFrictionEvidence(candidate.roadSummary)),
         ...catalogueEvidence(candidate.geometry),
         ...(verdict === null ? {} : { closures: verdict.evidence.closures, access: verdict.evidence.access }),
       };
@@ -1015,23 +1086,56 @@ async function planRideAttempt(
         if (pick.fellBackToFastest) fallbackLine = chosen.candidate.geometry;
       }
     }
-  } else if (fullPlan && riderEnabled && loopDiscovery !== undefined && parsed.value.request.sketch === undefined && pipeline.candidates.length > 0) {
-    // Loops keep their own time window (RM-5 rebuilds them) and share the
-    // scorer and the pick rule. No router calls.
+  } else if (fullPlan && riderEnabled && pipeline.candidates.length > 0) {
+    // Loops, and any ride the wave does not cover, keep main's envelope searches.
     const eligible = eligibleFrom(candidates, pipeline);
     const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
-    const chosen = pickLoop({
+    const options = parsed.value.request.options;
+    const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred";
+    const result = balancedFun ? await searchBalancedEnvelope({
+      request: parsed.value.request,
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      discovery: loopDiscovery,
-      mode: pickMode,
-      protectBusy: requestOptions.traffic === "protect-ride",
+      provider, maxCalls: RIDER_SEARCH_CALLS, deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
+      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
+      verify: async (proposed, searchSignal) => {
+        const own = await assessRoads([...candidates, ...proposed], searchSignal);
+        roads = own;
+        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
+      },
+    }) : curvy ? await searchCurvyEnvelope({
+      request: parsed.value.request,
+      candidates: eligible,
+      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
+      provider, sweepCalls: Math.min(CURVY_SWEEP.length, RIDER_SEARCH_CALLS), deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
+      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
+      verify: async (proposed, searchSignal) => {
+        const own = await assessRoads([...candidates, ...proposed], searchSignal);
+        roads = own;
+        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
+      },
+    }) : await searchRiderEnvelope({
+      request: parsed.value.request,
+      baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
+      candidates: eligible,
+      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
+      provider, maxCalls: Math.min(3, RIDER_SEARCH_CALLS), sweepCalls: dirtSweepCalls(riderEnv), deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
+      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
+      verify: async (proposed, searchSignal) => {
+        const own = await assessRoads([...candidates, ...proposed], searchSignal);
+        roads = own;
+        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
+      },
     });
-    if (chosen !== null) {
-      const selected = adoptRiderRoute(chosen, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
+    riderCalls += result.calls;
+    riderTrials = result.trials;
+    if (result.candidate !== null) {
+      const selected = adoptRiderRoute(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
       if (selected !== null) {
-        preferredRoute = { candidate: chosen, others: candidates };
-        pipeline = selected; riderKneeSelected = true;
+        preferredRoute = { candidate: result.candidate, others: candidates };
+        candidates = [result.candidate, ...candidates]; pipeline = selected; riderKneeSelected = true;
+        const factor = result.candidate.providerMetadata?.["riderModeFactor"];
+        riderFactor = typeof factor === "number" ? factor : undefined;
       }
     }
   }
@@ -1222,3 +1326,8 @@ async function planRideAttempt(
   };
 }
 
+/** The dirt sweep's own router budget (OGV_DIRT_SWEEP_CALLS), apart from the envelope search. */
+function dirtSweepCalls(env: Readonly<Record<string, string | undefined>>): number {
+  const raw = Number.parseInt(env["OGV_DIRT_SWEEP_CALLS"] ?? "", 10);
+  return Number.isFinite(raw) ? Math.max(0, Math.min(MAX_DIRT_SWEEP_CALLS, raw)) : DIRT_SWEEP_CALLS;
+}

@@ -38,8 +38,19 @@ function decodeEntities(value: string): string {
   });
 }
 
+/** UTF-8 length without allocating an encoder per string (same count as `TextEncoder`; lone surrogates count 3). */
 function byteLength(value: string): number {
-  return new TextEncoder().encode(value).byteLength;
+  let bytes = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < value.length && (value.charCodeAt(index + 1) & 0xfc00) === 0xdc00) {
+      bytes += 4;
+      index += 1;
+    } else bytes += 3;
+  }
+  return bytes;
 }
 
 function boundedXmlText(value: string, limits: ImportLimits, label: string): string {
@@ -52,9 +63,11 @@ function boundedXmlText(value: string, limits: ImportLimits, label: string): str
 
 function appendXmlText(element: MutableElement, value: string, limits: ImportLimits): void {
   const decoded = boundedXmlText(value, limits, "XML text");
-  if (byteLength(element.text) + byteLength(decoded) > limits.MAX_STRING_BYTES) {
+  const total = element.textBytes + byteLength(decoded);
+  if (total > limits.MAX_STRING_BYTES) {
     throw new ImportSecurityError(`XML text exceeds the ${limits.MAX_STRING_BYTES}-byte XML string limit.`);
   }
+  element.textBytes = total;
   element.text += decoded;
 }
 
@@ -78,6 +91,8 @@ interface MutableElement {
   readonly attributes: Record<string, string>;
   readonly children: XmlElement[];
   text: string;
+  /** Running UTF-8 size of `text`, so each append is measured once, not re-measured whole. */
+  textBytes: number;
 }
 
 function parseOpeningTag(
@@ -209,7 +224,7 @@ export function parseXmlDocument(xml: string, limits: ImportLimits): XmlElement 
       if (stack.length + 1 > limits.MAX_XML_DEPTH) {
         throw new ImportSecurityError(`XML nesting exceeds the ${limits.MAX_XML_DEPTH}-level limit.`);
       }
-      const element: MutableElement = { name: tag.name, attributes: tag.attributes, children: [], text: "" };
+      const element: MutableElement = { name: tag.name, attributes: tag.attributes, children: [], text: "", textBytes: 0 };
       if (tag.selfClosing) {
         const completed = asElement(element);
         if (stack.length > 0) stack.at(-1)!.children.push(completed);

@@ -19,7 +19,9 @@ import { LIVE_RIDER_NAME_STORAGE_KEY, LIVE_SESSION_STORAGE_KEY } from "@/applica
 
 import { HIKE_EXPLORE_ORIGIN_KEY, HIKE_EXPLORE_STATE_KEY } from "@/application/map/explore-origin";
 import { KEPT_ROUTE_STORAGE_KEY } from "@/application/explore/ride-this";
+import { APPROACH_STORAGE_KEY } from "@/application/ride-session/approach-request";
 export const LOCAL_DATA_STORAGE_KEYS = [
+  APPROACH_STORAGE_KEY,
   KEPT_ROUTE_STORAGE_KEY,
   HIKE_EXPLORE_ORIGIN_KEY,
   HIKE_EXPLORE_STATE_KEY,
@@ -50,6 +52,7 @@ export const LOCAL_DATA_STORAGE_KEYS = [
   `${MAP_LAYERS_STORAGE_KEY}.hike`,
   "og-activity-mode",
   "og-hike-tip-dismissed",
+  "og-legend-seen",
   CAMERA_ROUTE_ONLY_STORAGE_KEY,
   SPOTIFY_CLIENT_ID_STORAGE_KEY,
   VOICE_MUTED_STORAGE_KEY,

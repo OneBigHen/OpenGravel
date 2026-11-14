@@ -26,5 +26,6 @@ export function shareSourceFromRide(
     },
     provenance: document.provenance.type,
     authorPseudonym,
+    ...(document.provenance.credit === undefined ? {} : { credit: document.provenance.credit }),
   };
 }

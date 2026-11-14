@@ -3,6 +3,7 @@ import { ExploreClient } from "@/app/ExploreClient";
 import { resolveBasemapMode } from "@/infrastructure/map/basemap";
 import { liveCatalogEntries } from "@/server/community-routes/live-catalog";
 import { routeMetadata } from "@/server/explore/route-metadata";
+import { libraryRideAsCatalogEntry } from "@/server/route-library/as-catalog-entry";
 import type { Metadata } from "next";
 
 /** Dynamic for the same reason as Explore: the basemap is read per request. */
@@ -15,7 +16,11 @@ export async function generateMetadata({
   readonly params: Promise<{ readonly id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return routeMetadata(decodeURIComponent(id), liveCatalogEntries(), process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
+  const routeId = decodeURIComponent(id);
+  const entries = liveCatalogEntries();
+  // A national-library ride is not in the live catalog; it unfurls the same way.
+  const libraryRide = entries.some((entry) => entry.id === routeId) ? null : libraryRideAsCatalogEntry(routeId);
+  return routeMetadata(routeId, libraryRide === null ? entries : [libraryRide], process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
 }
 
 export default async function ExploreRoutePage({

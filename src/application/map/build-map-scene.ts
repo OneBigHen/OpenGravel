@@ -116,6 +116,12 @@ export interface MapSceneInput {
    * alternative is compared by colour and time, never read for dusk.
    */
   readonly daylight?: RouteDaylightScene | null;
+  /**
+   * What the sheet calls each choice, keyed by route id ("Twistiest",
+   * "Option 2"; `compareChoiceNames`), so a map tag and its Compare row say the
+   * same name (PF-8). Absent: the tags fall back to the role names.
+   */
+  readonly routeNames?: Readonly<Record<string, string>>;
 }
 
 /** A geographic bounding box for camera fit (05 §8–§9). */
@@ -254,8 +260,10 @@ function routeScenes(
   document: RideDocument,
   readGeometry: MapSceneInput["readGeometry"],
   daylight: RouteDaylightScene | null,
+  routeNames?: Readonly<Record<string, string>>,
 ): readonly RouteScene[] {
   if (bundle === null) return [];
+  const selectedSeconds = bundle.candidates.find((candidate) => candidate.id === bundle.selectedRouteId)?.durationSeconds ?? null;
   const stale = answerIsStale(bundle, document);
   const labelled = !stale && bundle.candidates.length > 1;
   const lines = bundle.candidates.map((candidate) => lineCoordinates(candidate, readGeometry));
@@ -291,12 +299,26 @@ function routeScenes(
         ? {}
         : {
             label: {
-              text: `${role === null ? ALTERNATIVE_LABEL : ROLE_LABELS[role]} · ${formatDuration(candidate.durationSeconds)}`,
+              text: routeNames === undefined
+                ? `${role === null ? ALTERNATIVE_LABEL : ROLE_LABELS[role]} · ${formatDuration(candidate.durationSeconds)}`
+                : routeTagText(routeNames[candidate.id] ?? `Option ${index + 1}`, candidate.durationSeconds, state === "selected" ? null : selectedSeconds),
               at,
             },
           }),
     };
   });
+}
+
+/**
+ * A map tag in the sheet's words (PF-8): the chosen ride says its time
+ * ("Twistiest · 39 min"), every other choice says what it costs against it
+ * ("Option 2 · +10 min").
+ */
+export function routeTagText(name: string, seconds: number, selectedSeconds: number | null): string {
+  if (selectedSeconds === null || !Number.isFinite(selectedSeconds) || !Number.isFinite(seconds)) return `${name} · ${formatDuration(seconds)}`;
+  const minutes = Math.round((seconds - selectedSeconds) / 60);
+  if (minutes === 0) return `${name} · same time`;
+  return `${name} · ${minutes > 0 ? "+" : "−"}${formatDuration(Math.abs(minutes) * 60)}`;
 }
 
 /** Whether this candidate's surface is verified, for the card badge (04 §11). */
@@ -424,7 +446,7 @@ export function buildMapScene(input: MapSceneInput): MapScene {
     // Only the planner exists in this slice; `ride`/`explore` arrive with their
     // hosts, and claiming a mode nothing produces would be a lie.
     mode: "plan",
-    routes: routeScenes(bundle, input.document, input.readGeometry, input.daylight ?? null),
+    routes: routeScenes(bundle, input.document, input.readGeometry, input.daylight ?? null, input.routeNames),
     selectedRouteId: bundle?.selectedRouteId ?? null,
     points: pointScenes(input.document),
     preview: input.preview ?? null,
