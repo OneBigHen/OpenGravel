@@ -390,7 +390,9 @@
 .og-ride-metrics {
   display: grid;
   flex: 1 1 auto;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* OG-20: the count follows the slots that are visible (three, or two before the
+     first GPS fix), so a hidden speed slot never leaves an empty third. */
+  grid-template-columns: repeat(var(--og-ride-metric-slots, 3), minmax(0, 1fr));
   align-self: stretch;
   min-width: 0;
 }

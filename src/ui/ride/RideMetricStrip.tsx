@@ -11,7 +11,7 @@
  * slim strip always did — shows the ride controls — and never cycles metrics.
  */
 
-import type { Ref } from "react";
+import type { CSSProperties, Ref } from "react";
 
 import type { RideMetricStripModel } from "@/application/ride-metrics/strip";
 
@@ -26,6 +26,10 @@ export interface RideMetricStripProps {
 }
 
 export function RideMetricStrip({ model, onShowControls, onChooseSlot, slotRef }: RideMetricStripProps) {
+  // OG-20: a slot waiting for its first reading is not drawn at all, so the
+  // strip never shows a dash. The remaining slots split the width evenly.
+  const visible = model.slots.filter((slot) => !slot.hidden);
+  const columns = Math.max(1, visible.length);
   return (
     <div
       className="og-ride-metrics"
@@ -33,10 +37,12 @@ export function RideMetricStrip({ model, onShowControls, onChooseSlot, slotRef }
       data-mode={model.mode}
       data-customizable={model.customizable ? "true" : "false"}
       data-preset={model.preset?.id ?? "custom"}
+      data-slots={columns}
+      style={{ "--og-ride-metric-slots": columns } as CSSProperties}
       role="group"
       aria-label="Ride readouts"
     >
-      {model.slots.map((slot) => {
+      {visible.map((slot) => {
         const { reading } = slot;
         const over = model.overLimit && reading.id === "speed.current";
         const action = model.customizable ? "Change metric." : "Show ride controls.";

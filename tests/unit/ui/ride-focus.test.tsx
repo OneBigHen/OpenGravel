@@ -2516,7 +2516,12 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
 
   it("changes one readout from the picker while paused, saves it and announces it", async () => {
     const settings = settingsDouble();
-    await harness({ autoResume: false, riderSettings: settings });
+    // Ride with a fix, then stop: the speed readout is on screen (OG-20 hides it
+    // before the first fix) and the picker is open to the rider.
+    const { store } = await harness({ position: "fresh", riderSettings: settings });
+    await act(async () => {
+      await store.getState().pause();
+    });
     expect(screen.getByTestId("ride-metric-strip")).toHaveAttribute("data-customizable", "true");
 
     fireEvent.click(screen.getByTestId("ride-metric-slot-1"));
@@ -2567,7 +2572,8 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
 
   it("closes an open picker by itself once the rider is moving", async () => {
     const { store, controller } = await harness({ autoResume: false });
-    fireEvent.click(screen.getByTestId("ride-metric-slot-0"));
+    // No fix yet, so the speed slot is hidden (OG-20); any shown readout opens it.
+    fireEvent.click(screen.getByTestId("ride-metric-slot-1"));
     expect(screen.getByTestId("ride-metric-picker")).toBeInTheDocument();
     await act(async () => {
       await store.getState().resume();
@@ -2823,6 +2829,17 @@ describe("the ride screen's number scale and controls (small-screen design syste
     // A long road name wraps instead of being clamped away.
     expect(street).not.toMatch(/-webkit-line-clamp/);
     expect(street).not.toMatch(/text-overflow/);
+    // OG-19: the action shares the first row with the distance but may take a
+    // whole line of its own, so "Turn left onto West Monument Avenue" wraps
+    // as words instead of being cut after "Aven".
+    const turn = rule(".og-ride__maneuver-turn");
+    expect(turn).toMatch(/flex-wrap:\s*wrap/);
+    const actionInTurn = rule(".og-ride__maneuver-turn .og-ride__maneuver-action");
+    expect(actionInTurn).toMatch(/min-width:\s*0/);
+    expect(actionInTurn).toMatch(/flex:\s*1 1/);
+    const then = rule(".og-ride__maneuver-then-action");
+    expect(then).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(then).not.toMatch(/text-overflow/);
 
     expect(rule(".og-ride-metrics__value")).toMatch(/font-size:\s*var\(--og-ride-text-readout\)/);
     expect(rule(".og-ride-metrics__value")).toMatch(/font-variant-numeric:\s*tabular-nums/);
