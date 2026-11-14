@@ -6,6 +6,7 @@ import { PlaceSheet } from "@/ui/place/PlaceSheet";
 import { RiderToast } from "@/ui/place/RiderToast";
 import { TopSearch } from "@/ui/place/TopSearch";
 import { usePlaceFlow } from "@/ui/place/usePlaceFlow";
+import { cssRuleRaw } from "../../helpers/app-css";
 import { createRideDocumentStore, placeStartCommand } from "@/ui/stores/ride-document-store";
 import { createPlannerUiStore } from "@/ui/stores/planner-ui-store";
 import { setFrontDoorOption } from "@/ui/stores/front-door-options";
@@ -70,6 +71,26 @@ describe("universal place sheet", () => {
 });
 
 describe("top search and toast", () => {
+  it("fades the chip row only while a chip is still out of sight (OG-23)", () => {
+    render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} layerOn={() => false} onClear={vi.fn()} onChip={vi.fn()} onLayer={vi.fn()}/>);
+    const row = screen.getByLabelText("Nearby places");
+    // jsdom has no layout, so the row's own measures are supplied: 900 px of
+    // chips in a 320 px row.
+    Object.defineProperty(row, "scrollWidth", { configurable: true, value: 900 });
+    Object.defineProperty(row, "clientWidth", { configurable: true, value: 320 });
+    Object.defineProperty(row, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    fireEvent.scroll(row);
+    expect(row).toHaveAttribute("data-overflow", "true");
+    // Scrolled to the end (600 + 320 > 900): nothing is left to find, no fade.
+    row.scrollLeft = 600;
+    fireEvent.scroll(row);
+    expect(row).not.toHaveAttribute("data-overflow");
+    // The fade is the CSS the flag turns on, on the right edge only.
+    const fade = cssRuleRaw('.og-search-chips[data-overflow="true"]', { inMedia: true });
+    expect(fade).toMatch(/mask-image:\s*linear-gradient\(to right/);
+    expect(fade).toMatch(/transparent\)/);
+  });
+
   it("opens on search, the five place chips, two layer switches and the Menu, with no Ask until Settings turns it on", () => {
     render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} layerOn={() => false} onClear={vi.fn()} onChip={vi.fn()} onLayer={vi.fn()}/>);
     expect(screen.getByPlaceholderText("Search here")).toBeInTheDocument();

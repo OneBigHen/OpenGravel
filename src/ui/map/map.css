@@ -35,6 +35,19 @@
   font-family: var(--og-face-body);
 }
 
+/* OG-23: the renderer slices a basemap name at the screen edge or leaves it under
+   the notch; the canvas dissolves over the last 12 px at the sides and the
+   device's top inset, so a name reads whole or is gone, never a broken word.
+   The mask is on the canvas alone — a mask on the box around it takes the map's
+   tap handling with it (Chromium then hit-tests the wrapper, not the canvas). */
+.og-map .maplibregl-canvas {
+  --og-map-edge-fade: 12px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgb(0 0 0) var(--og-safe-top), rgb(0 0 0) 100%), linear-gradient(to right, transparent 0, rgb(0 0 0) var(--og-map-edge-fade), rgb(0 0 0) calc(100% - var(--og-map-edge-fade)), transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, rgb(0 0 0) var(--og-safe-top), rgb(0 0 0) 100%), linear-gradient(to right, transparent 0, rgb(0 0 0) var(--og-map-edge-fade), rgb(0 0 0) calc(100% - var(--og-map-edge-fade)), transparent 100%);
+  mask-composite: intersect;
+}
+
 .og-map canvas:focus {
   outline: none;
 }
@@ -591,20 +604,5 @@
   }
 }
 
-.og-map__dimension {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--og-glass);
-  color: var(--og-ink);
-  font: inherit;
-  font-size: var(--og-text-meta);
-  font-weight: 700;
-  box-shadow: var(--og-shadow-float);
-  cursor: pointer;
-}
+.og-map__dimension { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: var(--og-glass); color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); font-weight: 700; box-shadow: var(--og-shadow-float); cursor: pointer; }
 .og-map__dimension:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }

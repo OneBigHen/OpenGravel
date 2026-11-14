@@ -146,6 +146,9 @@
     display: none;
   }
 
+  /* OG-23: while a chip is still out of sight the edge fades, so the row reads as scrollable, not clipped. */
+  .og-search-chips[data-overflow="true"] { -webkit-mask-image: linear-gradient(to right, rgb(0 0 0) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, rgb(0 0 0) calc(100% - 28px), transparent); }
+
   .og-search-chips button {
     position: relative;
     display: inline-flex;
