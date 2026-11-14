@@ -38,17 +38,9 @@
   align-content: start;
 }
 
-.og-routes__section {
-  display: grid;
-  gap: var(--og-space-3);
-  min-width: 0;
-}
+.og-routes__section { display: grid; gap: var(--og-space-3); min-width: 0; }
 
-.og-routes__more {
-  justify-self: center;
-  min-height: var(--og-touch);
-  padding-inline: var(--og-space-5);
-}
+.og-routes__more { justify-self: center; min-height: var(--og-touch); padding-inline: var(--og-space-5); }
 
 /* Chips float over the map on a phone. */
 .og-routes__chrome {
