@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-import { clickMapAtCoordinate, fractionOf, placeEndpoint, plannerMap, readCoordinate, readExtent, settledExtent, type Coordinate } from "./map-helpers";
+import { clickMapAtCoordinate, fractionOf, plannerMap, readCoordinate, readExtent, settledExtent, type Coordinate } from "./map-helpers";
 import { PHONE_SIZES } from "./rider-gate-helpers";
+import { directionsTo } from "./search-helpers";
 
 /**
  * GATE-EDIT-VISIBLE (#324; behind QA-06).
@@ -12,8 +13,6 @@ import { PHONE_SIZES } from "./rider-gate-helpers";
  */
 test.describe.configure({ timeout: 150_000 });
 
-const START: Coordinate = { lon: -75.4385, lat: 40.1385 };
-const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
 const STOP: Coordinate = { lon: -75.442, lat: 40.141 };
 
 for (const size of PHONE_SIZES) {
@@ -22,9 +21,8 @@ for (const size of PHONE_SIZES) {
     await page.goto("/");
     await expect(plannerMap(page)).toBeVisible();
     await settledExtent(page);
-    await placeEndpoint(page, "start", START);
-    await placeEndpoint(page, "finish", FINISH);
-    await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 60_000 });
+    await directionsTo(page);
+    await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 30_000 });
 
     // Open Edit and add one stop, so a count of zero cannot pass by accident.
     await page.getByTestId("trip-edit").click();

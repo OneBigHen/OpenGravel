@@ -69,7 +69,11 @@ test("turning the phone sideways mid-ride keeps the ride controls reachable", as
   await settleChrome(page);
   await expectNoSidewaysScroll(page, "ride in landscape");
   await expectReachable(page, page.getByTestId("ride-menu"), "the ride Menu button");
-  await expectReachable(page, page.getByTestId("ride-strip"), "the ride strip");
+  await expectReachable(page, page.getByRole("button", { name: "Show the whole route" }), "Show the whole route");
+  await expectReachable(page, page.getByTestId("ride-maneuver"), "the next-turn banner");
+  for (const readout of [/^Speed/, /^Distance left/, /^Arrival/]) {
+    await expectReachable(page, page.getByRole("button", { name: readout }), `the ${String(readout)} readout`);
+  }
   expect(await floatingControlProblems(page), "ride in landscape").toEqual([]);
 
   // The Menu opens and its actions can be reached by scrolling inside it (it closes itself after 8 s idle).
