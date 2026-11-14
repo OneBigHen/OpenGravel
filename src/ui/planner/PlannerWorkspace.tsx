@@ -102,7 +102,7 @@ import {
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
-  useOpenCuratedRide, usePlanSavedAgain,
+  useOpenCuratedRide, usePlanSavedAgain, usePlannerStartRide,
   usePlannerViewModel, usePlannerVisibleSession,
   type PlannerPlaceServices,
 } from "@/ui/planner/controllers";
@@ -233,10 +233,6 @@ export function PlannerWorkspace({
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
   const [refineEditing, setRefineEditing] = useState(false);
   const { breadcrumb, bar: breadcrumbBar, mapGlance, dockGlance, mapProps: breadcrumbMapProps } = usePlannerBreadcrumbView({ document, rideDocumentStore, planningSessionStore, plannerUiStore, libraryService, preparationProviders, rideActions });
-  const [rideStart, setRideStart] = useState<{
-    readonly state: "idle" | "starting";
-    readonly message: string | null;
-  }>({ state: "idle", message: null });
 
   const {
     store: areaStore,
@@ -693,68 +689,9 @@ export function PlannerWorkspace({
     rideDocumentStore.getState().undo();
   }, [document, updateRecovery, rideDocumentStore]);
 
-  /**
-   * The §28 handoff: the composition root journals the session, writes the
-   * bootstrap pointer and moves to `/ride`. This component only reports the
-   * outcome — it neither writes storage nor changes the URL.
-   */
-  const handleStartRide = useCallback(async (): Promise<void> => {
-    if (rideActions === undefined || rideHandoff.outcome !== "ready") return;
-    setRideStart({ state: "starting", message: null });
-    try {
-      const outcome = await rideActions.start(rideHandoff.request);
-      if (outcome.outcome === "rejected") {
-        setRideStart({ state: "idle", message: outcome.message });
-        return;
-      }
-      // A successful start navigates away; the surface must not flash an idle
-      // button while the route changes.
-      setRideStart({ state: "starting", message: null });
-    } catch (error: unknown) {
-      setRideStart({
-        state: "idle",
-        message:
-          error instanceof Error && error.message.length > 0
-            ? error.message
-            : "The ride could not be started.",
-      });
-    }
-  }, [rideActions, rideHandoff]);
-
-  /**
-   * OG-02: Start on a drawing that is not kept yet keeps it (the same as Done)
-   * and starts the ride as soon as the kept drawing is planned. The rider asked
-   * to ride; a footnote telling them to press another button first was a dead end.
-   */
-  const [startAfterDrawing, setStartAfterDrawing] = useState(false);
-  const handleStartPressed = useCallback((): void => {
-    if (rideHandoff.outcome === "refused" && rideHandoff.code === "sketch-preview") {
-      setRideStart({ state: "idle", message: null });
-      setStartAfterDrawing(true);
-      sketchPanelProps.onDone();
-      return;
-    }
-    setStartAfterDrawing(false);
-    void handleStartRide();
-  }, [rideHandoff, sketchPanelProps, handleStartRide]);
-  // The kept drawing could not be planned: say so beside Start instead of waiting.
-  const drawingStartFailed =
-    startAfterDrawing && (sketchError !== null || session.phase === "failed" || session.phase === "cancelled");
-  const drawingStartReady =
-    startAfterDrawing &&
-    !drawingStartFailed &&
-    !isPlanningInFlight(session.phase) &&
-    session.committedBundle !== null &&
-    session.committedBundle.rideRevision === document.revision &&
-    rideHandoff.outcome === "ready";
-  useEffect(() => {
-    if (!drawingStartReady) return;
-    // The kept drawing has its own plan now: start it, once.
-    void Promise.resolve().then(() => {
-      setStartAfterDrawing(false);
-      return handleStartRide();
-    });
-  }, [drawingStartReady, handleStartRide]);
+  const { rideStart, handleStartPressed, startAfterDrawing, drawingStartFailed } = usePlannerStartRide({
+    rideActions, rideHandoff, sketchPanelProps, sketchError, session, document,
+  });
 
   const planning = isPlanningInFlight(session.phase);
 

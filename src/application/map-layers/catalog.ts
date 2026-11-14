@@ -132,15 +132,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     id: "contours", name: "Contour lines", category: "view", kind: "features",
     legend: "Elevation lines; closer lines mean steeper ground", source: "Mapzen Terrarium terrain tiles",
     caveat: "Elevation resolution is roughly 100 to 300 ft. Lines are drawn for the area on screen, and the spacing is shown on each line. Steep ground is not the same as a steep road.",
-    minZoom: 6, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
+    minZoom: 12, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
   },
-  {
-    id: "slope", name: "Steep ground", category: "view", kind: "features",
-    legend: "Amber is steep, red is very steep", source: "Mapzen Terrarium terrain tiles",
-    caveat: "Elevation resolution is roughly 100 to 300 ft. It shows the ground, not the road. A road can be gentler than the hill beside it.",
-    minZoom: 6, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
-  },
-
   {
     id: "terrain-3d",
     name: "3D terrain",

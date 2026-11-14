@@ -13,11 +13,11 @@ vi.mock("@/infrastructure/elevation/terrarium-source", () => ({
 beforeEach(clearMapLayersCache);
 describe("terrain for the visible view", () => {
   it("returns a grid at desktop zoom 13 even when cache cells expand the view past 0.12 degrees", async () => {
-    const answer = await handleMapLayersRequest(new URL("http://localhost/api/map-layers?layers=contours,slope&bbox=-76.01,40.61,-75.9,40.7"), { providers: [terrainProvider], env: {} });
+    const answer = await handleMapLayersRequest(new URL("http://localhost/api/map-layers?layers=contours&bbox=-76.01,40.61,-75.9,40.7"), { providers: [terrainProvider], env: {} });
     expect(answer.body).toMatchObject({ unavailable: [], terrainGrid: { size: 65 } });
   });
   it("bounds a regional view with a grid rather than silently refusing terrain", async () => {
-    const answer = await handleMapLayersRequest(new URL("http://localhost/api/map-layers?layers=contours,slope&bbox=-76.5,40,-75,41"), { providers: [terrainProvider], env: {} });
+    const answer = await handleMapLayersRequest(new URL("http://localhost/api/map-layers?layers=contours&bbox=-76.5,40,-75,41"), { providers: [terrainProvider], env: {} });
     expect(answer.body).toMatchObject({ unavailable: [], terrainGrid: { size: 65 } });
   });
 });
