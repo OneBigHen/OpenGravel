@@ -57,8 +57,15 @@ async function slicedRows(page: Page): Promise<string[]> {
   });
 }
 
-for (const size of SIZES) {
-  test(`the capped ride sheet keeps Start and Compare whole at ${size.width}x${size.height}`, async ({ page }) => {
+/** Day adds nothing to the sheet; after dark the daylight chip does. Both must fit. */
+const CLOCKS = [
+  { name: "by day", at: "2026-11-14T17:00:00Z" },
+  { name: "after dark", at: "2026-11-15T05:15:00Z" },
+] as const;
+
+for (const clock of CLOCKS) for (const size of SIZES) {
+  test(`the capped ride sheet keeps Start and Compare whole at ${size.width}x${size.height} ${clock.name}`, async ({ page }) => {
+    await page.clock.setFixedTime(clock.at);
     await page.setViewportSize(size);
     await useConnectedRouteFixture(page);
     await page.goto("/");
