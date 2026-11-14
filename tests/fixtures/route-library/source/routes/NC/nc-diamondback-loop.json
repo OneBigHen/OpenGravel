@@ -1,0 +1,77 @@
+{
+ "id": "nc-diamondback-loop",
+ "name": "Diamondback Loop (NC 226A)",
+ "states": [
+  "NC",
+  "TN"
+ ],
+ "lane": "paved-twisty",
+ "source": {
+  "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/north-carolina/ride/diamondback-loop",
+  "name": "BestBikingRoads",
+  "fetched_via": "direct-download"
+ },
+ "author_credit": {
+  "author": "bkfist",
+  "author_url": "https://www.bestbikingroads.com/touring-biker-community/member/1027651249.html",
+  "credit_line": "Track by bkfist via BestBikingRoads"
+ },
+ "terms": {
+  "quote": "Best Biking Roads - All the Best Motorcycle Rides : Please Credit us and help support our project",
+  "terms_url": "https://www.bestbikingroads.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T11:29:53Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BestBikingRoads — https://www.bestbikingroads.com/contact_us.php",
+  "permission_notes": "BBR GPX is free, no login; no reuse statement on the page — ask before shipping."
+ },
+ "value_score": 5,
+ "value_reason": "BBR 5/5; 26.2 km measured, 26 km claimed; by bkfist, added March 7, 2015.",
+ "summary": "Diamondback Loop (NC 226A). BestBikingRoads: 26 km claimed, 26.2 km measured, rated 5/5. BBR track added March 7, 2015; verify road conditions before riding.",
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "difficulty": "unknown",
+  "permits": "none stated",
+  "seasonality": "unknown",
+  "surface_claim_source": "BestBikingRoads route page"
+ },
+ "scraped_at": "2026-11-13T11:29:53Z",
+ "last_verified": "2026-11-13T11:29:53Z",
+ "scraper": {
+  "adapter": "bestbikingroads",
+  "query": "BestBikingRoads North Carolina /routes/north-carolina index — full enumeration (132 pages) + GA/SC lead slugs",
+  "notes": "terms_source: GPX metadata <link><text> credit line, grep-verified in the downloaded file (BBR-shaped; creator=MapSource 6.16.3) [fixture: GPX trimmed to 271 points]"
+ },
+ "gpx": {
+  "availability": "hosted",
+  "download_url": "https://www.bestbikingroads.com/downloadfile.php?code2=6dad310",
+  "local_file": "nc-diamondback-loop.gpx",
+  "points": 271,
+  "distance_km": 24.88,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -82.1062,
+   "south": 35.8066,
+   "east": -82.0398,
+   "north": 35.8524
+  },
+  "sha256": "0365d1b58e0605b5922ee5c49aab37e3347858bc24c0204ea0b6354d6bf44c80",
+  "track_names": [
+   "Diamondback"
+  ],
+  "requires_login": false,
+  "track_vintage": "2015"
+ },
+ "media": {
+  "photos": [],
+  "videos": [
+   {
+    "url": "https://www.youtube.com/watch?v=4yhjNj5lUlk",
+    "credit": "bkfist"
+   }
+  ]
+ }
+}

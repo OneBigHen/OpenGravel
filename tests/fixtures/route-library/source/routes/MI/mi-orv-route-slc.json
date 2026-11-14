@@ -1,0 +1,72 @@
+{
+ "id": "mi-orv-route-slc",
+ "name": "ORV Route SLC",
+ "states": [
+  "MI"
+ ],
+ "lane": "dual-sport",
+ "source": {
+  "url": "https://www.michigan.gov/dnr/things-to-do/orv-riding/maps-list",
+  "name": "Michigan DNR ORV trail maps",
+  "fetched_via": "direct-download"
+ },
+ "author_credit": {
+  "author": "Michigan Department of Natural Resources",
+  "credit_line": "Track by Michigan Department of Natural Resources via Michigan DNR ORV trail maps"
+ },
+ "terms": {
+  "quote": "Trails shown on this map are an approximate representation of the trail system at the time of publication and may not reflect current ground conditions. Stay on signed trails only!",
+  "terms_url": "https://www.michigan.gov/dnr/things-to-do/orv-riding/maps-list",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T05:00:00-05:00"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "Michigan DNR Trails — DNR-Trails@michigan.gov",
+  "permission_notes": "DNR publishes the GPX for free public download; re-hosting permission not explicitly stated — ask before shipping."
+ },
+ "gpx": {
+  "availability": "hosted",
+  "download_url": "https://www2.dnr.state.mi.us/publications/pdfs/forestslandwater/ORV/Maps-Trail/ORVSLCRoute.gpx",
+  "local_file": "mi-orv-route-slc.gpx",
+  "points": 86,
+  "distance_km": 9.11,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -88.3532313246469,
+   "south": 45.990798150352326,
+   "east": -88.31529925839408,
+   "north": 46.094410911913975
+  },
+  "sha256": "bce4105bf9bf4ffb0b677e061296b6f907a7efdca468b34b9baa4db816d9db90",
+  "track_names": [
+   "ORVSLCRoute",
+   "ORVSLCRoute",
+   "ORVSLCRoute",
+   "ORVSLCRoute",
+   "ORVSLCRoute",
+   "ORVSLCRoute",
+   "ORVSLCRoute"
+  ],
+  "requires_login": false,
+  "is_bundle": true
+ },
+ "surface": {
+  "legal_status": "designated-ohv",
+  "mix": "mixed-use dirt/gravel road, 72-inch ORV route — motorcycles legal per DNR legend",
+  "difficulty": "unknown",
+  "permits": "Michigan DNR ORV license ($26.25/yr) and ORV trail permit required on designated trails unless street-licensed — see michigan.gov/dnr/things-to-do/orv-riding/permits-and-requirements",
+  "seasonality": "unknown",
+  "surface_claim_source": "Michigan DNR ORV trail map legend"
+ },
+ "summary": "DNR-designated 72-inch mixed-use ORV route; motorcycles legal per the DNR map legend. DNR file bundles many track segments under one name; measured distance sums the file's track segments (inter-segment jumps excluded), not a single loop length.",
+ "value_score": 3,
+ "value_reason": "DNR-designated 72-inch ORV route; motorcycles legal per the DNR map legend.",
+ "scraped_at": "2026-11-13T05:00:00-05:00",
+ "last_verified": "2026-11-13T05:00:00-05:00",
+ "scraper": {
+  "adapter": "generic-gpx",
+  "query": "Michigan DNR ORV maps list — full enumeration of every GPX link",
+  "notes": "terms_source: map disclaimer wording on michigan.gov/dnr/things-to-do/orv-riding/maps-list (no standalone reuse-terms page exists; quote is the page's own disclaimer wording, URL checked 2026-11-13) [fixture: GPX trimmed to 86 points]"
+ }
+}
