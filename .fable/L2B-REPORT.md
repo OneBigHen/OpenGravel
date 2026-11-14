@@ -131,5 +131,87 @@ The value is `null` and its index `sf` is `null`; the page may repeat the words 
    snapshot with the pack: it is the mapping review.
 2. Read the snapshot rows for legal and difficulty first. Any row with `"tableRow": false` is a phrasing the
    tables do not know; it is `null`, which is honest, and is where a new row may belong.
-3. Expect `null-facts` to pass: every value must have a quote and a source. If it fails, the named record's
-   record is missing `surface_claim_source` (or `difficulty_source` where difficulty came from elsewhere).
+3. Expect `null-facts` to pass: every value must have a quote and a source. A claim whose record names no
+   source is now withheld and listed rather than failing the build; see the follow-up section below.
+
+## Follow-up: the null-facts gate on the real library (2026-11-14)
+
+### Why the gate failed on `nv-bitter-springs-alternate`
+
+`factsFor` chose the difficulty's source with `surface?.difficulty_source ?? surface?.surface_claim_source`.
+The `??` operator falls back only when the left side is `undefined` or `null`; the failing record has
+`"difficulty_source": ""`, which is neither, so the empty string stood and `sourceOf("")` returned `null`.
+
+The 33 other records passed for a reason that is not about them being honest: they have **no
+`difficulty_source` key at all** (1,118 more records have the explicit string
+`"not stated on source page"`). `undefined` triggered the fallback, so each difficulty was credited to
+whatever source the *surface* claim named. That is a loophole, not evidence: the field says where the
+surface came from, and it was being used as if it also said where the difficulty came from. The record's own
+provenance field was silent, so nobody could show the source said "moderate".
+
+Checking the whole library for the same class of problem found two more dishonest passes the gate missed:
+`ct-merritt-parkway` and `ar-mt-magazine-scenic-byway` claim `easy` while their `difficulty_source`
+literally reads `"not stated on source page"` (one adds `"; scenic byway on a paved state highway"`).
+The old builder accepted that text as a named source.
+
+### The rule (in `src/application/route-library/facts.ts`)
+
+- A fact is credited only to the field that records where it came from: `surface_claim_source` for
+  surface, legal, permits and season; `difficulty_source` for difficulty. The surface source is never used
+  for the difficulty.
+- A provenance that is empty, a non-answer (`unknown`, `none stated`, `n/a`, `-`, `?`) or an admission
+  (`not stated …`) names no source. The fact's `value` becomes `null`, the record's own words are kept as
+  the `quote`, and the claim is listed in the build report under **"Claims dropped because the record names
+  no source"**. A URL containing `?` is still a source; the question-mark rule of `saysNothing` is not used
+  for provenance.
+- One rule, applied to all five facts. On the real library it changes exactly the difficulty: 32 claims are
+  withheld (30 records with a missing/blank `difficulty_source` plus the 2 that said the source did not
+  state it). No surface, legal, permit or season claim in the 5,815 records loses its value.
+
+`pack-builder.ts` reports the withheld claims instead of failing the build, and the `null-facts` gate detail
+now counts them. Nothing in `/root/Vibe/og-route-library-national` was edited.
+
+### The full build (exact command from `.fable/L2B-GATE-FIX.md`)
+
+```
+node --max-old-space-size=320 --import tsx scripts/route-library/build-pack.ts \
+  --library /root/Vibe/og-route-library-national \
+  --out /root/Vibe/og-route-library-build-l2b
+```
+
+Exit 0, `PASS version 8e85434154e2: 5815 rides, 4393 located, 3290 with a line`.
+
+| Check | Result | Detail |
+|---|---|---|
+| id-collision | pass | no library id collides with a curated catalog id (112 curated ids checked) |
+| duplicate-id | pass | every library id appears once |
+| validator-errors | pass | 0 validator errors in 5815 shipped records (0 records skipped and listed below) |
+| credit | pass | every one of 5815 rides has a credit line and a source address |
+| ride-points | pass | the longest ride is 13365 points (cap 20000) |
+| index-size | pass | index 373.9 KB gzipped (cap 400.0 KB) |
+| state-line-size | pass | 51 state line files; largest is MI at 81.1 KB (cap 200.0 KB) |
+| pack-size | pass | pack 15.92 MB (cap 60 MB) |
+| null-facts | pass | no null fact is rendered as a value; 16619 facts are null and say so (listed below); 32 claim(s) dropped because the record names no source (listed below) |
+| ride-count-drop | pass | 5815 rides in the earlier pack, 5815 now |
+
+Proof in the packed database for the record the gate named:
+
+```
+nv-bitter-springs-alternate  {"value":null,"quote":"moderate","source":null}
+ct-merritt-parkway           {"value":null,"quote":"easy","source":null}
+pa-pa-wilds-bdr-x            {"value":null,"quote":"moderate","source":null}
+```
+
+### Checks
+
+- `npx tsc --noEmit`: clean.
+- `npx vitest run tests/unit/route-library --maxWorkers=2`: 8 files, 123 tests passed.
+- New tests: `facts.test.ts` proves the surface source is never credited to the difficulty, that a blank or
+  "not stated" provenance withholds the value (keeping the words), that the rule covers all five facts,
+  that `unsourcedClaims` lists exactly what was withheld, and that a sourced claim survives;
+  `gates.test.ts` proves a record that cannot show a source now has the claim dropped and listed in the
+  report while the `null-facts` gate passes.
+- The build's default snapshot path is the repo's `scripts/route-library/phrases.snapshot.json`; it was
+  restored to the committed fixture build afterwards, because the repository test compares it with a fresh
+  fixture build (judgement call 5 above). The whole-library phrasings are in
+  `/root/Vibe/og-route-library-build-l2b/pack-report.md`.
