@@ -1007,13 +1007,9 @@
 }
 
 /* Smallest phones (QA-02): the title, the Ride / Things switch and the menu share
-   one row; a tighter gap and a smaller title keep "Explore" whole. */
+   one row; a tighter gap keeps "Explore" whole at the shared title size. */
 @media (max-width: 360px) {
   .og-explore__heading-row {
     gap: var(--og-space-2);
-  }
-
-  .og-explore h1 {
-    font-size: var(--og-text-headline);
   }
 }
