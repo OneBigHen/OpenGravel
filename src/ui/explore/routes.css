@@ -1,0 +1,254 @@
+/* Explore across the country: map stage, count bubbles, ride card, Map / List pill, chips. */
+
+/* Phone map view: the map fills the screen above the tab bar. */
+.og-explore.og-routes > .og-routes__stage {
+  position: fixed;
+  inset: 0 0 var(--og-tabbar-h, 0px) 0;
+  z-index: var(--og-z-map-ui);
+  width: auto;
+  margin: 0;
+  background: var(--og-bg);
+}
+
+.og-routes__map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.og-routes__stage > .og-routes__map {
+  position: absolute;
+  inset: 0;
+}
+
+.og-routes__map > .og-map-host {
+  position: absolute;
+  inset: 0;
+}
+
+/* Tablet and desktop: the map sits beside the list, as the curated map did. */
+.og-explore-map-panel > .og-routes__map {
+  height: min(760px, calc(100dvh - 200px));
+  min-height: 380px;
+  border-radius: var(--og-radius-card);
+}
+
+.og-routes__col {
+  grid-area: list;
+  display: grid;
+  gap: var(--og-space-4);
+  min-width: 0;
+  align-content: start;
+}
+
+.og-routes__section {
+  display: grid;
+  gap: var(--og-space-3);
+  min-width: 0;
+}
+
+.og-routes__more {
+  justify-self: center;
+  min-height: var(--og-touch);
+  padding-inline: var(--og-space-5);
+}
+
+/* Chips float over the map on a phone. */
+.og-routes__chrome {
+  position: absolute;
+  inset: calc(var(--og-safe-top) + var(--og-space-3)) 0 auto;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.og-routes__chrome > .og-explore__quick {
+  margin-inline: 0;
+  padding-inline: var(--og-space-4);
+  pointer-events: auto;
+}
+
+.og-routes__chip[aria-pressed="true"] {
+  border-color: var(--og-selected-ring);
+  box-shadow: inset 0 0 0 0.5px var(--og-selected-ring);
+  background: var(--og-selected);
+  font-weight: 700;
+}
+
+/* The one floating pill: Map / List. 48px, above the tab bar. */
+.og-routes__pillbar {
+  position: absolute;
+  inset: auto 0 var(--og-space-3);
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.og-explore > .og-routes__pillbar {
+  position: fixed;
+  bottom: calc(var(--og-tabbar-h, 0px) + var(--og-space-3));
+  z-index: var(--og-z-float);
+  width: auto;
+  margin: 0;
+}
+
+.og-explore:has(> .og-routes__pillbar) {
+  padding-bottom: calc(var(--og-tabbar-h, 0px) + 72px);
+}
+
+.og-routes__pill {
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-5);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Count bubbles pinned to the map: one per state, then one per group of rides. */
+.og-routes__bubbles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.og-routes__bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--og-space-2);
+  place-items: center;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+}
+
+/* 40px to the eye, 48px to the thumb. */
+.og-routes__bubble::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+/* The glass card for the tapped ride. */
+.og-routes__card {
+  position: absolute;
+  inset: auto var(--og-space-3) calc(var(--og-touch) + 2 * var(--og-space-3));
+  z-index: 4;
+  display: grid;
+  gap: var(--og-space-1);
+  padding: var(--og-space-3) var(--og-space-4);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  color: var(--og-ink);
+  touch-action: pan-y;
+}
+
+.og-explore-map-panel .og-routes__card {
+  bottom: var(--og-space-3);
+}
+
+.og-routes__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--og-space-1) var(--og-space-2);
+  padding-right: var(--og-touch);
+}
+
+.og-routes__card-name {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-body);
+  line-height: 1.2;
+}
+
+.og-routes__quality {
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  color: var(--og-route);
+}
+
+.og-routes__card-facts,
+.og-routes__card-credit {
+  margin: 0;
+  font-size: var(--og-text-meta);
+}
+
+.og-routes__card-credit {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-routes__card-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: var(--og-ink-2);
+}
+
+.og-routes__card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  margin-top: var(--og-space-2);
+}
+
+.og-routes__card-actions > .og-primary {
+  flex: 1;
+  min-height: var(--og-touch);
+}
+
+.og-routes__pager {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-1);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.og-routes__pager > button,
+.og-routes__card-close {
+  display: grid;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  place-items: center;
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.og-routes__pager > button {
+  color: var(--og-ink);
+}
+
+/* The smallest phones: the card drops the credit (it is on the ride page) and the map keeps the room. */
+@media (max-width: 360px) {
+  .og-routes__card-credit {
+    display: none;
+  }
+}

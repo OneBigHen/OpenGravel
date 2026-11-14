@@ -604,16 +604,26 @@ export function RouteDetail({
           start. Saving and sharing sit beside it as the quiet choices, together
           on their own row so the commitment is the only thing that stands out. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        <button
-          type="button"
-          className="og-primary"
-          data-testid="ride-this"
-          aria-busy={busy === "use"}
-          disabled={busy !== null || !fullGeometry}
-          onClick={() => void runAction("use", () => onUse(entry))}
-        >
-          {busy === "use" ? "Getting this ride ready…" : "Ride this"}
-        </button>
+        {entry.referenceTrack === true && entry.geometry.length < 2 ? (
+          // A library ride with no line of ours: the source's own page is the way on.
+          entry.credit?.sourceUrl === undefined ? null : (
+            <a className="og-primary" data-testid="ride-source-link" href={entry.credit.sourceUrl} target="_blank" rel="noopener noreferrer">
+              See it on {entry.credit.sourceName}
+              <span className="sr-only"> (opens the original in a new tab)</span>
+            </a>
+          )
+        ) : (
+          <button
+            type="button"
+            className="og-primary"
+            data-testid="ride-this"
+            aria-busy={busy === "use"}
+            disabled={busy !== null || !fullGeometry}
+            onClick={() => void runAction("use", () => onUse(entry))}
+          >
+            {busy === "use" ? "Getting this ride ready…" : entry.referenceTrack === true ? "Follow this track" : "Ride this"}
+          </button>
+        )}
         <div className="og-route-detail__alternates">
           {canSave ? (
             // Already saved is a state, not a dead end: the button keeps its

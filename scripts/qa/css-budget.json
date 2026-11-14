@@ -1,5 +1,5 @@
 {
-  "totalLines": 20023,
+  "totalLines": 20277,
   "maxFileLines": 2890,
   "backdropFilter": 99,
   "mediaQueries": 23,
@@ -14,6 +14,7 @@
     "src/ui/explore/explore.css": 1019,
     "src/ui/explore/hike-explore.css": 84,
     "src/ui/explore/route-detail.css": 1457,
+    "src/ui/explore/routes.css": 254,
     "src/ui/follow/follow.module.css": 167,
     "src/ui/layers/layers.css": 750,
     "src/ui/map/map.css": 616,

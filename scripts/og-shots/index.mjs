@@ -36,8 +36,10 @@ async function freePort() { for (;;) { const server = createNetServer(); await n
 async function run(command, args, env) { const child = spawn(command, args, { env, stdio: "inherit" }); const code = await new Promise((resolve, reject) => { child.on("error", reject); child.on("exit", resolve); }); if (code !== 0) throw new Error(`${command} exited with ${code}`); }
 async function localServer(map) {
   await run("npm", ["run", "build"], process.env);
+  // Absent until a country state copies the fixture pack here (see journeys.mjs).
+  process.env.OGSHOTS_LIBRARY_PACK ??= join(tmpdir(), `og-shots-${process.pid}-library.sqlite`);
   const nextPort = await freePort(), proxyPort = await freePort();
-  const env = { ...process.env, OGV_ROUTE_PLAN_FIXTURE: "1", OGV_RATE_LIMIT_UNLIMITED: "1", OGV_CATALOG_FIXTURE: "1", COMMUNITY_DB_PATH: ":memory:", OGV_SHARE_DB_PATH: join(tmpdir(), `og-shots-${process.pid}.sqlite`), OGV_ADVISOR_FIXTURE: "1", OGV_WEATHER_FIXTURE: "1", OGV_PLACES_FIXTURE: "1", OGV_GEOCODE_FIXTURE: "1", OGV_ELEVATION_FIXTURE: "1", OGV_OFFLINE_REGION_ROOT: "tests/fixtures/offline-regions", OGV_BASEMAP_ROOT: "tests/fixtures/basemap", NEXT_PUBLIC_OGV_BASEMAP: map === "fixture" ? "empty" : "openfreemap", NEXT_PUBLIC_OGV_RIDE_FIXTURE: "1" };
+  const env = { ...process.env, OGV_ROUTE_PLAN_FIXTURE: "1", OGV_RATE_LIMIT_UNLIMITED: "1", OGV_CATALOG_FIXTURE: "1", COMMUNITY_DB_PATH: ":memory:", OGV_SHARE_DB_PATH: join(tmpdir(), `og-shots-${process.pid}.sqlite`), OGV_ADVISOR_FIXTURE: "1", OGV_WEATHER_FIXTURE: "1", OGV_PLACES_FIXTURE: "1", OGV_GEOCODE_FIXTURE: "1", OGV_ELEVATION_FIXTURE: "1", OGV_ROUTE_LIBRARY_PACK: process.env.OGSHOTS_LIBRARY_PACK, OGV_OFFLINE_REGION_ROOT: "tests/fixtures/offline-regions", OGV_BASEMAP_ROOT: "tests/fixtures/basemap", NEXT_PUBLIC_OGV_BASEMAP: map === "fixture" ? "empty" : "openfreemap", NEXT_PUBLIC_OGV_RIDE_FIXTURE: "1" };
   const next = spawn("./node_modules/.bin/next", ["start", "-H", "127.0.0.1", "-p", String(nextPort)], { env, stdio: "inherit" });
   let exited = false; next.once("exit", () => { exited = true; });
   for (let i = 0; i < 600; i++) { if (exited) throw new Error("Next server exited before startup"); try { if ((await fetch(`http://127.0.0.1:${nextPort}/`)).ok) break; } catch {} if (i === 599) { next.kill(); throw new Error("Next server startup timed out"); } await sleep(200); }

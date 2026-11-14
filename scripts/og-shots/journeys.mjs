@@ -1,6 +1,38 @@
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const testId = id => `[data-testid="${id}"]`;
-export const states = ["plan-idle", "search-focused", "route-choices", "route-sheet-expanded", "active-ride", "explore", "rides-library", "settings", "planner-error"];
+export const states = ["plan-idle", "search-focused", "route-choices", "route-sheet-expanded", "active-ride", "explore", "rides-library", "settings", "planner-error", "explore-country-list", "explore-country-map", "explore-country-card", "explore-country-here"];
+// The ride library pack is only on the server's path while a country state runs, so
+// the older Explore picture stays what it was. OGSHOTS_LIBRARY_REAL=1 means the path
+// already holds the real pack and is left alone.
+async function libraryPack(on) {
+  const target = process.env.OGSHOTS_LIBRARY_PACK;
+  if (!target || process.env.OGSHOTS_LIBRARY_REAL === "1") return;
+  const { copyFile, rm } = await import("node:fs/promises");
+  if (on) await copyFile("tests/fixtures/route-library/pack.sqlite", target); else await rm(target, { force: true });
+}
+async function countryJourney(driver, state, target) {
+  await libraryPack(true);
+  const path = { "explore-country-list": "/explore?view=list", "explore-country-map": "/explore?view=map", "explore-country-card": "/explore?view=map&at=35.322,-83.807,9", "explore-country-here": "/explore?view=list&here=-84.5,35,-83,36" }[state];
+  await driver.goto(target + path);
+  await wait(driver, "loading skeletons gone", `return !document.querySelector('.og-skeleton,[aria-busy="true"]');`, 60000);
+  if (state === "explore-country-list" || state === "explore-country-here") {
+    await wait(driver, "library rows", `return document.querySelectorAll('[data-testid="library-row"]').length > 0;`, 30000);
+    await sleep(500);
+    return;
+  }
+  await wait(driver, "country map", `const m=document.querySelector('[data-testid="routes-map"]'); const p=m?.querySelector('[data-testid="planner-map"]'); return !!m && p?.dataset.mapLoad === 'ready' && !!p.dataset.mapExtent;`, 60000);
+  if (state === "explore-country-map") {
+    await wait(driver, "state bubbles", `return [...document.querySelectorAll('.og-routes__bubble')].some(e => e.style.visibility === 'visible');`, 30000);
+  } else {
+    await wait(driver, "lines drawn", `return Number(document.querySelector('[data-testid="routes-map"]')?.dataset.lines) > 0;`, 30000);
+    await sleep(800);
+    // Tap the start of the Cherohala Skyway the way a finger would.
+    await driver.evaluate(`const p=document.querySelector('[data-testid="planner-map"]'); const [w,s,e,n]=p.dataset.mapExtent.split(',').map(Number); const my=l=>Math.log(Math.tan(Math.PI/4+l*Math.PI/360)); const box=p.querySelector('canvas').getBoundingClientRect(); const x=box.left+(-83.8071-w)/(e-w)*box.width; const y=box.top+(my(n)-my(35.3228))/(my(n)-my(s))*box.height; const c=p.querySelector('canvas'); const o={bubbles:true,cancelable:true,clientX:x,clientY:y,button:0,pointerId:1,pointerType:'mouse',isPrimary:true,view:window}; for (const t of ['pointerdown','mousedown','pointerup','mouseup','click']) c.dispatchEvent(new (t.startsWith('pointer')?PointerEvent:MouseEvent)(t,o)); return 1;`);
+    await wait(driver, "ride card", `return !!document.querySelector('[data-testid="routes-map-card"]');`, 20000);
+  }
+  await sleep(600);
+}
+
 async function wait(driver, description, script, timeout = 30000) {
   const end = Date.now() + timeout;
   let last;
@@ -43,6 +75,8 @@ async function route(driver, target, failure) {
   await quiet(driver);
 }
 export async function journey(driver, state, target, local) {
+  if (state.startsWith("explore-country")) return countryJourney(driver, state, target);
+  await libraryPack(false);
   if (state === "explore" || state === "rides-library" || state === "settings") {
     const path = state === "rides-library" ? "/rides" : `/${state}`;
     await driver.goto(target + path);
