@@ -253,6 +253,8 @@ export async function runRefresh(options: RefreshOptions): Promise<RefreshResult
     const removed = difference(previousIds, currentIds);
     for (const id of removed) log(`Removed since the previous pack: ${id}`);
     log(`Changes: ${added.length} new, ${removed.length} removed, ${built.counts.rides} cards.`);
+    const deleted = prunePacks(outDir, options.keepPacks ?? 3, [built.packPath, ...(previousPath === null ? [] : [previousPath])]);
+    for (const name of deleted) log(`Pruned older pack ${name}`);
 
     if (previous !== null && previous.version === built.version) {
       log(`No change: version ${built.version} is already the newest build. Nothing to publish.`);
@@ -304,8 +306,6 @@ export async function runRefresh(options: RefreshOptions): Promise<RefreshResult
         removed,
       });
     }
-    const deleted = prunePacks(outDir, options.keepPacks ?? 3, [built.packPath, ...(previousPath === null ? [] : [previousPath])]);
-    for (const name of deleted) log(`Pruned older pack ${name}`);
     log(`Published version ${built.version}. Old links to removed rides now answer "this ride was removed".`);
     return result("published", {
       version: built.version,
