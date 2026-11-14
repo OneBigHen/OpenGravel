@@ -408,6 +408,12 @@ describe("buildPlannerViewModel — route cards", () => {
     }) }));
     expect(vm.routeCards[0]!.notices).toEqual([message]);
     expect(vm.routeCards[0]!.badges).toContain("Basic routing");
+    // QA-04: a basic route carries no evidence, so the card can make no curve or
+    // surface promise — and says the surface is unknown instead.
+    expect(vm.routeCards[0]!.curviness).toBeUndefined();
+    expect(vm.routeCards[0]!.surfaceStrip).toBeUndefined();
+    expect(vm.routeCards[0]!.badges).not.toContain("Few curves");
+    expect(vm.routeCards[0]!.truth?.[0]?.text).toBe("Surface unknown");
   });
 
   const ready = (): PlanningSessionSnapshot =>
