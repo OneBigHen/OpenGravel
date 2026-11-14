@@ -54,11 +54,12 @@ test("opens on a bubble per state, zooms in to a line, shows the card, opens the
   const groups = page.locator('.og-routes__bubble[data-kind="group"]');
   await expect(groups.first()).toBeVisible();
   // Several bubbles can be panned out of the phone's window; tap one that is on screen.
-  const onScreen = await groups.evaluateAll((nodes) => nodes.findIndex((node) => {
+  const findOnScreen = () => groups.evaluateAll((nodes) => nodes.findIndex((node) => {
     const box = node.getBoundingClientRect();
     return box.left >= 8 && box.right <= window.innerWidth - 8 && box.top >= 70 && box.bottom <= window.innerHeight - 150;
   }));
-  expect(onScreen).toBeGreaterThanOrEqual(0);
+  await expect.poll(findOnScreen, { timeout: 15_000 }).toBeGreaterThanOrEqual(0);
+  const onScreen = await findOnScreen();
   await groups.nth(onScreen).click();
   await expect.poll(() => zoomOf(page)).toBeGreaterThanOrEqual(7);
   await expect(routesMap(page)).not.toHaveAttribute("data-lines", "0");
