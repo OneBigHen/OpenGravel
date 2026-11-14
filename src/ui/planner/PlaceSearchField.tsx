@@ -31,6 +31,7 @@ import {
 } from "@/application/geocoding/place-search";
 import { readQuery, RIDE_DESCRIPTION_MAX_LENGTH } from "@/application/advisor/ride-description";
 import { placeKey, type RememberedPlace } from "@/application/geocoding/place-memory";
+import { withoutTrailingUsState } from "@/application/geocoding/us-states";
 import type { Coordinate } from "@/domain/ride/types";
 
 /** Wait this long after the last keystroke before asking (and spending a rate-limit slot). */
@@ -415,10 +416,15 @@ export function PlaceSearchField({
 /**
  * Whether Enter should list the matches rather than open the first: more than
  * one place, and not exactly one whose name is what the rider typed.
+ *
+ * The state a rider adds to a town ("Jim Thorpe PA") is not part of the town's
+ * name; without stripping it, the top suggestion never counted as a match and
+ * Enter turned a town search into a list of nearby businesses. A comma already
+ * separates the two in "Jim Thorpe, PA", a bare trailing state does not.
  */
 export function wantsList(query: string, places: readonly PlaceMatch[]): boolean {
   if (places.length < 2) return false;
-  const typed = (query.split(",")[0] ?? query).trim().toLowerCase();
+  const typed = withoutTrailingUsState((query.split(",")[0] ?? query).trim()).trim().toLowerCase();
   const exact = places.filter((place) => place.name.trim().toLowerCase() === typed);
   return exact.length !== 1;
 }

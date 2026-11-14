@@ -751,6 +751,40 @@ describe("Explore UI", () => {
     expect(screen.getByText("Where this route came from").closest(".og-route-detail__credits")).not.toBeNull();
   });
 
+  it("does not end the header on a separator with nothing after it (QA-22)", async () => {
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition },
+    });
+    // A credited ride names its author in the credit line instead of the source,
+    // so the meta line has only the start distance.
+    render(<RouteDetail
+      entry={{ ...entry, credit: { author: "Bobby", sourceName: "PA Adventure Bike Rides" } }}
+      onUse={vi.fn()}
+    />);
+
+    const meta = await screen.findByTestId("route-meta");
+    await waitFor(() => expect(meta).toHaveTextContent(/^Starts 7 mi from you$/));
+    expect(meta.textContent).not.toMatch(/[·,]\s*$/);
+  });
+
+  it("says a dirt ride is dirt, and reads each number once (QA-07, QA-22)", () => {
+    render(<RouteDetail entry={{ ...entry, surfaceSummary: "Mostly paved · 1.6 mi dirt", curvatureSummary: "2.1 mi of curves" }} onUse={vi.fn()} />);
+
+    const facts = screen.getByTestId("route-facts");
+    // The tile used to say "paved" while the truth line right under it said
+    // "1.6 mi dirt": the surface match only knew gravel.
+    const surface = facts.querySelector('[data-stat="surface"]');
+    expect(surface?.querySelector(".og-route-detail__stat-value")?.textContent).toBe("dirt");
+    // A screen reader heard "77 mi 77 mi": the visible value and its spoken
+    // copy were the same string twice.
+    const distance = facts.querySelector('[data-stat="distance"]');
+    expect(distance?.querySelectorAll(".og-route-detail__fact")).toHaveLength(0);
+    expect(distance?.textContent?.match(/17 mi/g)).toHaveLength(1);
+  });
+
   it("says how far the start is from a rider who already allowed location, and asks nobody else", async () => {
     const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
     vi.stubGlobal("navigator", {
@@ -830,13 +864,16 @@ describe("Explore UI", () => {
     // own span so the stylesheet draws the separators. No tile ledger, and no
     // "Est." stamp: the catalog's own time is the route's time.
     const facts = screen.getByTestId("route-facts");
+    // Distance reads once (its short value is the whole fact); the other three
+    // carry their full wording in the spoken copy.
+    expect(facts.querySelector('[data-stat="distance"]')?.textContent).toBe("Distance17 mi");
     expect([...facts.querySelectorAll(".og-route-detail__fact")].map((fact) => fact.textContent))
-      .toEqual(["17 mi", "~30 min", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
+      .toEqual(["~35 min", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
     // The pace behind the estimate is not words on the line (a footnote inside
     // the time fact is what left a lone "·" on a line of its own at 320 px);
     // it is the figure's title.
     expect(facts).not.toHaveTextContent(/mph/);
-    expect(screen.getByTitle("Estimated at 28 mph")).toHaveTextContent("~30 min");
+    expect(screen.getByTitle("Estimated at 28 mph")).toHaveTextContent("~35 min");
     expect(facts.closest(".og-route-detail__header")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Ride this" }));

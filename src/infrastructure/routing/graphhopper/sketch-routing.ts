@@ -10,8 +10,8 @@
  * 3. reviews every leg of every chunk against the drawing — an anchor that
  *    snapped onto a dead end (an out-and-back spur) is dropped, and a leg that
  *    left the drawing gets an anchor where it strayed farthest;
- * 4. re-routes each repaired chunk **once**, keeping the first answer if the
- *    repair fails; and
+ * 4. re-routes each repaired chunk, reviewing the repaired answer once more
+ *    (at most two repairs), keeping an answer only while it is cheaper; and
  * 5. stitches the chunk answers into one engine path, re-basing every index
  *    (instructions, details) onto the joined line.
  *
@@ -29,6 +29,7 @@ import {
   reviewSketchLeg,
   sketchStraySections,
   sliceLineByAlong,
+  spurCount,
   stitchSketchLines,
 } from "@/domain/sketch/snap";
 import type { GraphHopperWirePoint } from "./request-builder";
@@ -80,6 +81,16 @@ const CHUNK_BAND_MARGIN_METERS = 1_500;
  * extra riding, when choosing between a chunk's first answer and its repair.
  */
 const STRAY_COST_FACTOR = 3;
+
+/**
+ * What one out-and-back spur costs, in meters, when choosing between answers:
+ * enough that a route which leaves a short stretch of the drawing beats one that
+ * rides into a dead end and back to stay on it.
+ */
+const SPUR_COST_METERS = 1_500;
+
+/** How many times one chunk is reviewed and re-routed at most. */
+const MAX_REPAIR_ROUNDS = 3;
 
 /** The label the request builder gives a sketch anchor. */
 const SKETCH_LABEL = "Sketch";
@@ -181,6 +192,12 @@ function repairChunk(
   for (let index = 1; index < placed.length - 1; index += 1) {
     if (placed[index]?.point.label !== SKETCH_LABEL) continue;
     if (isSpurAt(line, indices[index] as number)) drop.add(index);
+  }
+  // Spurs first, on their own: dropping only the anchors that turned round is
+  // the smallest change, so the cheaper-answer test judges that alone rather
+  // than a spur fix bundled with other moves that can make the whole worse.
+  if (drop.size > 0) {
+    return { points: placed.filter((_entry, index) => !drop.has(index)), dropped: drop.size, added: 0 };
   }
   const inserts = new Map<number, PlacedPoint>();
   for (let index = 1; index < placed.length; index += 1) {
@@ -369,17 +386,6 @@ export async function routeSketch(input: {
     chunks.map((chunk) => async (): Promise<SketchChunkAnswer> => {
       const first = await route(chunk);
       if (corridor.length < 2) return first;
-      const repair = repairChunk(chunk, first.path, corridor);
-      if (repair === null) return first;
-      let second: SketchChunkAnswer;
-      try {
-        second = await route(repair.points);
-      } catch (caught) {
-        if (input.signal?.aborted === true) throw caught;
-        // The repair is an improvement, never a requirement: the first answer
-        // is a real route, and the pipeline still measures how it strays.
-        return first;
-      }
       // Keep the cheaper answer: its length plus a weighted price for every
       // meter of the drawing it leaves unfollowed. Length alone would prefer a
       // shortcut off the drawing; coverage alone would keep a 17-mile loop that
@@ -389,12 +395,32 @@ export async function routeSketch(input: {
         (answer.path.distance ?? 0) +
         STRAY_COST_FACTOR *
           sketchStraySections(coordinates(answer.path), band, { minLengthMeters: 0 })
-            .reduce((sum, section) => sum + section.lengthMeters, 0);
-      const better = cost(second) < cost(first);
-      if (!better) return first;
-      spursDropped += repair.dropped;
-      anchorsAdded += repair.added;
-      return second;
+            .reduce((sum, section) => sum + section.lengthMeters, 0) +
+        SPUR_COST_METERS * spurCount(coordinates(answer.path));
+      let current = first;
+      let points: readonly PlacedPoint[] = chunk;
+      // A repair can itself land an added anchor on a side street, so the
+      // repaired answer is reviewed once more (owner, 2026-11-13: a drawn route
+      // still zigzagged after one repair). Every round must be cheaper.
+      for (let round = 0; round < MAX_REPAIR_ROUNDS; round += 1) {
+        const repair = repairChunk(points, current.path, corridor);
+        if (repair === null) break;
+        let next: SketchChunkAnswer;
+        try {
+          next = await route(repair.points);
+        } catch (caught) {
+          if (input.signal?.aborted === true) throw caught;
+          // The repair is an improvement, never a requirement: the answer in
+          // hand is a real route, and the pipeline still measures how it strays.
+          break;
+        }
+        if (!(cost(next) < cost(current))) break;
+        spursDropped += repair.dropped;
+        anchorsAdded += repair.added;
+        current = next;
+        points = repair.points;
+      }
+      return current;
     }),
     input.concurrency ?? SKETCH_CHUNK_CONCURRENCY,
   );

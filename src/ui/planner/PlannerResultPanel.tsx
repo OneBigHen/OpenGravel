@@ -99,9 +99,14 @@ export interface PlannerResultPanelProps {
   readonly hike?: HikeSummaryModel | null;
   /** The place a one-tap save is named after: the loop's start or the destination. */
   readonly placeLabel?: string;
+  /**
+   * A new answer is being found and the ride on screen is the previous one
+   * (OG-05): the summary's numbers become skeletons until the answer lands.
+   */
+  readonly computing?: boolean;
 }
 
-export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null, placeLabel }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null, placeLabel, computing = false }: PlannerResultPanelProps) {
   const activity = useActivityMode();
   const hikeView = activity === "hike" ? hike : null;
   const wide = useInspectorTier();
@@ -142,6 +147,7 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     key={selectedCard.routeId}
     card={selectedCard}
     cards={choices.cards}
+    computing={computing}
     start={actions.start}
     title={destinationLine ?? "Your ride"}
     automaticName={automaticName}

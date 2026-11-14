@@ -102,7 +102,7 @@ import {
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
-  useOpenCuratedRide, usePlanSavedAgain, useAutoStartApproach,
+  useOpenCuratedRide, usePlanSavedAgain, usePlannerStartRide,
   usePlannerViewModel, usePlannerVisibleSession,
   type PlannerPlaceServices,
 } from "@/ui/planner/controllers";
@@ -233,10 +233,6 @@ export function PlannerWorkspace({
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
   const [refineEditing, setRefineEditing] = useState(false);
   const { breadcrumb, bar: breadcrumbBar, mapGlance, dockGlance, mapProps: breadcrumbMapProps } = usePlannerBreadcrumbView({ document, rideDocumentStore, planningSessionStore, plannerUiStore, libraryService, preparationProviders, rideActions });
-  const [rideStart, setRideStart] = useState<{
-    readonly state: "idle" | "starting";
-    readonly message: string | null;
-  }>({ state: "idle", message: null });
 
   const {
     store: areaStore,
@@ -304,7 +300,14 @@ export function PlannerWorkspace({
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
 
-  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, placeNameFor, routeLine: activeRoute, bikes });
+  // The drawn route on screen names its own ends until the drawing is kept.
+  const sketchPreviewEndpoints = useMemo(() => {
+    const line = showingSketchPreview ? activeRoute?.geometry : undefined;
+    const start = line?.[0];
+    const finish = line?.[line.length - 1];
+    return start === undefined || finish === undefined ? null : { start, finish };
+  }, [showingSketchPreview, activeRoute]);
+  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, sketchPreviewEndpoints, placeNameFor, routeLine: activeRoute, bikes });
 
   /**
    * The deterministic explanation of the route on screen (04 §13, Wave-3 task
@@ -686,37 +689,17 @@ export function PlannerWorkspace({
     rideDocumentStore.getState().undo();
   }, [document, updateRecovery, rideDocumentStore]);
 
-  /**
-   * The §28 handoff: the composition root journals the session, writes the
-   * bootstrap pointer and moves to `/ride`. This component only reports the
-   * outcome — it neither writes storage nor changes the URL.
-   */
-  const handleStartRide = useCallback(async (): Promise<void> => {
-    if (rideActions === undefined || rideHandoff.outcome !== "ready") return;
-    setRideStart({ state: "starting", message: null });
-    try {
-      const outcome = await rideActions.start(rideHandoff.request);
-      if (outcome.outcome === "rejected") {
-        setRideStart({ state: "idle", message: outcome.message });
-        return;
-      }
-      // A successful start navigates away; the surface must not flash an idle
-      // button while the route changes.
-      setRideStart({ state: "starting", message: null });
-    } catch (error: unknown) {
-      setRideStart({
-        state: "idle",
-        message:
-          error instanceof Error && error.message.length > 0
-            ? error.message
-            : "The ride could not be started.",
-      });
-    }
-  }, [rideActions, rideHandoff]);
-
-  useAutoStartApproach(String(document.rideId), rideActions !== undefined && rideHandoff.outcome === "ready", handleStartRide);
+  const { rideStart, handleStartPressed, startAfterDrawing, drawingStartFailed } = usePlannerStartRide({
+    rideActions, rideHandoff, sketchPanelProps, sketchError, session, document,
+  });
 
   const planning = isPlanningInFlight(session.phase);
+  // OG-05: only a drawing being snapped swaps the numbers for skeletons. Other
+  // replans keep the ride on screen until the new answer lands (the sheet does
+  // not change shape under the rider mid-plan).
+  const drawingIsSnapping =
+    (activeTool === "sketch" || showingSketchPreview) &&
+    (session.phase === "validating" || session.phase === "routing-primary");
 
   /**
    * Where the rider is coming from, so a tapped road is entered at the near
@@ -733,6 +716,7 @@ export function PlannerWorkspace({
     cards: viewModel.routeCards, route: activeRoute,
     elevationSource: preparationProviders?.elevationProfile, failed: viewModel.failed,
     planning, onRetry: handlePlan, plannerUiStore,
+    computing: drawingIsSnapping,
   });
 
   const tripCard = viewModel.routeCards.length > 0 || planning ? (
@@ -811,6 +795,7 @@ export function PlannerWorkspace({
             onEditConflictArea: handleEditConflictArea,
             onRemoveConflictArea: handleRemoveAvoidArea,
             errorMessage: viewModel.errorMessage,
+            ...(viewModel.failed ? { onRetryPlan: handlePlan } : {}),
             renderError,
             mapLoadStatus,
             onRetryMap: handleRetryMap,
@@ -858,10 +843,13 @@ export function PlannerWorkspace({
                 viewModel.routeCards.length === 0 || rideActions === undefined
                   ? null
                   : {
-                      refusal: rideHandoff.outcome === "refused" ? rideHandoff.message : null,
-                      starting: rideStart.state === "starting",
-                      error: rideStart.message,
-                      onStart: (): void => void handleStartRide(),
+                      // A drawing that is not kept yet is not a refusal: Start keeps it (OG-02).
+                      refusal: rideHandoff.outcome === "refused" && rideHandoff.code !== "sketch-preview" ? rideHandoff.message : null,
+                      starting: rideStart.state === "starting" || (startAfterDrawing && !drawingStartFailed),
+                      error: drawingStartFailed
+                        ? sketchError ?? "Your drawing could not be planned, so the ride did not start."
+                        : rideStart.message,
+                      onStart: handleStartPressed,
                     },
             },
             briefing: {
@@ -877,6 +865,9 @@ export function PlannerWorkspace({
               onRouteTraffic: setRouteTraffic,
             },
             sheetExpanded: sheetDetent === "expanded",
+            // OG-05: the numbers on screen belong to an older answer while a new
+            // one is being found, so the summary shows skeletons, not them.
+            computing: drawingIsSnapping,
             hike: plannedHike,
           }}
           refine={{

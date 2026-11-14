@@ -20,6 +20,7 @@ export { usePlannerStops } from "./hooks/usePlannerStops";
 export { useOpenCuratedRide } from "./hooks/useOpenCuratedRide";
 export { usePlanSavedAgain } from "./hooks/usePlanSavedAgain";
 export { useAutoStartApproach } from "./hooks/useAutoStartApproach";
+export { usePlannerStartRide } from "./hooks/usePlannerStartRide";
 export { usePlannerViewModel } from "./usePlannerViewModel";
 export { useRideGlance } from "./hooks/useRideGlance";
 export { usePlaceFlow } from "@/ui/place/usePlaceFlow";

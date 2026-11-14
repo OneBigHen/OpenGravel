@@ -82,7 +82,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.og-weekend-card__facts > :not(:first-child)::before { content: "· "; }
+.og-weekend-card__facts > :not(:last-child)::after { content: " · "; }
 
 .og-weekend-card__character {
   color: var(--og-primary-text);

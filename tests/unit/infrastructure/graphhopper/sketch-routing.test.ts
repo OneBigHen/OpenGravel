@@ -130,7 +130,7 @@ describe("routeSketch", () => {
     expect(line.at(-1)).toEqual([anchors.at(-1)!.lon, anchors.at(-1)!.lat]);
   });
 
-  it("drops the anchors at both ends of a detour and re-routes that chunk once", async () => {
+  it("drops the anchor a detour turns round on and re-routes that chunk once", async () => {
     const calls: (readonly GraphHopperWirePoint[])[] = [];
     const engine = straightRouter(calls);
     // The anchor at 2 km snapped onto the far carriageway: every leg touching it
@@ -162,9 +162,11 @@ describe("routeSketch", () => {
       routeChunk: router,
     });
     expect(calls).toHaveLength(2);
-    // Legs 1→2 and 2→3 were detours; their interior ends (1, 2 and 3) go.
-    expect(calls[1]!.map((point) => point.label ?? "end")).toEqual(["end", "end"]);
-    expect(result.report.spursDropped).toBe(3);
+    // The route turns round on the bad anchor, so that anchor alone goes: the
+    // smallest repair, and the good anchors either side of it are kept.
+    expect(calls[1]!.map((point) => point.label ?? "end")).toEqual(["end", "Sketch", "Sketch", "end"]);
+    expect(calls[1]!.some((point) => Math.abs(point.lon - at(2_000).lon) < 1e-9)).toBe(false);
+    expect(result.report.spursDropped).toBe(1);
     expect(result.path.distance).toBeLessThan(4_100);
   });
 

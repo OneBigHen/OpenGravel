@@ -44,7 +44,7 @@ import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
 import { formatFeet } from "@/application/planner/measurements";
-import { arrivalClock, arrivalLabel } from "@/application/planner/arrival";
+import { arrivalClock, arrivalLabel, plannedArrivalClock } from "@/application/planner/arrival";
 import { RouteDecisionCard, RoutePlanNotices, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { RouteContext } from "./RouteContext";
@@ -57,9 +57,13 @@ const ShareSheet = dynamic(() => import("@/ui/sharing/ShareSheet").then((mod) =>
 const NO_LINE: readonly Coordinate[] = [];
 
 /** "Back 12:04 PM" for a loop, "Arrive 12:04 PM" for a destination (Google's arrival line). */
-function arrivalLine(seconds: number | undefined, loop: boolean): string | null {
+function arrivalLine(seconds: number | undefined, loop: boolean, plannedAt: string | undefined): string | null {
   if (seconds === undefined || !Number.isFinite(seconds)) return null;
-  return arrivalLabel(arrivalClock(Date.now() + seconds * 1000), loop);
+  // The answer's own instant when there is one: the same plan reads the same
+  // arrival on every refresh. Only an injected card with no plan falls back to
+  // the clock.
+  const clock = plannedArrivalClock(plannedAt, seconds) ?? arrivalClock(Date.now() + seconds * 1000);
+  return arrivalLabel(clock, loop);
 }
 
 /**
@@ -92,6 +96,12 @@ const SAVED = "M4.5 10.5 8 14l7.5-8";
 
 export interface RideSummaryProps {
   readonly card: RouteCardVm;
+  /**
+   * A new answer is on its way and `card` is the previous one (OG-05): every
+   * number is a skeleton until it lands, so "Finding roads…" never sits beside
+   * a full set of stats that are about to change.
+   */
+  readonly computing?: boolean;
   readonly cards: readonly RouteCardVm[];
   readonly start: RideActionsProps["start"];
   /** The ride's name, already resolved by `destinationLineFor`. */
@@ -126,6 +136,7 @@ export interface RideSummaryProps {
 
 export function RideSummary({
   card,
+  computing = false,
   cards,
   start,
   title,
@@ -175,7 +186,7 @@ export function RideSummary({
       {(["paved", "gravel", "dirt", "unknown"] as const).filter((kind) => strip[kind] > 0).map((kind) => <span key={kind} data-surface={kind}>{SURFACE_WORDS[kind]}</span>)}
     </p>
   );
-  const arrival = arrivalLine(card.durationSeconds, rideStyle?.view.shape === "loop");
+  const arrival = arrivalLine(card.durationSeconds, rideStyle?.view.shape === "loop", card.plannedAt);
   // Three lines, always: a card that carries none (an injected view model) gets
   // the neutral answer to the same questions rather than no lines at all.
   const truth = truthOf(card);
@@ -238,7 +249,14 @@ export function RideSummary({
           </button> : null}</>}
         {quick.onStyle === undefined ? null : <button type="button" className="og-phone-summary__icon" data-testid="summary-style" aria-label="Ride options" title="Ride options" onClick={quick.onStyle}><Glyph d={SLIDERS}/></button>}
       </div>
-      <div className="og-phone-summary__eta">
+      {computing ? <div className="og-phone-summary__eta" data-testid="summary-computing" aria-busy="true">
+        <span className="og-visually-hidden" role="status">Finding your ride…</span>
+        <span className="og-phone-summary__skeleton og-phone-summary__skeleton--time" aria-hidden="true" />
+        <div className="og-phone-summary__facts" aria-hidden="true">
+          <span className="og-phone-summary__skeleton" />
+          <span className="og-phone-summary__skeleton og-phone-summary__skeleton--short" />
+        </div>
+      </div> : <div className="og-phone-summary__eta">
         <h2 className="og-phone-summary__time">{card.durationLabel}</h2>
         <div className="og-phone-summary__facts">
           <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}</p>
@@ -246,9 +264,9 @@ export function RideSummary({
           {/* The peek's one line (PF-2): miles and the surface, in the surface line's own words. */}
           <p className="og-phone-summary__peek" data-testid="peek-facts">{`${card.distanceLabel} · ${surfaceFacts(strip, card.distanceMeters).line}`}</p>
         </div>
-      </div>
+      </div>}
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
-      <RideTruthLines truth={truth} surfaceBar={bar === null ? null : <>{bar}{surfaceLegend}</>} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
+      {computing ? null : <RideTruthLines truth={truth} surfaceBar={bar === null ? null : <>{bar}{surfaceLegend}</>} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />}
       {/* This view is the summary alone, so a basic route says so here. */}
       {showPlanNotices ? <RoutePlanNotices card={card} /> : null}
       {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
