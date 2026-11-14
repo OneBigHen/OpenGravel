@@ -70,3 +70,66 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
+
+test("the Explore map panel is the map and nothing opaque is painted over it (QA-15)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/catalog", async (route) => {
+    const sample = catalogFixture[0]!;
+    const routes = Array.from({ length: 12 }, (_, index) => ({
+      ...sample, id: `clear-${index}`, name: `Clear ride ${index}`, region: "Pennsylvania",
+      preview: [{ lon: -75.5 + index * 0.001, lat: 40.6 }, { lon: -75.4, lat: 40.7 }],
+    }));
+    await route.fulfill({ json: { count: routes.length, routes } });
+  });
+  await page.goto("/explore");
+  const panel = page.getByTestId("explore-map");
+  await expect(panel).toContainText("12 rides");
+  await panel.scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("planner-map")).toHaveAttribute("data-map-load", "ready");
+  await expect(page.getByTestId("planner-map")).toHaveAttribute("data-map-painted", "true");
+
+  const report = await page.evaluate(() => {
+    const map = document.querySelector('[data-testid="planner-map"]');
+    const canvas = map?.querySelector("canvas.maplibregl-canvas");
+    if (map === null || canvas === null || canvas === undefined) return null;
+    const mapBox = map.getBoundingClientRect();
+    const canvasBox = canvas.getBoundingClientRect();
+    /** The classes that may legitimately paint the map's own paper. */
+    const allowed = (element: Element): boolean =>
+      element === canvas ||
+      element.classList.contains("og-map") ||
+      element.classList.contains("og-map-host") ||
+      element.classList.contains("og-map__attempt") ||
+      [...element.classList].some((name) => name.startsWith("maplibregl-"));
+    const samplePoints: [number, number][] = [
+      [mapBox.x + mapBox.width / 2, mapBox.y + mapBox.height / 2],
+      [mapBox.x + mapBox.width / 2, mapBox.y + 16],
+      [mapBox.x + mapBox.width * 0.25, mapBox.y + mapBox.height * 0.6],
+    ];
+    const offenders: string[] = [];
+    for (const [x, y] of samplePoints) {
+      // The top element at each point must be the map itself, not a cover.
+      const top = document.elementFromPoint(x, y);
+      if (top === null || !(top === canvas || map.contains(top))) {
+        offenders.push(`${Math.round(x)},${Math.round(y)}: ${top?.className ?? "nothing"} is over the map`);
+        continue;
+      }
+      for (const element of document.querySelectorAll("*")) {
+        const rect = element.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 10) continue;
+        if (!(x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)) continue;
+        if (allowed(element)) continue;
+        const style = getComputedStyle(element);
+        const opaque = style.backgroundColor !== "rgba(0, 0, 0, 0)" && !style.backgroundColor.startsWith("rgba(0, 0, 0, 0)");
+        if (opaque) offenders.push(`${Math.round(x)},${Math.round(y)}: ${element.className || element.tagName} ${style.backgroundColor}`);
+      }
+    }
+    return {
+      offenders,
+      canvasCoversMap: Math.abs(canvasBox.width - mapBox.width) < 1.5 && Math.abs(canvasBox.height - mapBox.height) < 1.5,
+    };
+  });
+  expect(report).not.toBeNull();
+  expect(report!.canvasCoversMap).toBe(true);
+  expect(report!.offenders).toEqual([]);
+});

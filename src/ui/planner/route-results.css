@@ -1,6 +1,5 @@
-/* Route results: the list of route cards (desktop rail and inspector), the
-   elevation profile, and the one-line ride glance over a tablet's sheet.
-   The chosen ride is plum, alternatives route-alt grey (DESIGN.md §2). */
+/* Route results: route cards, the elevation profile, and the ride glance over a
+   tablet's sheet. The chosen ride is plum, alternatives route-alt grey (§2). */
 
 .og-route-choices {
   display: flex;
@@ -192,12 +191,8 @@
 :is(.og-route-card__strip, .og-elevation__surface) > [data-surface="paved"] { background: var(--og-surface-paved); }
 :is(.og-route-card__strip, .og-elevation__surface) > [data-surface="gravel"] { background: var(--og-warn); }
 :is(.og-route-card__strip, .og-elevation__surface) > [data-surface="dirt"] { background: var(--og-ink-2); }
-/* Unknown is hatching, never a solid: a rider can tell "we did not measure this"
-   from "this is paved" even in a six-pixel bar (QA-10). */
-.og-route-card__strip > [data-surface="unknown"],
-.og-elevation__surface > [data-surface="unknown"] {
-  background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 3px, var(--og-surface) 3px 6px);
-}
+/* Unknown is hatching, never a solid (QA-10): "not measured" is not a colour. */
+.og-route-card__strip > [data-surface="unknown"], .og-elevation__surface > [data-surface="unknown"] { background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 3px, var(--og-surface) 3px 6px); }
 
 /* "Why this ride?" */
 .og-route-card__why-toggle {
@@ -532,10 +527,8 @@
 .og-elevation__legend > [data-surface="paved"]::before { background: var(--og-surface-paved); }
 .og-elevation__legend > [data-surface="gravel"]::before { background: var(--og-warn); }
 .og-elevation__legend > [data-surface="dirt"]::before { background: var(--og-ink-2); }
-/* The legend dot wears the same hatching as the bar's unknown stretch. */
-.og-elevation__legend > [data-surface="unknown"]::before {
-  background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 2px, var(--og-surface) 2px 4px);
-}
+/* The legend dot wears the bar's own hatching. */
+.og-elevation__legend > [data-surface="unknown"]::before { background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 2px, var(--og-surface) 2px 4px); }
 
 .og-elevation__ticks {
   display: flex;
@@ -749,7 +742,7 @@
   --og-route-tint: var(--og-map-brown);
 }
 
-/* The one announced swap: what the settled pick improved over the first look. */
+/* What the settled pick improved over the first look. */
 .og-first-look-note {
   margin: 0;
   padding: var(--og-space-2) var(--og-space-3);
@@ -767,10 +760,8 @@
 .og-truth__line--jump .og-truth__text { text-decoration: underline; text-decoration-color: var(--og-ink-2); text-underline-offset: 3px; }
 .og-truth__dot { flex: none; width: 8px; height: 8px; border-radius: var(--og-radius-pill); background: var(--og-ink-2); transform: translateY(-1px); }
 .og-truth__dot[data-tone="good"] { background: var(--og-primary-text); }
-.og-truth__dot[data-tone="warn"] { background: var(--og-warn); }
-.og-truth__dot[data-tone="bad"] { background: var(--og-danger); }
-/* "Not measured" is a hatch, the same mark the surface bar uses (QA-10): a
-   solid dot here would read as one more surface colour. */
+.og-truth__dot[data-tone="warn"] { background: var(--og-warn); } .og-truth__dot[data-tone="bad"] { background: var(--og-danger); }
+/* "Not measured" is the bar's hatch, not one more surface colour (QA-10). */
 .og-truth__dot[data-tone="unknown"] { background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 2px, var(--og-surface) 2px 4px); }
 .og-route-card .og-truth { padding: 0 var(--og-space-3, 12px) var(--og-space-3, 12px); }
 

@@ -26,9 +26,7 @@
 
   /* Derived, never new hues: a wash of a token for a tint or a press. */
   --og-primary-soft: color-mix(in srgb, var(--og-primary) 12%, var(--og-surface));
-  /* The surface strip's two ends: paved is a solid green, unknown is a neutral
-     grey drawn as diagonal hatching (QA-10). They used to be the same grey, so
-     the bar and the legend could not say which was which. */
+  /* Surface strip ends (QA-10): paved green, unknown grey, drawn as a hatch. */
   --og-surface-paved: #2f6b50;
   --og-surface-unknown: #6f7a75;
   --og-selected: #fdfcf9;
@@ -149,8 +147,7 @@
   --og-map-choice-2: #d97706;
   --og-map-choice-0: #0284c7;
 
-  /* Type: Plus Jakarta Sans for the interface, Outfit for titles and ride
-     numbers. Five sizes. */
+  /* Type: Plus Jakarta Sans for the interface, Outfit for titles and ride numbers. */
   --og-face-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --og-text-title: 28px;
@@ -207,9 +204,7 @@
   --og-z-toast: 70;
 }
 
-/* next/font (layout.tsx) puts --og-font-body / --og-font-display on <body>, so
-   the faces are resolved there: a var() resolves where it is declared, and on
-   <html> the fonts do not exist yet. */
+/* next/font puts --og-font-body/--og-font-display on <body>; var() resolves where it is declared. */
 :root,
 body {
   --og-face-body: var(--og-font-body, ui-sans-serif), system-ui, sans-serif;
@@ -223,8 +218,7 @@ body {
   }
 }
 
-/* Glass needs the blur to be legible: without it, or when the rider asked for
-   less transparency, chrome is the solid surface again. */
+/* Without the blur, or with less transparency asked for, chrome is solid again. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root,
   :root[data-theme] {
@@ -242,10 +236,8 @@ body {
   }
 }
 
-/* Owner, 2026-10-27: glass along the bottom made the words hard to read over
-   the map. Everything docked at the bottom (tab bar, planner and ride sheets,
-   the home pills, the layers sheet) is the solid surface again; the floating
-   chrome at the top keeps its glass. */
+/* Owner, 2026-10-27: glass along the bottom made words hard to read over the
+   map, so everything docked there is solid; the top chrome keeps its glass. */
 .og-planner__nav-shell,
 .og-planner__dock,
 .og-layers__panel,
