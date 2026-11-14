@@ -280,11 +280,13 @@ export interface PlannerViewModel {
    *
    * - **a loop**, whose shape and ride time the rider accepts by pressing
    *   `Make my loop`;
-   * - **a failure**, where `Plan again` is a deliberate retry;
    * - **a cancel**, where the rider stopped the attempt and the planner must not
    *   start it again behind their back;
    * - **a ride with no destination** (including one a sketch supplies), whose
    *   disabled state carries the single instruction that says what is missing.
+   *
+   * A failure is not one of them: its single Retry sits in the error row beside
+   * the message (OG-04), so the commitment never offers a second one.
    */
   readonly showPlanAction: boolean;
   /**
@@ -317,6 +319,12 @@ export interface PlannerViewModelInput {
    * state a ride with no sketch is in.
    */
   readonly sketchDerivedEndpoints?: SketchEndpoints | null;
+  /**
+   * The ends of a drawing's snapped preview route that is on screen but not kept
+   * yet. Labels only: the From / To card reads "From your sketch" instead of
+   * "No start yet" under a route the rider can see. Never makes a ride plannable.
+   */
+  readonly sketchPreviewEndpoints?: SketchEndpoints | null;
   /**
    * The name a geocoder found for an unnamed point's coordinate (M1, OGV-D-260),
    * or `undefined` while none is known. Derived evidence, never authored: it
@@ -517,6 +525,9 @@ const ERROR_COPY: Readonly<Record<PlanningErrorCode, string>> = {
   "provider-unavailable": "The routing service is unavailable right now.",
   "constraint-conflict": "Your constraints leave no eligible route.",
 };
+
+/** OG-01: nothing came back in time. Says what happened and what to do, never "stuck". */
+export const PLAN_TIMED_OUT_COPY = "Finding this ride took too long. Tap Retry to try again.";
 
 /** A loop has no destination to blame, so its no-route copy says "this ride". */
 const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point.";
@@ -1169,6 +1180,9 @@ export function buildPlannerViewModel(
 ): PlannerViewModel {
   const { document, session } = input;
   const derived = input.sketchDerivedEndpoints ?? null;
+  // What the From / To card names: a committed drawing's own ends, else the ends
+  // of the drawn route on screen.
+  const labelEnds = derived ?? input.sketchPreviewEndpoints ?? null;
   const bundle = drawableBundle(session);
   const selectedRouteId = bundle?.selectedRouteId ?? null;
   const cards = routeCards(
@@ -1191,33 +1205,33 @@ export function buildPlannerViewModel(
     startLabel:
       document.intent.start !== null
         ? formatEndpointLabel(document.intent.start, input.placeNameFor)
-        : derived === null
+        : labelEnds === null
           ? NO_START_LABEL
           : SKETCH_DERIVED_LABEL,
     startCoordinateLabel:
       document.intent.start !== null
         ? formatEndpointCoordinate(document.intent.start)
-        : derived === null
+        : labelEnds === null
           ? null
-          : sketchDerivedCoordinate(derived.start),
+          : sketchDerivedCoordinate(labelEnds.start),
     finishLabel:
       document.intent.finish !== null
         ? formatEndpointLabel(document.intent.finish, input.placeNameFor)
-        : derived === null
+        : labelEnds === null
           ? NO_FINISH_LABEL
           : SKETCH_DERIVED_LABEL,
     finishCoordinateLabel:
       document.intent.finish !== null
         ? formatEndpointCoordinate(document.intent.finish)
-        : derived === null
+        : labelEnds === null
           ? null
-          : sketchDerivedCoordinate(derived.finish),
+          : sketchDerivedCoordinate(labelEnds.finish),
     canPlan: disabledReason === null,
     disabledReason,
     routeCards: cards,
     selectedRouteId,
     errorMessage:
-      session.error === null ? null : planningErrorCopy(session.error.code, document, session.error.riderMessage),
+      session.error === null ? null : planningErrorCopy(session.error.code, document, session.error.riderMessage, session.error.timedOut),
     failed,
     planLabel: failed
       ? PLAN_LABEL_RETRY
@@ -1228,13 +1242,14 @@ export function buildPlannerViewModel(
         : (bundle?.candidates.length ?? 0) > 0
           ? PLAN_LABEL_UPDATE
           : PLAN_LABEL_CREATE,
-    // A loop, a failure and a cancel still need the press; a destination that is
-    // being planned does not.
+    // A loop and a cancel still need the press; a destination that is being
+    // planned does not. A failure's one retry lives in its error row (OG-04), so
+    // the commitment steps aside rather than offering a second "Plan again".
     showPlanAction:
-      failed ||
-      cancelled ||
-      document.intent.shape === "loop" ||
-      document.intent.finish === null,
+      !failed &&
+      (cancelled ||
+        document.intent.shape === "loop" ||
+        document.intent.finish === null),
     planIsCurrent:
       !failed &&
       bundle !== null &&
@@ -1248,7 +1263,8 @@ export function buildPlannerViewModel(
 }
 
 /** The §29 copy for one error code, with the loop's destination-free variant. */
-export function planningErrorCopy(code: PlanningErrorCode, document: RideDocument, riderMessage?: string): string {
+export function planningErrorCopy(code: PlanningErrorCode, document: RideDocument, riderMessage?: string, timedOut?: boolean): string {
+  if (timedOut === true) return PLAN_TIMED_OUT_COPY;
   if (code === "no-route" && riderMessage !== undefined && riderMessage.length > 0) return riderMessage;
   if (code === "no-route" && document.intent.shape === "loop") {
     return NO_ROUTE_LOOP_COPY;

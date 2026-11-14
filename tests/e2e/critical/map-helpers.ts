@@ -502,7 +502,12 @@ export async function placeEndpointAtFraction(
  */
 export async function pressPlan(page: Page): Promise<void> {
   const plan = page.getByTestId("compose-create");
-  if (await plan.count() === 0) return;
+  if (await plan.count() === 0) {
+    // After a failure the sheet's one Retry is the plan command (OG-04).
+    const retry = page.getByTestId("planner-error-retry");
+    if (await retry.count() > 0) await retry.click();
+    return;
+  }
   // One tap on Loop already plans the loop (NEXT-PLAN taste call 1): the
   // button stays, disabled, while that plan is current. Nothing to press.
   if (await plan.isDisabled()) return;

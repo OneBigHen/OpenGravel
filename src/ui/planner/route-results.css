@@ -781,3 +781,31 @@
 .og-phone-choice[data-line-color="2"] { --og-route-tint: var(--og-map-choice-0); }
 .og-option-rows__ask { padding-top: var(--og-space-2); }
 .og-option-rows__ask .og-map-ask__trigger { width: 100%; }
+
+/* OG-05: while a new answer is found, the summary's numbers are skeletons. */
+.og-phone-summary__eta[aria-busy="true"] .og-phone-summary__facts {
+  display: grid;
+  gap: var(--og-space-2);
+  padding-top: var(--og-space-1);
+}
+
+.og-phone-summary__skeleton {
+  display: block;
+  width: 70%;
+  height: 14px;
+  border-radius: var(--og-radius-control);
+  background: linear-gradient(90deg, var(--og-surface-2), var(--og-surface), var(--og-surface-2)) 0 0 / 200% 100%;
+  animation: og-glance-shimmer 1.4s ease-in-out infinite;
+}
+
+.og-phone-summary__skeleton--time {
+  flex: none;
+  width: 84px;
+  height: 30px;
+}
+
+.og-phone-summary__skeleton--short { width: 40%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .og-phone-summary__skeleton { animation: none; }
+}
