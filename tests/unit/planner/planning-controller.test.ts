@@ -301,6 +301,7 @@ interface ControllerOptions {
   readonly now?: () => string;
   readonly onUpdate?: (snapshot: PlanningSessionSnapshot) => void;
   readonly rideId?: RideId;
+  readonly firstAnswerDeadlineMs?: number;
 }
 
 function buildController(options: ControllerOptions): PlanningController {
@@ -317,6 +318,7 @@ function buildController(options: ControllerOptions): PlanningController {
     requestContext,
     ...(options.now === undefined ? {} : { now: options.now }),
     ...(options.onUpdate === undefined ? {} : { onUpdate: options.onUpdate }),
+    ...(options.firstAnswerDeadlineMs === undefined ? {} : { firstAnswerDeadlineMs: options.firstAnswerDeadlineMs }),
   };
   return options.pipeline === undefined
     ? createPlanningController({
@@ -1705,5 +1707,56 @@ describe("dispose", () => {
     controller.dispose();
 
     expect(controller.snapshot()).toEqual(disposed);
+  });
+});
+
+
+describe("OG-01: a stalled plan ends, it never hangs", () => {
+  const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it("fails as a retryable timeout when no ride arrives before the deadline, and aborts the request", async () => {
+    const stalled = fakeProvider("api");
+    const controller = buildController({ providers: [stalled.provider], firstAnswerDeadlineMs: 30 });
+    void begin(controller, 1);
+    await flush();
+    expect(controller.snapshot().phase).toBe("routing-primary");
+    await wait(60);
+    const snapshot = controller.snapshot();
+    expect(snapshot.phase).toBe("failed");
+    expect(snapshot.error).toMatchObject({ code: "provider-unavailable", recoverable: true, timedOut: true });
+    expect(callAt(stalled, 0).signal.aborted).toBe(true);
+    expect(diagnosticFor(snapshot, "api").outcome).toBe("timeout");
+  });
+
+  it("does not fail an attempt whose first ride is already on screen", async () => {
+    const first = fakeProvider("api-first");
+    const full = fakeProvider("api");
+    const controller = buildController({
+      providers: [first.provider, full.provider],
+      pipeline: identityPipeline().pipeline,
+      firstAnswerDeadlineMs: 30,
+    });
+    void begin(controller, 1);
+    await flush();
+    first.settle(0, [rawCandidate("api-first")]);
+    await flush();
+    await wait(60);
+    expect(controller.snapshot().phase).toBe("alternatives-loading");
+    expect(callAt(full, 0).signal.aborted).toBe(false);
+    full.settle(0, [rawCandidate("api")]);
+    await flush();
+    expect(controller.snapshot().phase).toBe("ready");
+  });
+
+  it("Cancel aborts the request the provider is holding", async () => {
+    const stalled = fakeProvider("api");
+    const controller = buildController({ providers: [stalled.provider], firstAnswerDeadlineMs: 30 });
+    void begin(controller, 1);
+    await flush();
+    controller.cancel();
+    expect(callAt(stalled, 0).signal.aborted).toBe(true);
+    await wait(60);
+    // The deadline was disarmed by the cancel: it stays cancelled, not failed.
+    expect(controller.snapshot().phase).toBe("cancelled");
   });
 });

@@ -758,7 +758,9 @@ export class LibraryService implements LibraryServicePort {
     const importData = record.importData;
     if (importData !== undefined) {
       // "Route along roads" asked the planner for a new road route; that ask stands.
-      if (record.document.intent.shaping.length > 0) return null;
+      // A SwitchBack import also carries shaping anchors, but only as a summary
+      // of its track: the rider never asked for a new route, so it opens on its own line.
+      if (record.document.intent.shaping.length > 0 && record.document.provenance.source !== "SwitchBack") return null;
       const coordinates: Coordinate[] = [];
       for (const track of importData.tracks) {
         for (const segment of track.segments) {

@@ -211,6 +211,8 @@ export interface GraphHopperRequestBody {
    */
   readonly headings?: readonly (number | "NaN")[];
   readonly heading_penalty?: number;
+  /** No u-turn at a via point (a sketch anchor): the drawn line rides through it. */
+  readonly pass_through?: boolean;
 }
 
 /** A point as the wire list carries it, before conversion to `[lon, lat]`. */
@@ -786,6 +788,9 @@ export function createGraphHopperRequest(
       ? {
           headings: points.map((point) => point.heading ?? "NaN"),
           heading_penalty: SKETCH_HEADING_PENALTY_SECONDS,
+          // A drawn line rides through each anchor; it never turns round on one
+          // (owner, 2026-11-13: drawn routes zigzagged into side streets and back).
+          pass_through: true,
         }
       : {}),
   };

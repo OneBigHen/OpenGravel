@@ -132,6 +132,16 @@ export const TOOL_HINTS: Readonly<Record<"start" | "finish" | "stop", string>> =
   stop: "Tap the map to place the stop.",
 };
 
+/**
+ * The same instruction when the armed end is already placed (OG-04): the next
+ * tap moves it. "Set your destination" over a ride that has one read as if the
+ * destination had been lost.
+ */
+export const TOOL_MOVE_HINTS: Readonly<Record<"start" | "finish", string>> = {
+  start: "Tap the map to move your start.",
+  finish: "Tap the map to move your destination.",
+};
+
 type PointMenuIntent = Extract<MapIntent, { type: "map-long-press" }>;
 
 export interface PlannerMapProps {

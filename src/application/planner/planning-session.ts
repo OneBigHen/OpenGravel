@@ -109,6 +109,8 @@ export interface PlanningError {
   readonly recoverable: boolean;
   /** A rider-safe sentence from the server that says why (which road blocks the ride); shown instead of the generic copy. */
   readonly riderMessage?: string;
+  /** The attempt was ended by the first-answer deadline: nothing came back in time (OG-01). */
+  readonly timedOut?: boolean;
 }
 
 /**
