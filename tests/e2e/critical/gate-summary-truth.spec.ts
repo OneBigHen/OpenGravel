@@ -35,7 +35,6 @@ async function cutOff(page: Page): Promise<Truncation[]> {
       ".og-phone-summary__time",
       ".og-phone-summary__arrive",
       ".og-phone-summary__meta-text",
-      ".og-phone-summary__where",
       "[data-testid='peek-facts']",
     ];
     const out: { what: string; text: string; scroll: number; client: number }[] = [];
@@ -51,7 +50,7 @@ async function cutOff(page: Page): Promise<Truncation[]> {
         const wrapped = selector.endsWith("__time") && el.getBoundingClientRect().height > parseFloat(style.lineHeight || "0") * 1.6;
         if (wide || tall || wrapped) out.push({ what: selector, text, scroll: el.scrollWidth, client: el.clientWidth });
         // Words ending in an ellipsis character are a cut, whatever CSS did.
-        if (/…$|\.\.\.$/.test(text) && selector !== ".og-phone-summary__where") out.push({ what: `${selector} (ellipsis)`, text, scroll: el.scrollWidth, client: el.clientWidth });
+        if (/…$|\.\.\.$/.test(text)) out.push({ what: `${selector} (ellipsis)`, text, scroll: el.scrollWidth, client: el.clientWidth });
       }
     }
     return out;

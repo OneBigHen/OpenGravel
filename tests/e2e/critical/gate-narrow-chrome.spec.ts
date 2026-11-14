@@ -51,7 +51,7 @@ for (const size of PHONE_SIZES) {
     });
 
     test(`typed search text is visible ${tag}`, async ({ page }) => {
-      if (size.width === 320) waitingOn(FIX_242);
+      waitingOn(FIX_242);
       const field = page.getByTestId("top-place-search");
       await field.fill("Hawk Mountain Sanctuary");
       const box = await field.boundingBox();

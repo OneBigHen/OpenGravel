@@ -91,6 +91,8 @@ export async function floatingControlProblems(page: Page): Promise<Problem[]> {
       if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
       if (getComputedStyle(el).pointerEvents === "none") return false;
       if (el.closest(".maplibregl-canvas-container") !== null) return false;
+      // The "Skip to main content" link waits above the screen on purpose until a keyboard focuses it.
+      if (el instanceof HTMLAnchorElement && /^#/.test(el.getAttribute("href") ?? "") && /skip/i.test(el.textContent ?? "")) return false;
       const r = el.getBoundingClientRect();
       return r.width >= 8 && r.height >= 8 && floats(el);
     });
@@ -103,22 +105,32 @@ export async function floatingControlProblems(page: Page): Promise<Problem[]> {
         problems.push({ kind: "off-screen", detail: `${label(el)} spans x ${Math.round(r.left)}..${Math.round(r.right)} y ${Math.round(r.top)}..${Math.round(r.bottom)} of ${W}x${H}` });
       }
     }
-    for (let i = 0; i < controls.length; i += 1) {
-      const a = controls[i]!;
-      const ra = a.getBoundingClientRect();
-      const cx = Math.min(Math.max(ra.left + ra.width / 2, 0), W - 1);
-      const cy = Math.min(Math.max(ra.top + ra.height / 2, 0), H - 1);
-      const top = document.elementFromPoint(cx, cy);
-      if (top !== null && !a.contains(top) && !top.contains(a)) {
-        problems.push({ kind: "covered", detail: `${label(a)} is under ${label(top)}` });
+    // The part of a control a finger can reach: clipped to the screen and to any scrolling parent.
+    const reachable = (el: HTMLElement): DOMRect | null => {
+      let { left, top, right, bottom } = el.getBoundingClientRect();
+      left = Math.max(left, 0); top = Math.max(top, 0); right = Math.min(right, W); bottom = Math.min(bottom, H);
+      for (let p = el.parentElement; p !== null; p = p.parentElement) {
+        const st = getComputedStyle(p);
+        if (st.overflowX !== "visible" || st.overflowY !== "visible") {
+          const pr = p.getBoundingClientRect();
+          left = Math.max(left, pr.left); top = Math.max(top, pr.top); right = Math.min(right, pr.right); bottom = Math.min(bottom, pr.bottom);
+        }
       }
-      for (let j = i + 1; j < controls.length; j += 1) {
-        const b = controls[j]!;
-        if (a.contains(b) || b.contains(a)) continue;
-        const rb = b.getBoundingClientRect();
-        const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
-        const h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-        if (w > 3 && h > 3) problems.push({ kind: "overlap", detail: `${label(a)} and ${label(b)} (${Math.round(w)}x${Math.round(h)}px)` });
+      return right - left > 4 && bottom - top > 4 ? new DOMRect(left, top, right - left, bottom - top) : null;
+    };
+    const shown = controls.flatMap((el) => { const r = reachable(el); return r === null ? [] : [{ el, r }]; });
+    for (let i = 0; i < shown.length; i += 1) {
+      const a = shown[i]!;
+      const top = document.elementFromPoint(a.r.left + a.r.width / 2, a.r.top + a.r.height / 2);
+      if (top !== null && !a.el.contains(top) && !top.contains(a.el)) {
+        problems.push({ kind: "covered", detail: `${label(a.el)} is under ${label(top)}` });
+      }
+      for (let j = i + 1; j < shown.length; j += 1) {
+        const b = shown[j]!;
+        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+        const h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        if (w > 3 && h > 3) problems.push({ kind: "overlap", detail: `${label(a.el)} and ${label(b.el)} (${Math.round(w)}x${Math.round(h)}px)` });
       }
     }
     return problems;

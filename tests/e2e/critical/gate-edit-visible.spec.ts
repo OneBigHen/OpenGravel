@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-import { fractionOf, plannerMap, readCoordinate, readExtent, settledExtent } from "./map-helpers";
+import { clickMapAtCoordinate, fractionOf, placeEndpoint, plannerMap, readCoordinate, readExtent, settledExtent, type Coordinate } from "./map-helpers";
 import { PHONE_SIZES } from "./rider-gate-helpers";
-import { directionsTo, searchPlace } from "./search-helpers";
 
 /**
  * GATE-EDIT-VISIBLE (#324; behind QA-06).
@@ -13,22 +12,26 @@ import { directionsTo, searchPlace } from "./search-helpers";
  */
 test.describe.configure({ timeout: 150_000 });
 
+const START: Coordinate = { lon: -75.4385, lat: 40.1385 };
+const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
+const STOP: Coordinate = { lon: -75.442, lat: 40.141 };
+
 for (const size of PHONE_SIZES) {
   test(`Edit keeps the route on the visible map and counts its stops honestly (${size.width}x${size.height})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/");
     await expect(plannerMap(page)).toBeVisible();
     await settledExtent(page);
-    await directionsTo(page);
-    await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 30_000 });
+    await placeEndpoint(page, "start", START);
+    await placeEndpoint(page, "finish", FINISH);
+    await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 60_000 });
 
-    // Add one stop from a place card.
-    await searchPlace(page, "Mountain Coffee");
-    await page.getByTestId("place-sheet").getByRole("button", { name: "Add stop", exact: true }).click();
-    await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 30_000 });
-
+    // Open Edit and add one stop, so a count of zero cannot pass by accident.
     await page.getByTestId("trip-edit").click();
     await expect(page.getByRole("heading", { name: "Edit ride" })).toBeVisible();
+    await page.getByTestId("add-stop").click();
+    await clickMapAtCoordinate(page, STOP);
+    await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 60_000 });
     const list = page.getByTestId("stops-list");
     await expect(list).toBeVisible();
 

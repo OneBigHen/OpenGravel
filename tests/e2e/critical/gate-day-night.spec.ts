@@ -68,6 +68,20 @@ async function lineVersusMap(page: Page, point: Coordinate): Promise<{ line: num
   );
 }
 
+test("the readability probe itself: it flags faint text and passes clear text", async ({ page }) => {
+  await page.goto("/settings");
+  await page.evaluate(() => {
+    const box = document.createElement("div");
+    box.id = "probe";
+    box.style.cssText = "position:fixed;left:8px;top:120px;background:#ffffff;z-index:99999";
+    box.innerHTML = '<p style="color:#b9b9b9;margin:0">faint words on white</p><p style="color:#111111;margin:0">clear words on white</p>';
+    document.body.append(box);
+  });
+  const flagged = await faintText(page, 4.5, "#probe");
+  expect(flagged).toHaveLength(1);
+  expect(flagged[0]).toContain("faint words");
+});
+
 for (const look of ["day", "night"] as const) {
   test(`${look}: chrome text is readable and the route line stands out from the map`, async ({ page }) => {
     await pinAppearance(page, look);
