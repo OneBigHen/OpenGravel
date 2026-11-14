@@ -47,7 +47,7 @@ test("turning the phone sideways mid-plan keeps nav, Layers and the sheet action
   await expectReachable(page, page.locator(".og-planner__settings-link"), "Settings");
   await expectReachable(page, page.getByTestId("map-layers-toggle"), "the Layers button");
   // Sheet actions: Start is the one to ride; Save and Share are the quiet choices beside it.
-  await page.getByTestId("planner-sheet").evaluate((sheet) => sheet.scrollIntoView({ block: "nearest" }));
+  // No scrolling first: the rider turns the phone and Start has to be right there.
   await expectReachable(page, page.getByTestId("start-ride"), "Start");
   await expectReachable(page, page.getByTestId("summary-save"), "Save");
   expect(await floatingControlProblems(page), "plan in landscape").toEqual([]);
