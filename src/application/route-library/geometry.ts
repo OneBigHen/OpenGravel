@@ -4,6 +4,7 @@ import { LOOP_CLOSE_METERS } from "@/domain/sketch/types";
 import type { Coordinate } from "@/domain/ride/types";
 
 import { CARD_LINE_POINTS, encodeCardLine } from "./card-line";
+import { isRoughTrack } from "./track-flags";
 import type { LibraryBounds } from "./types";
 
 /** Every stored line is `polyline5`: about 1.1 m, which a 5 m simplified line cannot use up. */
@@ -16,9 +17,6 @@ export const MAP_LINE_POINTS = 64;
 const BUNDLE_MAP_SEGMENTS = 24;
 const BUNDLE_MAP_SEGMENT_POINTS = 16;
 const METERS_PER_MILE = 1609.344;
-/** "Rough": fewer than this many points per 30 miles, or a jump over 3 miles on a single track. */
-export const ROUGH_POINTS_PER_30_MILES = 20;
-export const ROUGH_JUMP_MILES = 3;
 
 export function encodeLine(points: readonly Coordinate[]): string {
   return encodeCatalogPolyline(points, LINE_PRECISION);
@@ -193,7 +191,7 @@ export function buildGeometry(rawSegments: readonly (readonly Coordinate[])[], o
   const all = simplified.flat();
   const longest = simplified.reduce((best, segment) => (lengthMeters(segment) > lengthMeters(best) ? segment : best), simplified[0]!);
   const loop = !options.bundle && haversine(first, last) <= LOOP_CLOSE_METERS && meters > LOOP_CLOSE_METERS * 2;
-  const rough = miles > 0 && (rawPoints / (miles / 30) < ROUGH_POINTS_PER_30_MILES || longestJumpMiles > ROUGH_JUMP_MILES);
+  const rough = isRoughTrack({ miles, rawPoints, longestJumpMiles, bundle: options.bundle });
 
   let mapSegments: Coordinate[][];
   if (simplified.length === 1) {
