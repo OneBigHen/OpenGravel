@@ -74,7 +74,6 @@ for (const size of PHONE_SIZES) {
     });
 
     test(`the plan sheet after Directions keeps every control on screen ${tag}`, async ({ page }) => {
-      if (size.width === 320) waitingOn(FIX_242);
       await directionsTo(page);
       await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 30_000 });
       await settleChrome(page);

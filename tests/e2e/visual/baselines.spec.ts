@@ -215,13 +215,15 @@ for (const theme of THEMES) {
     for (const state of Object.keys(STATES).filter((name) => name !== "active-ride")) {
       test(`${state} looks the same at 2 pm and 4 am`, async ({ browser }, testInfo) => {
         const device = DEVICES[0];
-        const [afternoon, predawn] = [
-          await drawAt(browser, device, theme, state, HOURS[0]),
-          await drawAt(browser, device, theme, state, HOURS[1]),
-        ];
+        const afternoon = await drawAt(browser, device, theme, state, HOURS[0]);
+        const predawn = await drawAt(browser, device, theme, state, HOURS[1]);
         if (!afternoon.equals(predawn)) {
           await testInfo.attach("2pm.png", { body: afternoon, contentType: "image/png" });
           await testInfo.attach("4am.png", { body: predawn, contentType: "image/png" });
+          // Is it the hour, or is the screen simply not repeatable? Draw 2 pm a second time to tell.
+          const again = await drawAt(browser, device, theme, state, HOURS[0]);
+          await testInfo.attach("2pm-again.png", { body: again, contentType: "image/png" });
+          expect(afternoon.equals(again), `${state} (${theme}) does not even repeat at the same hour`).toBe(true);
         }
         expect(predawn.equals(afternoon), `${state} (${theme}) changes with the hour of the day`).toBe(true);
       });

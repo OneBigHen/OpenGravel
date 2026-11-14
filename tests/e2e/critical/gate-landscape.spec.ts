@@ -20,8 +20,8 @@ import { directionsTo } from "./search-helpers";
  * need stays on screen and reachable. A control counts only if its whole box is inside 844x390 and a tap
  * at its centre lands on it.
  *
- * Waiting on PR #242 (small phones and landscape): on main Layers and the edit bar sit on top of the
- * tabs/search in landscape. Remove `waitingOn` when #242 lands.
+ * The plan half is waiting on PR #242 (small phones and landscape): on main the first nav tab is covered in
+ * landscape. Remove `waitingOn` when #242 lands. The ride half passes on main and is live.
  */
 test.describe.configure({ timeout: 150_000 });
 
@@ -58,7 +58,6 @@ test("turning the phone sideways mid-plan keeps nav, Layers and the sheet action
 });
 
 test("turning the phone sideways mid-ride keeps the ride controls reachable", async ({ page }) => {
-  waitingOn(WAIT_242);
   await page.addInitScript(() => window.localStorage.setItem("og.rideFixture.maxFixes", "6"));
   await page.setViewportSize({ width: 390, height: 844 });
   await startRide(page);

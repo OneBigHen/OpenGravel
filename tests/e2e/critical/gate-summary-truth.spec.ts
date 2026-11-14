@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { plannerMap, settledExtent } from "./map-helpers";
-import { PHONE_SIZES, waitingOn } from "./rider-gate-helpers";
+import { PHONE_SIZES } from "./rider-gate-helpers";
 import { directionsTo } from "./search-helpers";
 
 /**
@@ -15,11 +15,11 @@ import { directionsTo } from "./search-helpers";
  * The place-sheet distance against a real road distance is checked against the real router in
  * tests/real-router/rider-gates-live.test.ts.
  *
- * Waiting on PR #242: on main the climb reads "Clim..." on 320 and the time wraps.
+
+ * The cut-off probe is proven in the first test below: it must flag a headline squeezed into a box that
+ * is too small, or a pass here would mean nothing.
  */
 test.describe.configure({ timeout: 150_000 });
-
-const WAIT_242 = "waiting on PR #242 (small phones and landscape): the climb is cut to \"Clim...\" at 320";
 
 interface Truncation {
   readonly what: string;
@@ -104,11 +104,25 @@ async function expectHeadlineTruth(page: Page, where: string): Promise<void> {
   }
 }
 
+test("the cut-off probe itself: it flags a headline squeezed into too small a box", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(plannerMap(page)).toBeVisible();
+  await settledExtent(page);
+  await directionsTo(page);
+  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 30_000 });
+  await expect(page.getByTestId("route-summary").locator(".og-phone-summary__meta-text")).toContainText(/Climb/, { timeout: 20_000 });
+  expect(await cutOff(page)).toEqual([]);
+  await page.locator(".og-phone-summary__meta-text").first().evaluate((el) => {
+    el.style.cssText = "display:block;width:36px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis";
+  });
+  expect((await cutOff(page)).length).toBeGreaterThan(0);
+});
+
 for (const size of PHONE_SIZES) {
   const tag = `${size.width}x${size.height}`;
 
   test(`A-to-B route summary tells the whole truth ${tag}`, async ({ page }) => {
-    if (size.width === 320) waitingOn(WAIT_242);
     await page.setViewportSize(size);
     await page.goto("/");
     await expect(plannerMap(page)).toBeVisible();
@@ -119,7 +133,6 @@ for (const size of PHONE_SIZES) {
   });
 
   test(`loop summary tells the whole truth ${tag}`, async ({ page }) => {
-    if (size.width === 320) waitingOn(WAIT_242);
     await page.context().setGeolocation({ latitude: 40.1385, longitude: -75.4385 });
     await page.context().grantPermissions(["geolocation"]);
     await page.setViewportSize(size);
