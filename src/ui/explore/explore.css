@@ -55,13 +55,6 @@
   letter-spacing: -0.02em;
 }
 
-.og-explore__count {
-  margin: 0;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-  font-weight: 600;
-}
-
 .og-explore__lens {
   display: inline-flex;
   flex: none;

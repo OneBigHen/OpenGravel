@@ -42,6 +42,7 @@ import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RideCreditLine } from "@/ui/credit/RideCreditLine";
+import { libraryWorth, RideMore, RideWorth, worthEyebrow } from "@/ui/explore/RideWorth";
 import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
@@ -462,6 +463,9 @@ export function RouteDetail({
   const provenanceSource = entry.credit === undefined ? provenanceSourceName(entry.provenance) : "";
   const toStartLabel = riderOrigin === undefined ? null : approachLabel(distanceToStartKm(riderOrigin, entry) * 1000);
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
+  // A library ride says whether it is worth the trip: its score in words, the
+  // library's reason, and the source's claims, all from the pack.
+  const worth = libraryWorth(entry.libraryDetail);
 
   // The instrument panel uses the same evidence-backed facts as the route
   // summary; compact values retain the complete wording for screen readers.
@@ -545,6 +549,7 @@ export function RouteDetail({
     <main id="main" className="og-route-detail">
       <header className="og-route-detail__header">
         <div className="og-route-detail__heading">
+          {worth === null || worthEyebrow(worth) === "" ? null : <p className="og-eyebrow og-worth__eyebrow" data-testid="worth-eyebrow">{worthEyebrow(worth)}</p>}
           <h1>{entry.name}</h1>
         </div>
         <RideCreditLine credit={entry.credit} />
@@ -615,6 +620,7 @@ export function RouteDetail({
       </section>
         </div>
         <div className="og-route-detail__content">
+      {worth === null ? null : <RideWorth worth={worth} />}
 
       {/* ONE action a rider takes on this page: it opens the ride ready to
           start. Saving and sharing sit beside it as the quiet choices, together
@@ -676,6 +682,8 @@ export function RouteDetail({
 
       {/* The group post usually opens with the same words; say them once. */}
       {repeatsStory(entry.summary, entry.story?.description) ? null : <p className="og-route-detail__summary">{entry.summary}</p>}
+
+      {worth === null || entry.libraryDetail === undefined ? null : <RideMore worth={worth} detail={entry.libraryDetail} />}
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} credit={entry.credit} />}
 

@@ -1,0 +1,167 @@
+/* Home sections and result lists. */
+.og-routes__home {
+  display: grid;
+  gap: var(--og-space-5);
+  min-width: 0;
+}
+
+.og-routes__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+}
+
+.og-routes__all {
+  flex: none;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-3);
+  border: 0;
+  background: none;
+  color: var(--og-primary-text);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-routes__note {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+/* Browse by state: three across at 390, two at 320. */
+.og-routes__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-routes__tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  width: 100%;
+  min-height: 56px;
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-routes__tile-code {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+}
+
+.og-routes__tile-count {
+  justify-self: end;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-routes__tile-name {
+  grid-column: 1 / -1;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+/* Best rides near the view: one glass panel above the Map / List pill, cards that scroll sideways. */
+.og-routes__stripwrap {
+  position: absolute;
+  inset: auto var(--og-space-3) calc(var(--og-touch) + 2 * var(--og-space-3));
+  z-index: 3;
+}
+
+.og-routes__strip {
+  display: grid;
+  gap: var(--og-space-1);
+  padding: var(--og-space-3) 0 var(--og-space-2);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  color: var(--og-ink);
+}
+
+.og-routes__strip-title,
+.og-routes__strip-note {
+  margin: 0;
+  padding-inline: var(--og-space-3);
+}
+
+.og-routes__strip-title {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-body);
+}
+
+.og-routes__strip-note {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-routes__strip-list {
+  display: flex;
+  gap: var(--og-space-2);
+  margin: var(--og-space-1) 0 0;
+  padding: 0 var(--og-space-3);
+  overflow-x: auto;
+  list-style: none;
+  scroll-padding-inline: var(--og-space-3);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.og-routes__strip-card {
+  display: flex;
+  flex: 0 0 min(248px, 82%);
+  scroll-snap-align: start;
+}
+
+.og-routes__strip-link {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--og-space-2);
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: var(--og-space-2);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+  color: inherit;
+  font-size: var(--og-text-meta);
+  text-decoration: none;
+}
+
+.og-routes__strip-shape {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--og-radius-control);
+}
+
+.og-routes__strip-body {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.og-routes__strip-body > :not(strong) {
+  color: var(--og-ink-2);
+}
+
+.og-routes__strip-body > strong {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-body);
+  line-height: 1.2;
+}

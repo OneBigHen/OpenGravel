@@ -429,24 +429,6 @@
 }
 
 /* Map style: a single choice, ticked. */
-.og-layers__check {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--og-line-strong);
-  border-radius: var(--og-radius-pill);
-  color: var(--og-on-primary);
-  font-size: var(--og-text-meta);
-  font-weight: 700;
-  line-height: 1;
-}
-
-.og-layers__row[data-on="true"] .og-layers__check {
-  border-color: var(--og-primary);
-  background: var(--og-primary);
-}
-
 /* Extras under a layer that is on. */
 .og-layers__filters {
   display: flex;

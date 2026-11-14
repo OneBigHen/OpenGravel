@@ -760,10 +760,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.og-phone-choice__word {
-  color: var(--og-ink);
-}
-
 .og-phone-choice__delta {
   flex: none;
   color: var(--og-ink-2);

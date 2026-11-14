@@ -1,3 +1,4 @@
+import type { RideDetail } from "@/application/route-library/types";
 import type { LibraryExploreRide, RideSummary } from "@/application/library/library-service";
 import { routeAlongShapingPoints } from "@/application/import/import-artifact";
 import type { BikeConstraintSnapshot, Coordinate, RideDocument, RidePoint } from "@/domain/ride/types";
@@ -145,9 +146,12 @@ export interface CatalogEntry {
    * track, a reference to follow, never a route we checked or built.
    */
   readonly referenceTrack?: true;
+  /** A national-library ride's own facts (score, source claims, notes, stops), as the pack holds them. */
+  readonly libraryDetail?: RideDetail;
 }
 
 interface RawCatalogEntry {
+  readonly libraryDetail?: unknown;
   readonly id?: unknown;
   readonly name?: unknown;
   readonly region?: unknown;
@@ -543,6 +547,16 @@ function roadReadModel(
     : null;
 }
 
+/** The library's own shape, checked at the doors the page reads: a damaged block is dropped, never half-shown. */
+function isLibraryDetail(value: unknown): value is RideDetail {
+  if (typeof value !== "object" || value === null) return false;
+  const detail = value as Record<string, unknown>;
+  const object = (field: unknown): boolean => typeof field === "object" && field !== null;
+  return typeof detail["id"] === "string" && typeof detail["score"] === "number" && typeof detail["type"] === "string"
+    && object(detail["facts"]) && object(detail["track"]) && object(detail["stops"]) && object(detail["credit"])
+    && Array.isArray(detail["notes"]) && Array.isArray(detail["alsoOn"]);
+}
+
 export function parseCatalogEntry(value: unknown): CatalogEntry | null {
   const raw = value as RawCatalogEntry;
   if (!isRecord(raw)) return null;
@@ -616,6 +630,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(estimatedTimeMinutes === undefined ? {} : { estimatedTimeMinutes }),
     ...(parsedLongTripFacts === undefined ? {} : { longTripFacts: parsedLongTripFacts }),
     ...(raw.referenceTrack === true ? { referenceTrack: true as const } : {}),
+    ...(isLibraryDetail(raw.libraryDetail) ? { libraryDetail: raw.libraryDetail } : {}),
   };
   const roadData = roadReadModel(raw.roadSummary, raw.roadDetails) ?? roadDetails(raw.roads, base);
   return roadData === null

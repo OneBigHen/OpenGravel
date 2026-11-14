@@ -236,15 +236,6 @@
   margin-left: auto;
 }
 
-.og-settings__row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--og-space-1);
-  margin-left: auto;
-}
-
 .og-settings__row-action,
 .og-settings__text-button {
   flex: none;
@@ -486,36 +477,6 @@
 }
 
 /* Download progress. */
-.og-settings__progress {
-  display: flex;
-  flex: 1 1 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--og-space-2);
-}
-
-.og-settings__progress progress {
-  flex: 1 1 120px;
-  height: 8px;
-  accent-color: var(--og-primary);
-}
-
-.og-settings__progress-value {
-  min-width: 3ch;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-  font-variant-numeric: tabular-nums;
-}
-
-.og-settings__art {
-  width: calc(100% + 2 * var(--og-space-4));
-  max-width: none;
-  height: auto;
-  margin: calc(-1 * var(--og-space-4)) calc(-1 * var(--og-space-4)) var(--og-space-4);
-  aspect-ratio: 21 / 8;
-  object-fit: cover;
-}
-
 @media (max-width: 760px) {
   .og-settings__header {
     margin-top: calc(var(--og-safe-top) + var(--og-space-4));

@@ -28,6 +28,10 @@ export interface ExploreQuery {
   readonly sort: ExploreSort;
   /** National ride library chips (`?type=twisty,dirt`). */
   readonly types?: readonly LibraryChip[];
+  /** A state's ride list (`?state=NC`): the library's rides in that state. */
+  readonly state?: string;
+  /** Only Standout rides (`?standout=1`). */
+  readonly standout?: boolean;
   /** Phones: which view is showing (`?view=map`). The list is the default. */
   readonly view?: "map" | "list";
   /** The in-view list: only rides starting in this box (`?here=west,south,east,north`). */
@@ -83,6 +87,7 @@ export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery
   const curvy = params.get("curvy");
   const types = libraryTypes(params.get("type"));
   const view = params.get("view");
+  const state = (params.get("state") ?? "").toUpperCase();
   const here = numbers(params.get("here"), 4);
   const at = numbers(params.get("at"), 3);
   return {
@@ -95,6 +100,8 @@ export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery
     ...(area === undefined ? {} : { area }),
     sort: sort(params.get("sort")),
     ...(types === undefined ? {} : { types }),
+    ...(/^[A-Z]{2}$/.test(state) ? { state } : {}),
+    ...(params.get("standout") === "1" ? { standout: true } : {}),
     ...(view === "map" || view === "list" ? { view } : {}),
     ...(here === undefined ? {} : { here: { west: here[0]!, south: here[1]!, east: here[2]!, north: here[3]! } }),
     ...(at === undefined ? {} : { at: { lat: at[0]!, lon: at[1]!, zoom: at[2]! } }),
@@ -112,6 +119,8 @@ export function serializeExploreQuery(query: ExploreQuery): string {
   if (query.curvy === true) params.set("curvy", "true");
   if (query.sort !== DEFAULT_QUERY.sort && query.sort !== "near") params.set("sort", query.sort);
   if (query.types !== undefined && query.types.length > 0) params.set("type", query.types.join(","));
+  if (query.state !== undefined) params.set("state", query.state);
+  if (query.standout === true) params.set("standout", "1");
   if (query.view !== undefined) params.set("view", query.view);
   if (query.here !== undefined) params.set("here", [query.here.west, query.here.south, query.here.east, query.here.north].map((n) => n.toFixed(3)).join(","));
   if (query.at !== undefined) params.set("at", `${query.at.lat.toFixed(3)},${query.at.lon.toFixed(3)},${query.at.zoom.toFixed(2)}`);
