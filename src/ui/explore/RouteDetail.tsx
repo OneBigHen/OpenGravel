@@ -41,6 +41,7 @@ import { distanceToStartKm } from "@/application/explore/query";
 import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
+import { AlsoOnLine } from "@/ui/credit/AlsoOnLine";
 import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
@@ -548,6 +549,7 @@ export function RouteDetail({
           <h1>{entry.name}</h1>
         </div>
         <RideCreditLine credit={entry.credit} />
+        <AlsoOnLine primary={entry.credit} alsoOn={entry.alsoOn} />
         {rideFacts.length === 0 ? null : (
           <dl className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => {

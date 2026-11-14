@@ -112,6 +112,11 @@ export interface CatalogEntry {
    */
   readonly credit?: RideCredit;
   /**
+   * Other sites that list this same road (national library, L2a). Each keeps its own
+   * credit, so a merged card thanks every source. Absent on a ride listed once.
+   */
+  readonly alsoOn?: readonly RideCredit[];
+  /**
    * The mechanics behind `provenance`, for the rider who wants them (09 §6 step
    * 8): what produced the geometry and what has not been checked about it. It is
    * shown behind a disclosure, because a rider choosing a ride needs the one-line
@@ -185,6 +190,19 @@ const SOURCE_ORDER: Readonly<Record<CatalogSource, number>> = {
   personal: 1,
   import: 2,
 };
+
+/** `undefined` when absent or empty, `null` when any credit is malformed. */
+function parseAlsoOn(value: unknown): readonly RideCredit[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 12) return null;
+  const credits: RideCredit[] = [];
+  for (const item of value) {
+    const credit = parseRideCredit(item);
+    if (credit === undefined || credit === null) return null;
+    credits.push(credit);
+  }
+  return credits.length === 0 ? undefined : credits;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -587,6 +605,8 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
   if (story === null || teaser === null) return null;
   const credit = parseRideCredit(raw.credit);
   if (credit === null) return null;
+  const alsoOn = parseAlsoOn(raw.alsoOn);
+  if (alsoOn === null) return null;
   const parsedLongTripFacts = longTripFacts(raw.longTripFacts);
   const base: CatalogEntry = {
     id: raw.id,
@@ -601,6 +621,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(previewGeometry === undefined ? {} : { previewGeometry }),
     provenance: raw.provenance,
     ...(credit === undefined ? {} : { credit }),
+    ...(alsoOn === undefined ? {} : { alsoOn }),
     ...(typeof raw.provenanceDetail === "string" ? { provenanceDetail: raw.provenanceDetail } : {}),
     ...(typeof raw.surfaceSummary === "string" ? { surfaceSummary: raw.surfaceSummary } : {}),
     ...(typeof raw.curvatureSummary === "string" ? { curvatureSummary: raw.curvatureSummary } : {}),

@@ -8,7 +8,7 @@ export type RideKind = "road" | "area" | "trip";
 export type SurfaceCode = "p" | "u" | "m" | null;
 export type PolicyMode = "host" | "link" | "hide";
 
-/** Index flag bits (plan section 6). Bit 128 (merged from several sites) is set by the L2 dedupe stage. */
+/** Index flag bits (plan section 6). Bit 128 (merged from several sites) is set by the L2a dedupe stage. */
 export const FLAG = {
   line: 1,
   loop: 2,
@@ -117,6 +117,8 @@ export interface IndexRow {
   readonly s: number;
   readonly c: string | null;
   readonly sf: "p" | "u" | "m" | null;
+  /** Merged cards only (flag 128): the `sources` indexes of the other sites that list this ride. */
+  readonly o?: readonly number[];
 }
 
 /** A fact the source claims, kept with its words; `value` is null when the source did not say. */
