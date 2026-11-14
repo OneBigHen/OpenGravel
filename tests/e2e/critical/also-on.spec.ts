@@ -1,8 +1,22 @@
+import { copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+
 import { expect, test } from "@playwright/test";
+
+// The server reads this path (playwright.config.ts); the fixture pack is copied in for this spec only.
+const PACK = join(tmpdir(), "og-route-library-e2e", "pack.sqlite");
+test.beforeAll(() => {
+  mkdirSync(dirname(PACK), { recursive: true });
+  copyFileSync(join(process.cwd(), "tests/fixtures/route-library/dedupe-pack.sqlite"), PACK);
+});
+test.afterAll(() => {
+  rmSync(dirname(PACK), { recursive: true, force: true });
+});
 
 /**
  * One road listed by three sites is one card (L2a). The fixture pack
- * (tests/fixtures/route-library/dedupe-pack.sqlite, wired in playwright.config.ts)
+ * (tests/fixtures/route-library/dedupe-pack.sqlite)
  * holds a single card for PA 231 with two other sites credited, and its two merged-away ids
  * as aliases, so an old link opens the same card.
  */

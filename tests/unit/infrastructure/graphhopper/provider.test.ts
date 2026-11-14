@@ -5,7 +5,7 @@
  * converted into a provider error, and a 30 s engine timeout is.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ProviderRouteRequest } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
@@ -344,6 +344,77 @@ describe("GraphHopper provider", () => {
       }
     });
 
+    describe("the quick first answer", () => {
+      const quick: ProviderRouteRequest = { ...loop, discovery: { ...loop.discovery!, seedCount: 1, firstAnswer: true } };
+
+      it("still turns down a loop that rides down a dead end and back", async () => {
+        let asked = 0;
+        const fetcher: typeof fetch = async () => {
+          asked += 1;
+          return jsonResponse(asked === 1 ? RETRACING : RESPONSE_FIXTURE);
+        };
+        const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+        const answer = await provider.candidates(quick, new AbortController().signal);
+
+        expect(asked).toBe(2);
+        expect(answer.candidates).toHaveLength(1);
+        expect(countDeadEndSpurs(answer.candidates[0]!.geometry)).toBe(0);
+      });
+
+      it("asks again with the next seed when the engine cannot place a loop on the first one", async () => {
+        let asked = 0;
+        const fetcher: typeof fetch = async () => {
+          asked += 1;
+          return asked === 1
+            ? jsonResponse({ message: "Could not find a valid point around the start" }, 400)
+            : jsonResponse(RESPONSE_FIXTURE);
+        };
+        const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+        const answer = await provider.candidates(quick, new AbortController().signal);
+
+        expect(asked).toBe(2);
+        expect(answer.candidates).toHaveLength(1);
+      });
+
+      it("starts a second seed when the first one is still wandering, and takes whichever answers first", async () => {
+        vi.useFakeTimers();
+        try {
+          const seeds: number[] = [];
+          const fetcher: typeof fetch = (_input, init) => {
+            const seed = Number((JSON.parse(String(init?.body)) as Record<string, unknown>)["round_trip.seed"]);
+            seeds.push(seed);
+            // The first seed never comes back; the second answers at once.
+            return seeds.length === 1 ? pendingFetch(_input, init) : Promise.resolve(jsonResponse(RESPONSE_FIXTURE));
+          };
+          const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+          const pending = provider.candidates(quick, new AbortController().signal);
+
+          await vi.advanceTimersByTimeAsync(1_000);
+          expect(seeds).toHaveLength(1);
+          await vi.advanceTimersByTimeAsync(3_000);
+          const answer = await pending;
+
+          expect(seeds).toHaveLength(2);
+          expect(seeds[1]).not.toBe(seeds[0]);
+          expect(answer.candidates).toHaveLength(1);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it("makes no more calls than the full plan would for the same loop", async () => {
+        const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
+        const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+        await provider.candidates(quick, new AbortController().signal);
+
+        // One seed, re-asked at most twice: never the full plan's nine.
+        expect(calls.length).toBeLessThanOrEqual(3);
+      });
+    });
+
     it("never spends extra calls on the hosted plan, which bills each one", async () => {
       const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
       const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher, hosted: { apiKey: "key" } });
@@ -600,5 +671,43 @@ describe("GraphHopper provider", () => {
       recoverable: true,
     });
     expect((caught as Error).message).not.toContain(internalUrl);
+  });
+});
+
+describe("GraphHopper provider — knows the graph it routes on (RM-4)", () => {
+  const strongCurvy: ProviderRouteRequest = { ...REQUEST, options: { ...REQUEST.options, roadCharacter: "curvy", traffic: "protect-ride", curvePressure: "strong" } };
+  function graphFetcher(info: () => Response) {
+    const routes: unknown[] = [];
+    let infoCalls = 0;
+    const fetcher = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).endsWith("/info")) { infoCalls += 1; return info(); }
+      routes.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify(RESPONSE_FIXTURE), { status: 200 });
+    }) as typeof fetch;
+    return { fetcher, routes, infoCalls: () => infoCalls };
+  }
+  const v2Info = () => new Response(JSON.stringify({ encoded_values: { surface: [], og_curve: [], og_through: [] } }), { status: 200 });
+
+  it("reads /info once and keeps it; a failed read is asked again", async () => {
+    let fail = true;
+    const recorded = graphFetcher(() => (fail ? new Response("down", { status: 503 }) : v2Info()));
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: recorded.fetcher });
+    await expect(provider.graph!(new AbortController().signal)).resolves.toBeNull();
+    fail = false;
+    await expect(provider.graph!(new AbortController().signal)).resolves.toEqual({ encodedValues: ["surface", "og_curve", "og_through"] });
+    await provider.graph!(new AbortController().signal);
+    expect(recorded.infoCalls()).toBe(2);
+  });
+
+  it("sends og_curve only once the graph lists it, and the same busy-road block either way", async () => {
+    const recorded = graphFetcher(v2Info);
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: recorded.fetcher, riderModesEnabled: true });
+    await provider.candidates(strongCurvy, new AbortController().signal);
+    expect(JSON.stringify(recorded.routes[0])).not.toContain("og_curve");
+    expect(JSON.stringify(recorded.routes[0])).toContain("road_class == PRIMARY");
+    await provider.graph!(new AbortController().signal);
+    await provider.candidates(strongCurvy, new AbortController().signal);
+    expect(JSON.stringify(recorded.routes[1])).toContain("og_curve < 0.25");
+    expect(JSON.stringify(recorded.routes[1])).toContain("road_class == PRIMARY");
   });
 });
