@@ -1,0 +1,67 @@
+{
+ "id": "pa-lancaster-county-loop-tour-ephrata-parkesburg-holtwood-marietta",
+ "name": "Lancaster County Loop Tour",
+ "states": [
+  "PA"
+ ],
+ "lane": "paved-twisty",
+ "lanes_secondary": [],
+ "source": {
+  "name": "BestBikingRoads",
+  "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/pennsylvania/ride/lancaster-county-loop-tour-ephrata-parkesburg-holtwood-marietta",
+  "fetched_via": "scrapling-fetcher"
+ },
+ "author_credit": {
+  "author": "aguth3",
+  "credit_line": "Track by aguth3 via BestBikingRoads (May 11, 2012)"
+ },
+ "terms": {
+  "quote": "Best Biking Roads - All the Best Motorcycle Rides : Please Credit us and help support our project",
+  "terms_url": "https://www.bestbikingroads.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T12:27:31Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BestBikingRoads — contact via https://www.bestbikingroads.com/ (site contact page; credit required)",
+  "permission_notes": "BBR GPX carries a credit line in its metadata; the site asks for credit and support. Re-hosting permission not confirmed — needs-permission."
+ },
+ "value_score": 4,
+ "value_reason": "BBR 4.0/5; 173.5 km measured from the track; Rural roads. Lancaster County Loop Tour.",
+ "summary": "174 km loop — Lancaster County Loop Tour — on rural roads.",
+ "scraped_at": "2026-11-13T12:27:31Z",
+ "last_verified": "2026-11-13T12:27:31Z",
+ "scraper": {
+  "adapter": "bestbikingroads",
+  "query": "BestBikingRoads Pennsylvania index + county bundle pages — full enumeration",
+  "notes": "terms_source: GPX metadata <link><text> credit line, grep-verified in the local file (BBR-shaped GPX, creator MapSource 6.16.3). BBR 4.0/5; page length 174 km; measured 173.5 km from <trkpt>s. Author aguth3, May 11, 2012. [fixture: GPX trimmed to 262 points]"
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "surface_claim_source": "BestBikingRoads route page",
+  "difficulty": "unknown",
+  "seasonality": "unknown",
+  "permits": "none stated"
+ },
+ "gpx": {
+  "availability": "hosted",
+  "local_file": "pa-lancaster-county-loop-tour-ephrata-parkesburg-holtwood-marietta.gpx",
+  "download_url": "https://www.bestbikingroads.com/downloadfile.php?code2=2",
+  "distance_km": 166.65,
+  "points": 262,
+  "bounds": {
+   "west": -76.5494,
+   "south": 39.8139,
+   "east": -75.9133,
+   "north": 40.2137
+  },
+  "elevation_gain_m": null,
+  "sha256": "f9580e9db650df1948e6b42b851cb51c7ef24a068c95b7fe1284e8afa3595540",
+  "requires_login": false,
+  "track_names": [
+   "LancasterCo"
+  ],
+  "track_vintage": "2012"
+ }
+}

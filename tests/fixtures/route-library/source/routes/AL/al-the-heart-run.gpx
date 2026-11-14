@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="fixture" xmlns="http://www.topografix.com/GPX/1/1">
+<metadata>
+    <link href="http://www.garmin.com">
+      <text>Garmin International</text>
+    </link>
+    <time>2008-03-19T01:16:07Z</time>
+    <bounds maxlat="43.9639248" maxlon="-84.9985170" minlat="30.2477052" minlon="-94.1657345"/>
+  </metadata>
+<rte><name>The Heart Run</name><rtept lat="33.6845114" lon="-87.8289969"/><rtept lat="33.5462379" lon="-87.8013611"/><rtept lat="33.3134222" lon="-87.6382828"/><rtept lat="33.2914925" lon="-87.5974703"/><rtept lat="33.2638481" lon="-87.5720657"/><rtept lat="33.6988878" lon="-87.3951244"/><rtept lat="33.6845114" lon="-87.8289969"/></rte>
+</gpx>

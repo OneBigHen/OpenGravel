@@ -1,0 +1,84 @@
+{
+ "id": "nc-cherohala-skyway",
+ "name": "Cherohala Skyway",
+ "states": [
+  "NC",
+  "TN"
+ ],
+ "lane": "scenic",
+ "lanes_secondary": [
+  "paved-twisty"
+ ],
+ "source": {
+  "name": "MotoCurve",
+  "url": "https://www.motocurve.com/motorcycle-roads/cherohala-skyway",
+  "fetched_via": "scrapling-fetcher"
+ },
+ "author_credit": {
+  "author": "MotoCurve",
+  "credit_line": "Track by MotoCurve via motocurve.com"
+ },
+ "terms": {
+  "quote": "Riding club, blog or ride report? Paste this and your readers get a card of the Cherohala Skyway that opens its map, GPX and directions. Free to use.",
+  "terms_url": "https://www.motocurve.com/motorcycle-roads/cherohala-skyway",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T05:21:33Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "MotoCurve — https://motocurve.com (contact via site)",
+  "permission_notes": "GPX is freely downloadable from MotoCurve and the page invites reuse of the route card; re-hosting the file itself is not explicitly granted."
+ },
+ "value_score": 5,
+ "value_reason": "The Dragon’s big, fast neighbour: 50 mi of open sweepers above 5,000 ft, with a real track.",
+ "summary": "The Cherohala Skyway (NC 143 / TN 165) from Robbinsville, NC, to Tellico Plains, TN: 50 mi measured of fast, open sweepers above 5,000 ft through the Cherokee and Nantahala National Forests. Where the Dragon is tight, the Skyway is wide and fast. No services on the Skyway itself.",
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "surface_claim_source": "MotoCurve page (Cherohala Skyway — public highway)",
+  "difficulty": "easy",
+  "seasonality": "Open all year, but the high section can close for snow and ice in winter.",
+  "permits": "none stated",
+  "difficulty_source": "MotoCurve page: 'Where the Tail of the Dragon is tight, the Skyway is fast and open: long sweepers'"
+ },
+ "scraped_at": "2026-11-13T05:21:33Z",
+ "last_verified": "2026-11-13T05:21:33Z",
+ "scraper": {
+  "adapter": "motocurve",
+  "query": "MotoCurve best motorcycle roads in America index (motocurve.com/motorcycle-roads)",
+  "notes": "terms_source: MotoCurve Cherohala Skyway page card text, quoted verbatim from https://www.motocurve.com/motorcycle-roads/cherohala-skyway (fetched 2026-11-13). Direct GPX download at /road-lines/cherohala-skyway.gpx; <rte>-only file, 464 route points, measured 81.188 km. [fixture: GPX trimmed to 253 points]"
+ },
+ "gpx": {
+  "availability": "hosted",
+  "local_file": "nc-cherohala-skyway.gpx",
+  "download_url": "https://www.motocurve.com/road-lines/cherohala-skyway.gpx",
+  "requires_login": false,
+  "points": 253,
+  "distance_km": 77.25,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -84.29402,
+   "south": 35.30235,
+   "east": -83.80707,
+   "north": 35.38521
+  },
+  "sha256": "d1e5f52bb1926b05e1e85c8fab1ac80f12c7928e443c5d23e0378af0f7dfd723",
+  "track_names": [
+   "Cherohala Skyway"
+  ]
+ },
+ "ancillary": {
+  "fuel": [
+   {
+    "name": "Fuel in Tellico Plains, TN",
+    "notes": "MotoCurve: 'Tellico Plains at the Tennessee end and Robbinsville at the North Carolina end both have food and fuel.'",
+    "source": "https://www.motocurve.com/motorcycle-roads/cherohala-skyway"
+   },
+   {
+    "name": "Fuel in Robbinsville, NC",
+    "notes": "MotoCurve: 'Tellico Plains at the Tennessee end and Robbinsville at the North Carolina end both have food and fuel.'",
+    "source": "https://www.motocurve.com/motorcycle-roads/cherohala-skyway"
+   }
+  ]
+ }
+}
