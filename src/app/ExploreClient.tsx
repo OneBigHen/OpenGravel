@@ -17,6 +17,7 @@ import {
   type LibraryExploreRide,
   roadDiscoveryScopeFromCatalog,
 } from "@/application/explore/catalog";
+import { loadRouteLibrary, type RouteLibrary } from "@/application/route-library/client";
 import { discoverRoads, type RoadCandidate } from "@/application/roads/discovery";
 import { createLibraryService } from "@/application/library/library-service";
 import { activeBike as activeGarageBike, snapshotOf, type BikeProfile } from "@/application/garage/garage-model";
@@ -49,6 +50,8 @@ export interface ExploreClientProps {
   readonly basemap?: BasemapMode;
   readonly mapboxToken?: string;
   readonly assetBasePath?: string;
+  /** False when the server has no ride library, so the browser never asks (and never logs a 404). */
+  readonly libraryOn?: boolean;
 }
 
 /** A route page's full line, which the list's card preview cannot stand in for. */
@@ -64,7 +67,7 @@ export function ExploreClient(props: ExploreClientProps) {
   return <RideExploreClient {...props} />;
 }
 
-function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: ExploreClientProps) {
+function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath, libraryOn = true }: ExploreClientProps) {
   const router = useRouter();
   const hostFactory = useMemo<MapHostFactory>(
     () =>
@@ -98,6 +101,22 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
   const [detailAttempt, setDetailAttempt] = useState(0);
   const [hiddenIds] = useState<ReadonlySet<string>>(() => hiddenRouteIds());
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  /** The national ride library; `null` when this server has none, and Explore is as it always was. */
+  const [routeLibrary, setRouteLibrary] = useState<RouteLibrary | null>(null);
+  /** Explore waits briefly for the library so it does not jump, but never for long. */
+  const [libraryWaited, setLibraryWaited] = useState(!libraryOn);
+  useEffect(() => {
+    if (detailId !== undefined) return;
+    if (!libraryOn) return;
+    let active = true;
+    const timer = window.setTimeout(() => setLibraryWaited(true), 3000);
+    void loadRouteLibrary().then((loaded) => {
+      if (!active) return;
+      setRouteLibrary(loaded);
+      setLibraryWaited(true);
+    });
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [detailId, libraryOn]);
   /** The active garage bike, read on the client (EX-02, RS-01). */
   const [bike, setBike] = useState<BikeProfile | null>(null);
   useEffect(() => {
@@ -233,7 +252,7 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
 
   // A route page renders from its own fetch; only the list waits on the catalog.
   const routePageReady = detailId !== undefined && libraryRides !== null;
-  if (status === "loading" && !routePageReady) return <ExploreLoading />;
+  if ((status === "loading" || (status === "ready" && !libraryWaited && detailId === undefined)) && !routePageReady) return <ExploreLoading />;
   if (status === "error" && !routePageReady) {
     return (
       <main id="main" className="og-explore">
@@ -274,6 +293,7 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
       entries={entries}
       roadCandidates={roadCandidates}
       hiddenIds={hiddenIds}
+      library={routeLibrary}
       {...(bike === null ? {} : { weekendBike: bike })}
       {...(mapboxToken === undefined ? {} : { mapboxToken })}
       {...(basemap === undefined

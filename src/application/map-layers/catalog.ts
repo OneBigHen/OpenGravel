@@ -38,7 +38,12 @@ export type MapLayerId =
   | "viewpoints"
   | "public-land"
   | "mvum"
-  | "work-zones";
+  | "work-zones"
+  | "gates"
+  | "fords"
+  | "private-roads"
+  | "rough-tracks"
+  | "usgs-topo";
 
 /**
  * How the layer is drawn: a camera/view change (3D terrain), a raster tile
@@ -71,6 +76,9 @@ export interface MapLayerDefinition {
   readonly glyph: string;
 }
 
+/** USGS The National Map topographic tiles (public domain, no key). */
+export const USGS_TOPO_TILES = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
+
 export const MAP_LAYER_CATEGORIES: readonly { readonly id: MapLayerCategory; readonly name: string }[] = [
   { id: "view", name: "Map view" },
   { id: "conditions", name: "Live conditions" },
@@ -93,6 +101,41 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     source: "US Forest Service motor vehicle use maps",
     caveat: "Roads missing from the map and dates not published stay unknown. A road being listed does not mean it is passable today, so check local Forest Service notices.",
     minZoom: 10, color: "#243a35", colorToken: "--og-deep-spruce", glyph: "⟋",
+  },
+  {
+    id: "gates", name: "Gates", category: "access", kind: "features",
+    legend: "A mapped gate across a road or track",
+    source: "OpenStreetMap",
+    caveat: "Volunteer-mapped. A gate that is not on the map is not a promise there is none, and whether one is locked or open is not shown.",
+    minZoom: 11, color: "#7a4a1c", glyph: "▮",
+  },
+  {
+    id: "fords", name: "Water crossings", category: "access", kind: "features",
+    legend: "Fords where the road runs through water",
+    source: "OpenStreetMap",
+    caveat: "Volunteer-mapped. Depth and current are not shown and change with the weather, so look before you cross.",
+    minZoom: 11, color: "#1f6f8b", glyph: "≈",
+  },
+  {
+    id: "private-roads", name: "Private roads", category: "access", kind: "features",
+    legend: "Solid red: mapped as private or closed to vehicles",
+    source: "OpenStreetMap access tags",
+    caveat: "Volunteer-mapped, so a road missing here is not a promise it is open. Driveways are left out. Check signs on the ground.",
+    minZoom: 12, color: "#a83e32", glyph: "⛔",
+  },
+  {
+    id: "rough-tracks", name: "Rough tracks", category: "access", kind: "features",
+    legend: "Dashed brown: mapped as soft, rough or 4x4-only",
+    source: "OpenStreetMap track, smoothness and 4x4 tags",
+    caveat: "Volunteer-mapped and often out of date, so a track can be better or worse than shown. Not drawn does not mean easy.",
+    minZoom: 12, color: "#8a4b14", glyph: "▨",
+  },
+  {
+    id: "usgs-topo", name: "USGS topo map", category: "view", kind: "raster",
+    legend: "The USGS paper-style topographic map",
+    source: "USGS The National Map",
+    caveat: "Drawn from USGS map data of mixed ages, so newer roads and trails may be missing. Needs a data connection.",
+    minZoom: 4, color: "#65745d", glyph: "▦",
   },
   {
     id: "work-zones", name: "Road work", category: "conditions", kind: "features",
@@ -357,6 +400,11 @@ const LAYER_ABOUT: Readonly<Record<MapLayerId, string>> = {
   "trail-closures": "Trail closures.",
   "mvum": "National Forest roads where motorcycles are allowed (green) or not (red).",
   "work-zones": "Road work and lane closures, so you can avoid slow or blocked roads.",
+  "gates": "Gates mapped across roads and tracks.",
+  "fords": "Places the road runs through water.",
+  "private-roads": "Roads mapped as private or closed to vehicles.",
+  "rough-tracks": "Tracks mapped as soft, rough or 4x4 only.",
+  "usgs-topo": "The USGS topographic map, with contour lines and trails.",
   "active-fire": "Wildfires spotted by satellite in the last two days.",
   "weather-radar": "Where it is raining now, the last two hours, and the next 30 minutes.",
   "wind": "Which way the wind is blowing and how hard.",

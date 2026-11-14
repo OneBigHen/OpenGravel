@@ -146,7 +146,7 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
       // Browser gates switch the weather set on: give the wind layer an arrow to
       // draw instead of an icon-less point no renderer can show.
       ...(layerId === "wind" ? { wind: { speedMph: 18, gustMph: 32, fromDegrees: 250 } } : {}),
-      geometry: layerId === "great-roads" || layerId === "gravel"
+      geometry: layerId === "great-roads" || layerId === "gravel" || layerId === "private-roads" || layerId === "rough-tracks"
         ? { type: "LineString", coordinates: [[lon - dx, lat + offset * dy], [lon + dx, lat + offset * dy]] }
         : { type: "Point", coordinates: [lon + offset * dx, lat - dy] },
     };

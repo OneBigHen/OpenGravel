@@ -1393,7 +1393,7 @@
     backdrop-filter: var(--og-glass-blur);
   }
 
-  .og-route-detail__actions .og-primary { flex: 1 1 auto; white-space: nowrap; }
+  .og-route-detail__actions .og-primary { flex: 1 1 0; min-width: 0; line-height: 1.2; text-align: center; }
 
   .og-route-detail__actions .og-secondary {
     flex: none;

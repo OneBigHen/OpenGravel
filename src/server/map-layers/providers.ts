@@ -491,6 +491,48 @@ export function curatedRidesProvider(entries: () => Promise<readonly CuratedRide
 // fallback. The forest-road, closure and cell-tower layers that Overpass once
 // served are retired.
 
+// What stops or slows a ride, straight from OpenStreetMap tags. Points come back as
+// centres; the two road layers come back as their real line.
+const GATE_SELECTORS = ['node["barrier"~"^(gate|lift_gate)$"]'];
+const FORD_SELECTORS = ['node["ford"="yes"]', 'way["ford"="yes"]', 'node["highway"="ford"]', 'way["highway"="ford"]'];
+const PRIVATE_ROAD_SELECTORS = [
+  'way["highway"~"^(track|unclassified|residential|tertiary|secondary)$"]["access"~"^(private|no)$"]',
+  'way["highway"~"^(track|unclassified|residential|tertiary|secondary)$"]["motor_vehicle"~"^(private|no)$"]',
+];
+const ROUGH_TRACK_SELECTORS = [
+  'way["highway"="track"]["tracktype"~"^(grade4|grade5)$"]',
+  'way["highway"]["smoothness"~"^(very_horrible|impassable)$"]',
+  'way["highway"]["4wd_only"="yes"]',
+];
+const LINE_LAYERS: readonly MapLayerId[] = ["private-roads", "rough-tracks"];
+
+function riderStopLayers(tags: Record<string, unknown>, layers: readonly MapLayerId[]): readonly MapLayerId[] {
+  const out: MapLayerId[] = [];
+  if (layers.includes("gates") && (tags["barrier"] === "gate" || tags["barrier"] === "lift_gate")) out.push("gates");
+  if (layers.includes("fords") && (tags["ford"] === "yes" || tags["highway"] === "ford")) out.push("fords");
+  const closed = (value: unknown): boolean => value === "private" || value === "no";
+  if (layers.includes("private-roads") && (closed(tags["access"]) || closed(tags["motor_vehicle"]))) out.push("private-roads");
+  const rough = tags["tracktype"] === "grade4" || tags["tracktype"] === "grade5" || tags["smoothness"] === "very_horrible" || tags["smoothness"] === "impassable" || tags["4wd_only"] === "yes";
+  if (layers.includes("rough-tracks") && rough) out.push("rough-tracks");
+  return out;
+}
+
+const RIDER_STOP_NAMES: Readonly<Partial<Record<MapLayerId, string>>> = {
+  gates: "Gate", fords: "Water crossing", "private-roads": "Private or no-access road", "rough-tracks": "Rough track",
+};
+
+function riderStopDetail(layerId: MapLayerId, tags: Record<string, unknown>): string | null {
+  if (layerId === "private-roads") return tags["access"] === "no" || tags["motor_vehicle"] === "no" ? "Mapped as closed to vehicles" : "Mapped as private";
+  if (layerId === "rough-tracks") {
+    if (tags["4wd_only"] === "yes") return "Mapped as 4x4 only";
+    if (tags["smoothness"] === "impassable") return "Mapped as impassable for vehicles";
+    if (tags["smoothness"] === "very_horrible") return "Mapped as very rough";
+    return tags["tracktype"] === "grade5" ? "Mapped as soft ground, grade 5" : "Mapped as mostly soft or rough, grade 4";
+  }
+  if (layerId === "gates") return tags["access"] === "private" ? "Mapped as private" : null;
+  return null;
+}
+
 const PUBLIC_LAND_SELECTORS = ['way["boundary"="protected_area"]', 'way["leisure"="nature_reserve"]', 'way["boundary"="national_park"]'];
 
 export const OVERPASS_MIRRORS = [
@@ -514,6 +556,19 @@ export function parseOverpass(payload: unknown, layers: readonly MapLayerId[]): 
     const element = record(entry);
     if (element === null) return [];
     const tags = record(element["tags"]) ?? {};
+    const stops = riderStopLayers(tags, layers);
+    if (stops.length > 0) {
+      const line = Array.isArray(element["geometry"])
+        ? element["geometry"].flatMap((node): LngLat[] => { const n = record(node); const at = n === null ? null : lngLat(n["lon"], n["lat"]); return at === null ? [] : [at]; })
+        : [];
+      const mid = record(element["center"]);
+      const centre = lngLat(element["lon"] ?? mid?.["lon"], element["lat"] ?? mid?.["lat"]);
+      return stops.flatMap((stop): InfoFeature[] => {
+        const base = { id: `osm:${text(element["type"]) ?? "x"}/${String(element["id"])}/${stop}`, layerId: stop, name: text(tags["name"]) ?? RIDER_STOP_NAMES[stop] ?? stop, detail: riderStopDetail(stop, tags), weight: null };
+        if (LINE_LAYERS.includes(stop)) return line.length >= 2 ? [{ ...base, geometry: { type: "LineString", coordinates: line } }] : [];
+        return centre === null ? [] : [{ ...base, geometry: { type: "Point", coordinates: centre } }];
+      });
+    }
     const layerId = overpassLayer(tags, layers);
     if (layerId === null) return [];
     const center = record(element["center"]);
@@ -536,16 +591,22 @@ export function overpassQuery(bounds: MapLayerBounds, layers: readonly MapLayerI
   if (layers.includes("trailheads")) selectors.push('nwr["information"="trailhead"]');
   if (layers.includes("shelters")) selectors.push('nwr["amenity"="shelter"]', 'nwr["tourism"="camp_site"]');
   if (layers.includes("summits")) selectors.push('nwr["natural"="peak"]');
-  if (selectors.length === 0) return null;
+  if (layers.includes("gates")) selectors.push(...GATE_SELECTORS);
+  if (layers.includes("fords")) selectors.push(...FORD_SELECTORS);
+  const lines: string[] = [];
+  if (layers.includes("private-roads")) lines.push(...PRIVATE_ROAD_SELECTORS);
+  if (layers.includes("rough-tracks")) lines.push(...ROUGH_TRACK_SELECTORS);
+  if (selectors.length === 0 && lines.length === 0) return null;
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-  return `[out:json][timeout:12];(${selectors.map((selector) => `${selector}(${bbox});`).join("")});out center 400;`;
+  const union = (list: readonly string[]): string => `(${list.map((selector) => `${selector}(${bbox});`).join("")})`;
+  return `[out:json][timeout:12];${selectors.length === 0 ? "" : `${union(selectors)};out center 400;`}${lines.length === 0 ? "" : `${union(lines)};out geom 300;`}`;
 }
 
 export const overpassProvider: LayerProvider = {
   id: "osm",
   // Not registered with the handler: public land calls `load` directly as its
   // fallback, so no requested layer is served through this provider id.
-  layers: ["trailheads", "water-sources", "shelters", "summits"],
+  layers: ["trailheads", "water-sources", "shelters", "summits", "gates", "fords", "private-roads", "rough-tracks"],
   ttlMs: 60 * 60_000,
   async load(bounds, layers, context) {
     const query = overpassQuery(bounds, layers);
