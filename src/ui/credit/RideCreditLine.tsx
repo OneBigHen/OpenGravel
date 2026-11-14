@@ -29,7 +29,7 @@ export function RideCreditLine({
   );
   return (
     <p className={classes} data-testid="ride-credit">
-      {credit.author === null ? <>Route from {source} · author not named</> : <>Route by {credit.author} · {source}</>}
+      {credit.author === null ? <>Route from {source} · author unknown</> : <>Route by {credit.author} · {source}</>}
     </p>
   );
 }

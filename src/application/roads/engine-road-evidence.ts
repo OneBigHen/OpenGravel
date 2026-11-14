@@ -64,6 +64,11 @@ const OSM_ROAD_SOURCE: EvidenceSource = {
   label: "OpenStreetMap road classes",
   category: "osm",
 };
+const OSM_DENSITY_SOURCE: EvidenceSource = {
+  id: "osm-density",
+  label: "OpenStreetMap buildings around each road",
+  category: "osm",
+};
 const OSM_CURVATURE_SOURCE: EvidenceSource = {
   id: "osm-curvature",
   label: "Road geometry from OpenStreetMap",
@@ -288,6 +293,65 @@ export function engineBusyRoads(
   return {
     share: clamp01(busyMeters / measuredMeters),
     coverage: summary.totalMeters > 0 ? clamp01(measuredMeters / summary.totalMeters) : 0,
+  };
+}
+
+/**
+ * How much of a town each kind of built-up area costs a ride. The engine marks
+ * every edge `rural`, `residential` (suburbs and small towns) or `city` from
+ * the density of buildings around it. Suburban streets are most of the way to a
+ * city street for a rider out for back roads: stop signs, driveways, school
+ * zones, no view. A main road (motorway, trunk, primary or a link) costs half
+ * a city street even out in the country, so leaving town on a highway is not
+ * free, but it is still better than a loop through the suburbs.
+ */
+const URBAN_FRICTION: Readonly<Record<string, number>> = { rural: 0, residential: 0.7, city: 1 };
+const MAIN_ROAD_FRICTION = 0.5;
+
+/**
+ * The metre-weighted built-up share of the line (0 all country back roads, 1
+ * all city streets), with the share of the line the engine
+ * described. `null` when no run
+ * carries a density, so the score keeps it unknown rather than calling it rural.
+ */
+export function engineUrbanFriction(
+  summary: ProviderRoadSummary | undefined,
+): { readonly unit: number; readonly coverage: number } | null {
+  const runs = summary?.roadRuns;
+  if (summary === undefined || runs === undefined || runs.length === 0) return null;
+  let friction = 0;
+  let measured = 0;
+  for (const run of runs) {
+    const density = URBAN_FRICTION[run.urbanDensity.toLowerCase()];
+    if (density === undefined || !Number.isFinite(run.meters) || run.meters <= 0) continue;
+    const mainRoad = BUSY_ROAD_CLASSES.has(run.roadClass.toLowerCase()) || run.roadClassLink === true;
+    const weight = mainRoad ? Math.max(MAIN_ROAD_FRICTION, density) : density;
+    measured += run.meters;
+    friction += weight * run.meters;
+  }
+  if (!(measured > 0)) return null;
+  return {
+    unit: clamp01(friction / measured),
+    coverage: summary.totalMeters > 0 ? clamp01(measured / summary.totalMeters) : 0,
+  };
+}
+
+/**
+ * The `urbanFriction` evidence entry: time in towns and on main roads, scored as the
+ * `junctionFriction` cost. A loop from the edge of a city otherwise scores the
+ * same whether it heads into the suburbs or out to the farms.
+ */
+export function engineUrbanFrictionEvidence(summary: ProviderRoadSummary | undefined): RouteEvidence {
+  const urban = engineUrbanFriction(summary);
+  if (urban === null) return {};
+  return {
+    urbanFriction: {
+      value: Number(urban.unit.toFixed(3)),
+      coverage: urban.coverage,
+      status: "estimated",
+      confidence: 0.8,
+      provenance: [OSM_DENSITY_SOURCE],
+    },
   };
 }
 

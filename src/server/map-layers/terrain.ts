@@ -33,6 +33,6 @@ export const terrainProvider: LayerProvider = {
     if (result.availability !== "available") throw new Error("DEM unavailable");
     const terrainGrid: TerrainGrid = { bounds, size, heights: result.elevationsMeters };
     const spacing = Math.max((bounds.east - bounds.west) * 111_195 * Math.cos((bounds.north + bounds.south) * Math.PI / 360), (bounds.north - bounds.south) * 111_195) / (size - 1);
-    return { features: [], terrainGrid, freshness: layers.map((layerId) => ({ layerId, source: "AWS / Mapzen Terrarium", fetchedAt: new Date((context.now ?? Date.now)()).toISOString(), observedAt: null, stale: false, note: `View-sampled Terrarium DEM (z${zoom}); derivative grid spacing up to ${Math.round(spacing)} m. Contour interval ${terrainContourInterval(terrainGrid)} m (20 m in close views). Source survey date unknown. Online only.` })) };
+    return { features: [], terrainGrid, freshness: layers.map((layerId) => ({ layerId, source: "Mapzen Terrarium terrain tiles", fetchedAt: new Date((context.now ?? Date.now)()).toISOString(), observedAt: null, stale: false, note: `View-sampled Terrarium DEM (z${zoom}); derivative grid spacing up to ${Math.round(spacing)} m. Contour interval ${terrainContourInterval(terrainGrid)} m (20 m in close views). Source survey date unknown. Online only.` })) };
   },
 };
