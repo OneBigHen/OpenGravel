@@ -66,7 +66,9 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   const [linesDrawn, setLinesDrawn] = useState(0);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const byId = useMemo(() => new Map(library.rows.map((row) => [row.id, row])), [library.rows]);
-  const handlers = useRef({ onView, tap: (_ids: readonly string[]) => {}, frame: () => {} });
+  const handlers = useRef({ onView, tap: (ids: readonly string[]): void => { void ids; }, frame: () => {} });
+  // The callbacks only read the ref when the map fires them, never during render.
+  /* eslint-disable react-hooks/refs */
   const overlay = useMemo(
     () => createRoutesOverlay({
       onView: (next) => { setView(next); handlers.current.onView(next); },
@@ -75,6 +77,7 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
     }),
     [],
   );
+  /* eslint-enable react-hooks/refs */
 
   useEffect(() => { handlers.current.onView = onView; }, [onView]);
 
