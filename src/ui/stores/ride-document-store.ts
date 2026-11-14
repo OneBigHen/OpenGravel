@@ -1088,15 +1088,12 @@ export function reverseRideCommand(
  * are builders only — the reducer still decides, and a choice equal to the
  * current value is its `noop`.
  */
-/** The history labels `rideShapeCommand` writes: a shape pick is a setting, not authored work. */
-export const RIDE_SHAPE_LABELS: readonly string[] = ["Make it a loop", "Ride to a destination"];
-
 export function rideShapeCommand(
   document: RideDocument,
   shape: "destination" | "loop",
 ): Extract<RideCommand, { type: "ride.shape.set" }> {
   return {
-    ...commandBase(document, "rider", RIDE_SHAPE_LABELS[shape === "loop" ? 0 : 1]!),
+    ...commandBase(document, "rider", shape === "loop" ? "Make it a loop" : "Ride to a destination"),
     type: "ride.shape.set",
     shape,
   };

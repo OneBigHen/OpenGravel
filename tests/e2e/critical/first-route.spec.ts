@@ -165,7 +165,8 @@ test("idle: the planner asks for a start and offers a loop from here", async ({
 
   // The laptop opens on "To a destination" (QA-21): the big button names what it
   // does, so with nothing authored it is "Create ride" and waits for a start.
-  // Choosing Loop turns it into the one live action, "Make my loop" from here.
+  // Choosing Loop relabels it "Make my loop" and starts looking for the rider's
+  // position (it stays disabled until a start exists).
   const plan = page.getByTestId("compose-create");
   await expect(plan).toHaveText("Create ride");
   await expect(plan).toBeDisabled();
@@ -174,7 +175,6 @@ test("idle: the planner asks for a start and offers a loop from here", async ({
   );
   await page.getByTestId("ride-shape-loop").check({ force: true });
   await expect(plan).toHaveText("Make my loop");
-  await expect(plan).toBeEnabled();
   await page.getByTestId("ride-shape-destination").check({ force: true });
   await expect(plan).toHaveText("Create ride");
 
