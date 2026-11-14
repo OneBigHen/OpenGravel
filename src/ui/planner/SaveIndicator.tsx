@@ -4,6 +4,12 @@ import type { SaveIndicatorState } from "@/ui/stores/ride-document-store";
 
 export interface SaveIndicatorProps {
   readonly state: SaveIndicatorState;
+  /**
+   * True once this document has had a save attempt that returned. A cold
+   * planner has nothing to save, so an "unsaved" document with no result is
+   * not a label a rider needs floating over the map (OG-23).
+   */
+  readonly savedBefore?: boolean;
 }
 
 /**
@@ -30,7 +36,10 @@ export function saveIndicatorCopy(state: SaveIndicatorState): string {
   }
 }
 
-export function SaveIndicator({ state }: SaveIndicatorProps) {
+export function SaveIndicator({ state, savedBefore = false }: SaveIndicatorProps) {
+  // OG-23: a cold planner is not "Not saved" — there is no ride, so there is
+  // nothing to save and no label to show. After a save attempt the note stays.
+  if (state === "unsaved" && !savedBefore) return null;
   return (
     <p
       className="og-planner__save-indicator"

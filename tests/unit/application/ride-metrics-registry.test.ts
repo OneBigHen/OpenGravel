@@ -642,6 +642,33 @@ describe("the strip model", () => {
     expect(model.slots[1].caption).toBe("Dist left");
   });
 
+  it("hides the speed slot until the first fix, then shows a real number (OG-20)", () => {
+    const noFix = strip(navigation({
+      position: {
+        coordinate: null,
+        observedAt: null,
+        ageMs: null,
+        accuracyMeters: null,
+        headingDegrees: null,
+        speedMps: null,
+        quality: "unavailable",
+      },
+    }));
+    // No fix yet: no dash on the strip at all, and speed is the slot that waits.
+    expect(noFix.slots[0]).toMatchObject({ hidden: true });
+    expect(noFix.slots[0].reading.displayValue).toBe(NO_VALUE);
+    expect(noFix.slots.filter((slot) => slot.hidden)).toHaveLength(1);
+    expect(noFix.slots.filter((slot) => !slot.hidden)).toHaveLength(2);
+
+    // A fix, even a stopped one, brings the slot back with a number, never a dash.
+    const fixed = strip(navigation());
+    expect(fixed.slots[0].hidden).toBe(false);
+    expect(fixed.slots[0].reading.displayValue).toBe("47");
+    expect(fixed.slots[0].reading.unit).toBe("mph");
+    const stopped = strip(navigation({ position: { ...FRESH, speedMps: 0 } }));
+    expect(stopped.slots[0]).toMatchObject({ hidden: false, reading: { displayValue: "0" } });
+  });
+
   it("uses the Record defaults while recording and the Free Ride defaults without one", () => {
     const routeless = { ...navigation().plan, route: null };
     expect(strip(navigation({ activity: "free", plan: routeless, recordingId: asRecordingId("rec_1") })).shownIds).toEqual([

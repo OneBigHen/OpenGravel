@@ -10,7 +10,7 @@ import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { MapAdvisorAsk } from "@/ui/planner/RideAdvisor";
 import { AppMenu } from "@/ui/nav/AppMenu";
 import { LayerGlyph } from "@/ui/layers/LayerIcon";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ConditionsPill } from "./ConditionsPill";
 import { useRouteFuelGap, type FuelGapRoute } from "./useRouteFuelGap";
@@ -141,6 +141,26 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
   readonly mapLayers?: MapLayersSource | undefined;
 }) {
   const chips = useChipRow(bias, route ?? null, mapLayers);
+  const chipRow = useRef<HTMLDivElement>(null);
+  const [moreChips, setMoreChips] = useState(false);
+  // OG-23: a row clipped at the screen edge looks broken, not scrollable. Track
+  // whether there is still a chip to the right and fade that edge only then.
+  useEffect(() => {
+    const row = chipRow.current;
+    if (row === null) return;
+    const read = (): void => setMoreChips(row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
+    read();
+    row.addEventListener("scroll", read, { passive: true });
+    // A resize changes how many chips fit. The observer is a refinement: a host
+    // without one (a test DOM) still tracks the row on scroll.
+    const Observer = row.ownerDocument.defaultView?.ResizeObserver;
+    const observer = Observer === undefined ? null : new Observer(read);
+    observer?.observe(row);
+    return () => {
+      observer?.disconnect();
+      row.removeEventListener("scroll", read);
+    };
+  }, [chips.length]);
   return <div className="og-top-search" data-testid="top-search">
     <div className="og-top-search__row">
     <div className="og-top-search__bar">
@@ -153,7 +173,7 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
     </div>
     <AppMenu className="og-top-search__menu"/>
     </div>
-    <div className="og-search-chips" aria-label="Nearby places">
+    <div className="og-search-chips" ref={chipRow} data-overflow={moreChips ? "true" : undefined} aria-label="Nearby places">
       <MapAdvisorAsk />
       {chips.map(({ chip, label, smart }) => <button key={smart ? `smart:${chip.id}` : chip.id} type="button" data-chip={chip.id} data-smart={smart ? "true" : undefined} data-testid={smart ? `smart-chip-${chip.id}` : `search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>
         <LayerGlyph id={CHIP_ICON[chip.id]} className="og-search-chips__glyph"/>{label}

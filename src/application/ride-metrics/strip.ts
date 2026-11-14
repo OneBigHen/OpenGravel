@@ -46,6 +46,12 @@ export interface RideMetricSlotView {
   readonly caption: string;
   /** "Speed, 47 miles per hour." — the value half of the slot's accessible name. */
   readonly spokenValue: string;
+  /**
+   * True for a slot the strip must not draw yet (OG-20). Only the live speed
+   * before the first GPS fix: a dash is not a reading, and an empty third of the
+   * instrument strip reads as a broken app. The slot returns with the first fix.
+   */
+  readonly hidden: boolean;
 }
 
 export interface RideMetricStripModel {
@@ -169,6 +175,8 @@ export function buildRideMetricStrip(input: RideMetricStripInput): RideMetricStr
       reading,
       caption: RIDE_METRIC_REGISTRY[reading.id].shortLabel,
       spokenValue: `${reading.label}, ${reading.accessibleDetail}.`,
+      // OG-20: before the first fix the speed slot is absent, not a dash.
+      hidden: reading.id === "speed.current" && reading.state === "waiting",
     };
   };
   // The lock reads a fresh speed whether or not the rider shows speed.
