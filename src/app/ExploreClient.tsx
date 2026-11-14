@@ -104,10 +104,10 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath, libr
   /** The national ride library; `null` when this server has none, and Explore is as it always was. */
   const [routeLibrary, setRouteLibrary] = useState<RouteLibrary | null>(null);
   /** Explore waits briefly for the library so it does not jump, but never for long. */
-  const [libraryWaited, setLibraryWaited] = useState(false);
+  const [libraryWaited, setLibraryWaited] = useState(!libraryOn);
   useEffect(() => {
     if (detailId !== undefined) return;
-    if (!libraryOn) { setLibraryWaited(true); return; }
+    if (!libraryOn) return;
     let active = true;
     const timer = window.setTimeout(() => setLibraryWaited(true), 3000);
     void loadRouteLibrary().then((loaded) => {
