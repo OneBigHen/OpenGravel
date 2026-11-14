@@ -428,25 +428,6 @@
   color: var(--og-danger);
 }
 
-/* Map style: a single choice, ticked. */
-.og-layers__check {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--og-line-strong);
-  border-radius: var(--og-radius-pill);
-  color: var(--og-on-primary);
-  font-size: var(--og-text-meta);
-  font-weight: 700;
-  line-height: 1;
-}
-
-.og-layers__row[data-on="true"] .og-layers__check {
-  border-color: var(--og-primary);
-  background: var(--og-primary);
-}
-
 /* Extras under a layer that is on. */
 .og-layers__filters {
   display: flex;
@@ -473,7 +454,6 @@
   font-weight: 600;
   cursor: pointer;
 }
-
 
 .og-layers__option:disabled,
 .og-layers__subswitch:disabled {
@@ -585,7 +565,7 @@
     inset: auto 0 var(--og-tabbar-h, 0px);
     z-index: var(--og-z-overlay);
     width: 100%;
-    max-height: calc(55dvh - var(--og-tabbar-h, 0px));
+    max-height: calc(50dvh - var(--og-tabbar-h, 0px));
     border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
     box-shadow: var(--og-shadow-sheet);
   }

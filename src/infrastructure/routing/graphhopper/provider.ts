@@ -119,6 +119,19 @@ const LOOP_SCALE_MAX = 2;
  */
 const LOOP_RESEED_ATTEMPTS = 2;
 const LOOP_RESEED_STEP = 1_000_003;
+/**
+ * The quick first answer of a loop makes correction calls and dead-end re-asks
+ * only while the answer is still quick. The full plan that follows keeps every
+ * pass and decides the final pick.
+ */
+const FIRST_ANSWER_RESEED_BUDGET_MS = 2_000;
+/**
+ * A seed that has not answered after this long is probably one the engine is
+ * wandering on (one call visited 12 million roads). A second seed starts then,
+ * and whichever answers first is the first answer.
+ */
+const FIRST_ANSWER_HEDGE_MS = 3_500;
+const FIRST_ANSWER_HEDGE_SEED_STEP = 3 * 1_000_003;
 
 interface RouteAttempt {
   readonly response: Response;
@@ -446,6 +459,7 @@ export function createGraphHopperProvider(
       const calibrateSeed = async (
         seed: number | undefined,
         startScale = 1,
+        stopAt = Number.POSITIVE_INFINITY,
       ): Promise<{ readonly answer: SeedAnswer; readonly scale: number }> => {
         let best = await answerFor(seed, startScale === 1 ? undefined : startScale);
         let bestScale = startScale;
@@ -456,7 +470,7 @@ export function createGraphHopperProvider(
         const miss = (answer: SeedAnswer): number =>
           Math.abs((answer.paths[0]?.time ?? Number.POSITIVE_INFINITY) - targetMs);
         let scale = startScale;
-        for (let pass = 0; pass < LOOP_CALIBRATION_PASSES; pass += 1) {
+        for (let pass = 0; pass < LOOP_CALIBRATION_PASSES && Date.now() < stopAt; pass += 1) {
           const time = best.paths[0]?.time;
           if (time === undefined || time <= 0 || miss(best) <= toleranceMs) break;
           scale = Math.min(LOOP_SCALE_MAX, Math.max(LOOP_SCALE_MIN, (scale * targetMs) / time));
@@ -483,7 +497,58 @@ export function createGraphHopperProvider(
       // another seed, and the first answer without that is kept. When every
       // seed retraces, the first answer stands: the planner decides what to do
       // with it, the adapter does not hide it.
+      const quickOne = async (seed: number): Promise<SeedAnswer> => {
+        const started = Date.now();
+        // A seed the engine cannot place a loop on is replaced by the next one,
+        // while there is still time, instead of costing the rider the first answer.
+        let firstFailure: unknown;
+        let first: Awaited<ReturnType<typeof calibrateSeed>> | undefined;
+        try {
+          first = await calibrateSeed(seed, 1, started + FIRST_ANSWER_RESEED_BUDGET_MS);
+        } catch (caught) {
+          if (signal.aborted || hosted !== undefined) throw caught;
+          firstFailure = caught;
+        }
+        if (first !== undefined && (options.reseedDeadEndLoops === false || hosted !== undefined || !retraces(first.answer))) return first.answer;
+        for (let attempt = 1; attempt <= LOOP_RESEED_ATTEMPTS; attempt += 1) {
+          if (Date.now() - started > FIRST_ANSWER_RESEED_BUDGET_MS) break;
+          let again: SeedAnswer;
+          try {
+            again = (await calibrateSeed((seed + attempt * LOOP_RESEED_STEP) % 2_147_483_647, first?.scale ?? 1, started + 2 * FIRST_ANSWER_RESEED_BUDGET_MS)).answer;
+          } catch (caught) {
+            if (signal.aborted) throw caught;
+            firstFailure ??= caught;
+            continue;
+          }
+          if (first === undefined || !retraces(again)) return again;
+        }
+        if (first === undefined) throw firstFailure;
+        return first.answer;
+      };
+      const quick = (seed: number): Promise<SeedAnswer> => {
+        const primary = quickOne(seed);
+        return new Promise<SeedAnswer>((resolve, reject) => {
+          let open = 1;
+          let failure: unknown;
+          const settle = (run: Promise<SeedAnswer>): void => {
+            run.then(resolve, (caught: unknown) => {
+              failure ??= caught;
+              open -= 1;
+              if (open === 0) reject(failure);
+            });
+          };
+          settle(primary);
+          const timer = setTimeout(() => {
+            if (signal.aborted) return;
+            open += 1;
+            settle(quickOne((seed + FIRST_ANSWER_HEDGE_SEED_STEP) % 2_147_483_647));
+          }, FIRST_ANSWER_HEDGE_MS);
+          const clear = (): void => clearTimeout(timer);
+          primary.then(clear, () => undefined);
+        });
+      };
       const calibrated = async (seed: number | undefined): Promise<SeedAnswer> => {
+        if (seed !== undefined && request.discovery?.firstAnswer === true) return quick(seed);
         const first = await calibrateSeed(seed);
         // The hosted free plan bills every call, so it never gets the extra asks.
         if (seed === undefined || options.reseedDeadEndLoops === false || hosted !== undefined || !retraces(first.answer)) {
