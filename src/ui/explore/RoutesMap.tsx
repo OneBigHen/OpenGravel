@@ -9,7 +9,7 @@ import type { IndexRow } from "@/application/route-library/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { bubblesFor, COUNTRY_EXTENT, extentFromCamera, spreadBubbles, statesInView, type Bubble } from "@/ui/explore/routes-camera";
-import { createRoutesOverlay, LINE_MIN_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
+import { createRoutesOverlay, LINE_MIN_ZOOM, STATE_BUBBLE_MAX_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
 import { RoutesMapCard } from "@/ui/explore/RoutesMapCard";
 
 export interface RoutesCamera {
@@ -113,18 +113,26 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   }, [host, overlay]);
 
   // Line files for the states in view, one request each, once.
+  const openingFitSeen = useRef(false);
   useEffect(() => {
-    if (view === null || view.zoom < LINE_MIN_ZOOM) return;
+    if (view === null) return;
+    // The map first reports a stand-in view while it is still flying to the opening
+    // frame (it is zoomed in on the app's default place); that is not worth six
+    // state downloads. The first view that matches the opening frame ends the wait.
+    if (!openingFitSeen.current) {
+      const matches = initial === null ? view.zoom < STATE_BUBBLE_MAX_ZOOM : Math.abs(view.zoom - initial.zoom) < 0.5;
+      if (!matches) return;
+      openingFitSeen.current = true;
+    }
+    if (view.zoom < LINE_MIN_ZOOM) return;
     let live = true;
-    // Wait for the camera to settle: the map reports a stand-in view while it is
-    // still fitting the opening frame, and that is not worth six state downloads.
     const timer = setTimeout(() => {
       for (const state of statesInView(library.rows, view.bounds)) {
         void library.linesFor(state).then((lines) => { if (live && lines !== null) { overlay.addLines(state, lines); setLinesDrawn(overlay.linesLoaded()); } });
       }
     }, 250);
     return () => { live = false; clearTimeout(timer); };
-  }, [view, library, overlay]);
+  }, [view, library, overlay, initial]);
 
   const pickedRows = useMemo(() => pickedIds.flatMap((id) => { const row = byId.get(id); return row === undefined ? [] : [row]; }), [pickedIds, byId]);
   useEffect(() => {
