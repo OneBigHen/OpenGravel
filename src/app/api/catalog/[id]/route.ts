@@ -13,7 +13,8 @@ export async function GET(_request: Request, context: { readonly params: Promise
   if (result.status === 404) {
     // Not a curated or shared ride: it may be one of the national library's.
     const libraryRide = libraryRideAsCatalogEntry(id);
-    if (libraryRide !== null) result = handleCatalogDetail(id, [libraryRide]);
+    // Order: a live card, then an alias (a merged-away id answers with the card it became), then a tombstone.
+    if (libraryRide !== null) result = handleCatalogDetail(libraryRide.id, [libraryRide]);
     else {
       const tombstone = packTombstone(id);
       if (tombstone !== null) return removedRideResponse(tombstone);

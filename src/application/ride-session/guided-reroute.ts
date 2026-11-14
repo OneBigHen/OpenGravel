@@ -158,6 +158,101 @@ export function createGuidedReroutePlanner(deps: {
   let lastRejoin: { readonly planningGeneration: number; readonly connectorStart: Coordinate } | null = null;
 
   /**
+   * The way to the start of the planned line, then the line exactly (QA-18).
+   * Null means "do the full replan instead": no line facts, no usable way.
+   */
+  async function planToStart(args: {
+    readonly navigation: SessionNavigationState;
+    readonly intent: RideIntent;
+    readonly route: RerouteBoundRoute;
+    readonly planningGeneration: number;
+    readonly signal: AbortSignal;
+  }): Promise<GuidedRerouteResult | null> {
+    const { navigation, route, planningGeneration, signal } = args;
+    const position = navigation.position.coordinate;
+    const line = route.line;
+    const instructions = route.instructions;
+    const start = line[0];
+    if (position === null || start === undefined || line.length < 2 || instructions === undefined || instructions.length === 0) return null;
+    if (instructions.some((instruction) => instruction.geometryIndex === undefined || instruction.geometryIndex >= line.length)) return null;
+    const base = await buildRerouteRequest(
+      {
+        currentPosition: position,
+        authoredIntent: args.intent,
+        remainingStopIds: navigation.remainingStopIds,
+        completedStopIds: navigation.completedStopIds,
+      },
+      {
+        requestId: `reroute-${planningGeneration}`,
+        includeAlternatives: false,
+        profileFor,
+        extraAvoidRings: currentRiderReportRings(),
+        resolveGeometry: async (ref) => (await deps.geometry.get(ref))?.payload ?? null,
+      },
+    );
+    if (!base.ok) return null;
+    deps.provider.beginAttempt({
+      rideId: navigation.plan.rideId,
+      rideRevision: navigation.plan.rideRevision,
+      planningGeneration,
+    });
+    const connectorRequest: ProviderRouteRequest = {
+      requestId: `${base.request.requestId}-start`,
+      origin: base.request.origin,
+      destination: start,
+      stops: [],
+      shaping: [],
+      profile: base.request.profile,
+      avoidPolygons: base.request.avoidPolygons,
+      roadSpans: [],
+      options: { ...base.request.options, includeAlternatives: false },
+    };
+    let answer: Awaited<ReturnType<typeof deps.provider.candidates>>;
+    try {
+      answer = await deps.provider.candidates(withRiderHeading(connectorRequest, navigation), signal);
+    } catch (caught) {
+      if (signal.aborted) throw caught;
+      return null;
+    }
+    if (signal.aborted) throw signal.reason;
+    const connector = answer.candidates.find((entry) => entry.providerMetadata?.["bestRide"] === true) ?? answer.candidates[0];
+    if (connector === undefined || connector.geometry.length < 2) return null;
+    // The way must really end at the line's start, or the join would jump.
+    if (haversine(connector.geometry[connector.geometry.length - 1] as Coordinate, start) > 30) return null;
+    const head = connector.geometry.slice(0, -1);
+    const offset = head.length;
+    const geometry = [...head, ...line];
+    const connectorInstructions = (connector.instructions ?? [])
+      .filter((instruction) => instruction.type !== "finish" && instruction.type !== "arrive");
+    const plannedInstructions = instructions.map((instruction) => ({
+      ...instruction,
+      geometryIndex: (instruction.geometryIndex as number) + offset,
+    }));
+    const joined: RouteInstruction[] = [...connectorInstructions, ...plannedInstructions];
+    const connectorMeters = chainage(connector.geometry).at(-1) ?? connector.distanceMeters;
+    const lineMeters = chainage(line).at(-1) ?? 0;
+    const lineSeconds = route.durationSeconds ?? instructions.reduce((sum, instruction) => sum + instruction.durationSeconds, 0);
+    const stored = await deps.geometry.put(
+      { kind: "line", coordinates: geometry },
+      { kind: "route", now: now() },
+    );
+    return deepFreeze({
+      status: "planned" as const,
+      route: { planningGeneration, routeId: newRouteCandidateId() },
+      routeGeometryRef: stored.geometryRef,
+      durationSeconds: connector.durationSeconds + lineSeconds,
+      distanceMeters: connectorMeters + lineMeters,
+      instructions: joined,
+      ...(route.speedLimits === undefined ? {} : {
+        speedLimits: route.speedLimits.map((span) => ({ ...span, fromIndex: span.fromIndex + offset, toIndex: span.toIndex + offset })),
+      }),
+      ...(route.surfaceRuns === undefined ? {} : {
+        surfaceRuns: route.surfaceRuns.map((run) => ({ ...run, from: run.from + connectorMeters, to: run.to + connectorMeters })),
+      }),
+    });
+  }
+
+  /**
    * Route only the way back onto the planned line and keep the rest exactly
    * (RM-6). Null means "do today's full replan instead": no usable target, no
    * connector passed, the best one costs too much, or the splice is not exact.
@@ -347,6 +442,15 @@ export function createGuidedReroutePlanner(deps: {
           lastRejoin = { planningGeneration, connectorStart: position };
           return rejoined;
         }
+      }
+
+      // "Head to the start": route only the way to the line's start, then ride
+      // the planned line itself. A fresh route shaped through points on the
+      // line is free to take other roads between them, so a rider on the
+      // planned line could be called off the route (QA-18).
+      if (input.followLine === true && input.route !== undefined && input.detour === undefined) {
+        const toStart = await planToStart({ navigation, intent: loaded.document.intent, route: input.route, planningGeneration, signal: input.signal });
+        if (toStart !== null) return toStart;
       }
 
       const built = await buildRerouteRequest(

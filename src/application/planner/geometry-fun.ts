@@ -1,21 +1,23 @@
-import { analyzeGeometryFun, type GeometryFun } from "@/domain/geometry/heading-fun";
+import type { GeometryFun } from "@/domain/geometry/heading-fun";
+import { goodMeters, lineGeometryFun, type GoodMilesMode } from "@/domain/route/good-miles";
 import type { ProviderCandidate } from "./route-provider";
 
 const cache = new WeakMap<ProviderCandidate, GeometryFun | null>();
 /** Repeated canonical screens/ranks reuse a candidate's immutable geometry facts. */
 export function candidateGeometryFun(candidate: ProviderCandidate): GeometryFun | null {
   if (cache.has(candidate)) return cache.get(candidate)!;
-  const junctions = candidate.instructions?.flatMap(instruction =>
-    instruction.geometryIndex !== undefined && instruction.type !== "finish" &&
-    ((instruction.maneuver !== undefined && instruction.maneuver !== "straight") || instruction.type === "roundabout")
-      ? [instruction.geometryIndex] : []) ?? [];
-  const fun = analyzeGeometryFun(candidate.geometry, candidate.roadSummary?.roadRuns ?? [], junctions);
+  const fun = lineGeometryFun(candidate);
   cache.set(candidate, fun);
   return fun;
 }
 
+/** A candidate's good metres (`good-miles.ts`), reusing the cached bend measure. */
+export function candidateGoodMeters(candidate: ProviderCandidate, mode: GoodMilesMode): number {
+  return goodMeters(candidate, mode, mode === "curvy" ? candidateGeometryFun(candidate) : null);
+}
+
 /**
- * The Curvy pick spends the same number the scorecard counts as good miles:
+ * The Curvy ranking spends the same number the scorecard counts as good miles:
  * road-bends-v1 `bendMeters` (sustained tight bends along one road), in
  * kilometres, less a modest real ETA cost of about one bend kilometre per 17
  * additional minutes.

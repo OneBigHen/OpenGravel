@@ -111,6 +111,19 @@ export function packSummary(packPath: string): PackSummary | null {
   }
 }
 
+/** Ids that no longer have their own card but answer through `alias`. */
+function packAliasIds(packPath: string): readonly string[] {
+  let database: DatabaseSync | null = null;
+  try {
+    database = new DatabaseSync(packPath, { readOnly: true });
+    return (database.prepare("SELECT id FROM alias").all() as { id: string }[]).map((row) => row.id);
+  } catch {
+    return [];
+  } finally {
+    database?.close();
+  }
+}
+
 /**
  * One run at a time. A lock older than two hours is treated as a run that died
  * rather than a reason to stop refreshing forever. Returns null when locked.
@@ -250,7 +263,9 @@ export async function runRefresh(options: RefreshOptions): Promise<RefreshResult
     const currentIds = current?.ids ?? [];
     const previousIds = previous?.ids ?? [];
     const added = difference(currentIds, previousIds);
-    const removed = difference(previousIds, currentIds);
+    // A card merged into another (L2a) still answers through `alias`; only a card with no answer left is "removed".
+    const stillAnswers = new Set(current === null ? [] : packAliasIds(built.packPath));
+    const removed = difference(previousIds, currentIds).filter((id) => !stillAnswers.has(id));
     for (const id of removed) log(`Removed since the previous pack: ${id}`);
     log(`Changes: ${added.length} new, ${removed.length} removed, ${built.counts.rides} cards.`);
     const deleted = prunePacks(outDir, options.keepPacks ?? 3, [built.packPath, ...(previousPath === null ? [] : [previousPath])]);

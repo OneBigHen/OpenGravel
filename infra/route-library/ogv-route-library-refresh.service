@@ -11,9 +11,9 @@ Type=oneshot
 # install.sh replaces @REPO@ with the checkout this unit was installed from.
 Environment=HOME=/root
 Environment=OGV_REPO_DIR=@REPO@
-# Kill switch for a scheduled publish: set to 0 to keep building the new pack
-# without switching what production serves.
-Environment=OGV_ROUTE_LIBRARY_PUBLISH=1
+# Publishing switches what production serves, which needs the owner's go. The unit
+# therefore only builds until someone sets this to 1 (systemctl edit) on purpose.
+Environment=OGV_ROUTE_LIBRARY_PUBLISH=0
 ExecStart=/usr/local/lib/opengravel/route-library-refresh.sh --publish
 Nice=10
 IOSchedulingClass=idle

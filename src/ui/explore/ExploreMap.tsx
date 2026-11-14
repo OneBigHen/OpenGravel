@@ -50,6 +50,13 @@ function extentOf(entries: readonly CatalogEntry[]): MapExtent | null {
       maxLon = Math.max(maxLon, point.lon);
       maxLat = Math.max(maxLat, point.lat);
     }
+    // A ride with no line of ours (a library ride that links out) still has a place.
+    if (lineOf(entry).length === 0 && entry.bounds !== null) {
+      minLon = Math.min(minLon, entry.bounds.west);
+      minLat = Math.min(minLat, entry.bounds.south);
+      maxLon = Math.max(maxLon, entry.bounds.east);
+      maxLat = Math.max(maxLat, entry.bounds.north);
+    }
   }
   return Number.isFinite(minLon) ? { minLon, minLat, maxLon, maxLat } : null;
 }
@@ -97,8 +104,9 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
       selectedObject: null,
     };
   }, [available, highlightedId, tools]);
-  const fitExtent = useMemo(() => extentOf(available), [available]);
-  const fitKey = useMemo(() => `${available.map((entry) => entry.id).join("|")}:${fitRevision}`, [available, fitRevision]);
+  // A ride with no line of ours (a library ride that links out) still has an area to frame.
+  const fitExtent = useMemo(() => extentOf(available) ?? extentOf(entries), [available, entries]);
+  const fitKey = useMemo(() => `${(available.length > 0 ? available : entries).map((entry) => entry.id).join("|")}:${fitRevision}`, [available, entries, fitRevision]);
 
   const onIntent = useCallback(
     (intent: MapIntent): void => {

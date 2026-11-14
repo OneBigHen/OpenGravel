@@ -32,8 +32,12 @@ Installed. The unit rebuilds from:
 into:
   \${OGV_ROUTE_LIBRARY_OUT:-/root/Vibe/opengravel-data/route-library-build}
 
+The unit builds only (OGV_ROUTE_LIBRARY_PUBLISH=0). Publishing needs the owner's go; then set it to 1 with
+  sudo systemctl edit ogv-route-library-refresh.service
+The unit points at this checkout ($repo): install from a checkout that stays (not a throwaway worktree).
+
 Try a build without publishing:
-  /usr/local/lib/opengravel/route-library-refresh.sh
+  OGV_REPO_DIR=$repo /usr/local/lib/opengravel/route-library-refresh.sh
 
 A same-day takedown:
   node --import tsx scripts/route-library/takedown.ts <id> --library /root/Vibe/og-route-library-national --reason "why"

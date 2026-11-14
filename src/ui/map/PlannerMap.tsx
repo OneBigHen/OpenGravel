@@ -342,6 +342,15 @@ function sameCameraView(previous: CameraView | null, next: CameraView): boolean 
   );
 }
 
+/**
+ * Where the map first looks: the scene, or, when the scene draws nothing, the
+ * extent the page asked for (a ride that links out has an area but no line).
+ */
+function mountExtent(scene: MapScene, requested: MapExtent | null): MapExtent {
+  const framed = sceneExtent(scene);
+  return framed === DEFAULT_MAP_EXTENT && requested !== null ? requested : framed;
+}
+
 /** `prefers-reduced-motion` (12 §13), read once per host creation. */
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -552,7 +561,7 @@ export function PlannerMap({
       const host = await hostFactory(container, {
         basemap,
         ...(openedWith === "night" || themeLookRef.current === "night" ? { basemapLook: "night" as const } : {}),
-        initialExtent: sceneExtent(sceneRef.current),
+        initialExtent: mountExtent(sceneRef.current, fitExtentRef.current),
         reducedMotion: prefersReducedMotion(),
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
       });
@@ -625,7 +634,7 @@ export function PlannerMap({
       host.dispatch({ type: "tool-change", tool: activeToolRef.current });
       host.dispatch({ type: "ride-revision-change", revision: rideRevisionRef.current });
       host.applyScene(sceneRef.current);
-      host.fitBounds(sceneExtent(sceneRef.current), insetsRef.current);
+      host.fitBounds(mountExtent(sceneRef.current, fitExtentRef.current), insetsRef.current);
       // A ride that began following before the renderer resolved is followed now.
       const follow = followRef.current;
       if (follow !== null && follow !== undefined) host.followCamera?.(follow.camera, insetsRef.current);

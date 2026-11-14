@@ -7,12 +7,20 @@ const ROUGH = "track_type == GRADE3 || track_type == GRADE4 || track_type == GRA
 /** Highest dirt strength a request may ask for (pavement x0.118 at a 50% target). */
 export const MAX_DIRT_STRENGTH = 5;
 
-/** Request multipliers preserve hard zeroes. No access or speed is unlocked. */
+/** The strong curvy rule on a graph that carries the curve field (RM-2 `og_curve`). */
+export const STRONG_CURVE_RULE: GraphHopperCustomModelRule = { if: "og_curve < 0.25", multiply_by: "0.6" };
+
+/**
+ * Request multipliers preserve hard zeroes. No access or speed is unlocked.
+ * `encodedValues` is what the running graph lists; a rule naming a value the
+ * graph does not list is never sent (unknown means the old graph).
+ */
 export function riderModeRules(
   options: Partial<ProviderRouteOptions>,
   enabled = true,
   omitSmoothness = false,
   profile = "motorcycle_adventure",
+  encodedValues?: ReadonlySet<string>,
 ): GraphHopperCustomModelRule[] {
   if (!enabled) return [];
   const rules: GraphHopperCustomModelRule[] = [];
@@ -35,7 +43,11 @@ export function riderModeRules(
     dirtPenalty("road_class == MOTORWAY || road_class == TRUNK || road_class == PRIMARY", 0.45);
     dirtPenalty("road_class == SECONDARY && max_speed >= 80", 0.7);
   }
-  if (options.traffic === "protect-ride" && options.roadCharacter !== "efficient") {
+  // The busy-road penalties go with every request, on every graph. The v2
+  // graph was tuned and measured with them on top of its own profiles; leaving
+  // them out once the graph is known made a long-lived server plan different
+  // routes from the first plan it ever made (Old Buck 32.7 -> 17.9 dirt mi).
+  if (options.traffic === "protect-ride" && options.roadCharacter !== "efficient" && busyStrength > 0) {
     const penalty = (condition: string, factor: number): void => {
       rules.push({ if: condition, multiply_by: String(Number((factor ** busyStrength).toFixed(4))) });
     };
@@ -46,6 +58,7 @@ export function riderModeRules(
     penalty("urban_density == RESIDENTIAL", 0.95);
     penalty("max_speed >= 80 && (road_class == PRIMARY || road_class == SECONDARY)", 0.9);
   }
+  if (options.curvePressure === "strong" && encodedValues?.has("og_curve") === true) rules.push(STRONG_CURVE_RULE);
   const bike = options.bike;
   if (bike !== undefined || target > 0 || (options.traffic === "protect-ride" && options.roadCharacter !== "efficient")) {
     rules.push({ if: "surface == SAND || road_access == PRIVATE || !car_access", multiply_by: "0" });
