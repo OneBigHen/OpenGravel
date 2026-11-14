@@ -97,3 +97,34 @@ export function statesInView(rows: readonly IndexRow[], bounds: ViewBounds): rea
   }
   return [...wanted];
 }
+
+/**
+ * Pushes overlapping bubbles apart so every count stays readable where states
+ * crowd together (the north-east on a phone-wide country). Each point moves at
+ * most a few bubble widths from where it truly sits, and only the crowded ones move.
+ */
+export function spreadBubbles(points: { x: number; y: number }[], gap = 42, rounds = 14): void {
+  for (let round = 0; round < rounds; round += 1) {
+    let moved = false;
+    for (let i = 0; i < points.length; i += 1) {
+      const a = points[i];
+      if (a === undefined) continue;
+      for (let j = i + 1; j < points.length; j += 1) {
+        const b = points[j];
+        if (b === undefined) continue;
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let distance = Math.hypot(dx, dy);
+        if (distance >= gap) continue;
+        if (distance < 0.01) { dx = 1; dy = 0; distance = 1; }
+        const push = (gap - distance) / 2 + 0.5;
+        const ux = dx / distance;
+        const uy = dy / distance;
+        a.x -= ux * push; a.y -= uy * push;
+        b.x += ux * push; b.y += uy * push;
+        moved = true;
+      }
+    }
+    if (!moved) return;
+  }
+}

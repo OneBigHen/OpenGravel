@@ -92,6 +92,11 @@ function serverTimeZone(): string {
   return "UTC";
 }
 
+/** A library ride the source never placed: no line and no area, so a live map would only show the app's default view. */
+function lineHasNoPoints(entry: CatalogEntry): boolean {
+  return entry.geometry.length === 0 && (entry.previewGeometry ?? []).length === 0;
+}
+
 function UnknownMetric({ label }: { readonly label: string }) {
   return <span aria-label={`${label} unknown`}>—</span>;
 }
@@ -586,7 +591,7 @@ export function RouteDetail({
           <span className="og-route-detail__map-title" aria-hidden="true">{entry.name}</span>
       <section className="og-route-detail__map" aria-label="Map preview">
         {/* The route where it is: a live map to pan, else a map image. */}
-        {map !== undefined ? (
+        {map !== undefined && !(entry.referenceTrack === true && entry.bounds === null && lineHasNoPoints(entry)) ? (
           <ExploreMap {...map} entries={[entry]} highlightedId={entry.id} onOpen={() => undefined} tools="recentre" />
         ) : staticMapUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
@@ -598,7 +603,7 @@ export function RouteDetail({
         ) : (
           <div className="og-map-preview-unavailable" role="img" aria-label={`${entry.name} map preview`}>
             <span className="og-map-preview-unavailable__glyph" aria-hidden="true">⌖</span>
-            <span>Map preview unavailable</span>
+            <span>{entry.referenceTrack === true ? "The source does not say where this ride is on a map" : "Map preview unavailable"}</span>
           </div>
         )}
       </section>

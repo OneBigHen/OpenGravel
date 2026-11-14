@@ -50,6 +50,13 @@ function extentOf(entries: readonly CatalogEntry[]): MapExtent | null {
       maxLon = Math.max(maxLon, point.lon);
       maxLat = Math.max(maxLat, point.lat);
     }
+    // A ride with no line of ours (a library ride that links out) still has a place.
+    if (lineOf(entry).length === 0 && entry.bounds !== null) {
+      minLon = Math.min(minLon, entry.bounds.west);
+      minLat = Math.min(minLat, entry.bounds.south);
+      maxLon = Math.max(maxLon, entry.bounds.east);
+      maxLat = Math.max(maxLat, entry.bounds.north);
+    }
   }
   return Number.isFinite(minLon) ? { minLon, minLat, maxLon, maxLat } : null;
 }

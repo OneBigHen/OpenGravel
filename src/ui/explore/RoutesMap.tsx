@@ -8,7 +8,7 @@ import { sortBest, type LibraryChip, type RouteLibrary } from "@/application/rou
 import type { IndexRow } from "@/application/route-library/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
-import { bubblesFor, COUNTRY_EXTENT, extentFromCamera, statesInView, type Bubble } from "@/ui/explore/routes-camera";
+import { bubblesFor, COUNTRY_EXTENT, extentFromCamera, spreadBubbles, statesInView, type Bubble } from "@/ui/explore/routes-camera";
 import { createRoutesOverlay, LINE_MIN_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
 import { RoutesMapCard } from "@/ui/explore/RoutesMapCard";
 
@@ -116,10 +116,14 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   useEffect(() => {
     if (view === null || view.zoom < LINE_MIN_ZOOM) return;
     let live = true;
-    for (const state of statesInView(library.rows, view.bounds)) {
-      void library.linesFor(state).then((lines) => { if (live && lines !== null) { overlay.addLines(state, lines); setLinesDrawn(overlay.linesLoaded()); } });
-    }
-    return () => { live = false; };
+    // Wait for the camera to settle: the map reports a stand-in view while it is
+    // still fitting the opening frame, and that is not worth six state downloads.
+    const timer = setTimeout(() => {
+      for (const state of statesInView(library.rows, view.bounds)) {
+        void library.linesFor(state).then((lines) => { if (live && lines !== null) { overlay.addLines(state, lines); setLinesDrawn(overlay.linesLoaded()); } });
+      }
+    }, 250);
+    return () => { live = false; clearTimeout(timer); };
   }, [view, library, overlay]);
 
   const pickedRows = useMemo(() => pickedIds.flatMap((id) => { const row = byId.get(id); return row === undefined ? [] : [row]; }), [pickedIds, byId]);
@@ -144,10 +148,16 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   const place = useCallback((): void => {
     const layer = bubbleRef.current;
     if (layer === null) return;
+    const placed: { element: HTMLElement; x: number; y: number }[] = [];
     for (const element of layer.querySelectorAll<HTMLElement>("[data-lon]")) {
       const point = overlay.project(Number(element.dataset["lon"]), Number(element.dataset["lat"]));
       if (point === null) continue;
-      element.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
+      placed.push({ element, x: point.x, y: point.y });
+    }
+    // The states crowd the east coast on a phone: nudge their bubbles apart so each count reads.
+    if (placed.length > 1 && placed[0]?.element.dataset["kind"] === "state") spreadBubbles(placed);
+    for (const { element, x, y } of placed) {
+      element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
       element.style.visibility = "visible";
     }
   }, [overlay]);
