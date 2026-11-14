@@ -102,7 +102,7 @@ import {
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
-  useOpenCuratedRide, usePlanSavedAgain,
+  useOpenCuratedRide, usePlanSavedAgain, useAutoStartApproach,
   usePlannerViewModel, usePlannerVisibleSession,
   type PlannerPlaceServices,
 } from "@/ui/planner/controllers";
@@ -713,6 +713,8 @@ export function PlannerWorkspace({
       });
     }
   }, [rideActions, rideHandoff]);
+
+  useAutoStartApproach(String(document.rideId), rideActions !== undefined && rideHandoff.outcome === "ready", handleStartRide);
 
   const planning = isPlanningInFlight(session.phase);
 

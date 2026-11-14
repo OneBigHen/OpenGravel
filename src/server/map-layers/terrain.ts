@@ -16,7 +16,7 @@ function source(context: ProviderContext, zoom: number): ReturnType<typeof creat
 }
 
 export const terrainProvider: LayerProvider = {
-  id: "terrain", layers: ["contours", "slope"], ttlMs: 24 * 60 * 60_000,
+  id: "terrain", layers: ["contours"], ttlMs: 24 * 60 * 60_000,
   async load() { return []; },
   async snapshot(bounds, layers, context) {
     if (bounds.east - bounds.west > MAX_LAYER_SPAN_DEGREES.lon + 1e-6 || bounds.north - bounds.south > MAX_LAYER_SPAN_DEGREES.lat + 1e-6 || Math.abs(bounds.north) > 85) throw new Error("Zoom in for bounded terrain detail");

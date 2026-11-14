@@ -127,6 +127,7 @@ import {
 import { routeLengthMeters } from "@/domain/offline/capabilities";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 import { RECORDING_OFF_NOTICE } from "@/ui/ride/recording-row";
+import { clearApproach, takeApproach } from "@/application/ride-session/approach-request";
 
 /**
  * What the surface is doing right now.
@@ -788,7 +789,14 @@ export function createRideFocusStore(
       if (nearest === null) return;
       if (nearest.meters <= FAR_FROM_START_METERS) {
         farFromStartSettled = true;
+        clearApproach();
         if (get().farFromStart !== null) set({ farFromStart: null });
+        return;
+      }
+      // The rider already chose "Ride to the start" on the ride's card: no
+      // second question, the way to the start is planned now.
+      if (position.quality === "fresh-good" && !get().rerouteBusy && takeApproach()) {
+        void get().headToStart();
         return;
       }
       const start = line[0];

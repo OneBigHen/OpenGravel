@@ -145,11 +145,15 @@ describe("Explore UI", () => {
     const entries = Array.from({ length: 30 }, (_, index) => ({ ...entry, id: `route-${index}`, name: `Route ${index}`, region: "Pennsylvania" }));
     entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });
     render(<ExplorePanel entries={entries} initialQuery={{ sort: "recommended" }} />);
+    // The first 20 are drawn; the rest wait behind "Show more rides".
+    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(20);
+    fireEvent.click(screen.getByTestId("explore-show-more"));
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
     expect(screen.queryByRole("link", { name: /Western ride/ })).toBeNull();
-    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
+    // A new filter starts the list over at the first 20.
+    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(20);
     expect(window.location.search).toContain("area=eastern-pa");
   });
 
@@ -521,6 +525,45 @@ describe("Explore UI", () => {
       expect(weatherCalls.length).toBeGreaterThan(0);
       expect(weatherCalls.length).toBeLessThanOrEqual(3);
     });
+    vi.unstubAllGlobals();
+  });
+
+  it("draws the first 20 rides and adds more on request, not all of the catalogue at once", () => {
+    const many = Array.from({ length: 105 }, (_, index) => ({ ...entry, id: `many-${index}`, name: `Ride ${index}` }));
+    render(<ExplorePanel entries={many} />);
+    const list = screen.getByRole("list", { name: "Explore routes" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(20);
+    fireEvent.click(screen.getByTestId("explore-show-more"));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(40);
+    for (let tap = 0; tap < 4; tap += 1) fireEvent.click(screen.getByTestId("explore-show-more"));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(105);
+    expect(screen.queryByTestId("explore-show-more")).toBeNull();
+  });
+
+  it("never renders an empty facts line on a card", () => {
+    const bare = { ...entry, id: "bare", name: "Bare Ride", distanceKm: null };
+    delete (bare as { estimatedTimeMinutes?: number }).estimatedTimeMinutes;
+    render(<ExplorePanel entries={[bare, { ...entry, id: "full", name: "Full Ride", estimatedTimeMinutes: 90, curvatureSummary: "2.1 mi of curves", surfaceSummary: "Mostly paved · 1.6 mi dirt" }]} />);
+    const bareCard = screen.getByText("Bare Ride").closest("li")!;
+    expect(within(bareCard).queryByTestId("ride-card-facts")).toBeNull();
+    const fullCard = screen.getByText("Full Ride").closest("li")!;
+    expect(within(fullCard).getByTestId("ride-card-facts").textContent).toContain("2.1 mi of curves");
+    expect(within(fullCard).getByTestId("ride-card-facts").textContent).toContain("Mostly paved, 1.6 mi dirt");
+  });
+
+  it("gives a weekend pick the same facts as its list card", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { longitude: 0, latitude: 0 } } as GeolocationPosition) },
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({})));
+    const ride = { ...entry, id: "same", name: "Same Facts Ride", distanceKm: 96, estimatedTimeMinutes: 180, geometry: [{ lon: 0, lat: 0.01 }, { lon: 0.05, lat: 0.02 }], surfaceSummary: "Mostly paved · 1.6 mi dirt", curvatureSummary: "2.1 mi of curves" };
+    render(<ExplorePanel entries={[ride]} />);
+    const strip = await screen.findByTestId("weekend-picks");
+    const top = within(within(strip).getByTestId("weekend-pick")).getByTestId("ride-card-facts").textContent;
+    const list = within(screen.getByRole("list", { name: "Explore routes" })).getByTestId("ride-card-facts").textContent;
+    expect(top).toBe(list);
     vi.unstubAllGlobals();
   });
 
