@@ -234,6 +234,8 @@ export interface RouteCardVm {
 
 /** The card badge for a line the hosted fallback router drew (WORK-ORDER §1.2). */
 export const BASIC_ROUTING_BADGE = "Basic routing";
+/** Warnings the selected ride states as a sentence under the ride choices. */
+const NOTICE_WARNING_CODES: ReadonlySet<string> = new Set(["destination-final-approach", "basic-routing"]);
 export const OFFLINE_ROUTING_BADGE = "Planned offline";
 
 export interface PlannerViewModel {
@@ -787,7 +789,8 @@ function routeCards(
     const unpaved = unpavedMeters(candidate.evidence["surfaceMix"]);
     return {
       routeId: candidate.id,
-      notices: candidate.warnings.filter(warning => warning.code === "destination-final-approach").map(warning => warning.message),
+      // A basic route says so in a full sentence under the choices, not just a badge.
+      notices: candidate.warnings.filter(warning => NOTICE_WARNING_CODES.has(warning.code)).map(warning => warning.message),
       tint: bundle.candidates.indexOf(candidate),
       ...(curviness === null ? {} : { curviness: { level: curviness, label: CURVINESS_LABELS[curviness - 1] ?? "Curvy" } }),
       ...(strip === null ? {} : { surfaceStrip: strip }),
