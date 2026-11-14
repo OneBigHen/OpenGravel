@@ -144,6 +144,7 @@ for (const size of SIZES) {
         await expect(page.getByTestId("best-card").first()).toContainText(/Standout|Great ride/);
         expect(await strip.textContent()).not.toMatch(/★|stars/i);
         await page.waitForTimeout(1200);
+        await shot(page, "map", size.name, theme);
 
         // The country sits between the chips and the strip, edge to edge sideways.
         const extent = await settledExtent(page);
@@ -162,7 +163,6 @@ for (const size of SIZES) {
 
         expect(await overlaps(page, { chips: ".og-routes__chips", strip: "[data-testid='best-strip']", pill: "[data-testid='routes-pill']", nav: "[data-testid='primary-nav']" })).toEqual([]);
         expect(await audit(page, { scope: ".og-routes__chips, [data-testid='best-strip'], [data-testid='routes-pill'], .og-routes__bubble, [data-testid='primary-nav']", insideScreen: true })).toEqual([]);
-        await shot(page, "map", size.name, theme);
 
         // A card opens its ride.
         const card = page.getByTestId("best-card").first();
