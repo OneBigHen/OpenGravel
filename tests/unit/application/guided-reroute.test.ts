@@ -201,3 +201,69 @@ describe("createGuidedReroutePlanner: rejoin the planned line (RM-6)", () => {
     expect(firstTargets).toEqual([9_800, 9_800, 12_000]);
   });
 });
+
+describe("createGuidedReroutePlanner: Head to the start rides the planned line itself (QA-18)", () => {
+  const LAT = 40.5;
+  const lonPerMeter = 1 / (111_320 * Math.cos((LAT * Math.PI) / 180));
+  const latPerMeter = 1 / 111_320;
+  // A planned line 20 km east with a wiggle, vertex every 250 m.
+  const line = Array.from({ length: 81 }, (_, index) => ({ lon: -77 + index * 250 * lonPerMeter, lat: LAT + Math.sin(index / 3) * 90 * latPerMeter }));
+  const chain = chainage(line);
+  const instructions: RouteInstruction[] = [
+    { text: "Head east on Ridge Road", type: "depart", roadName: "Ridge Road", geometryIndex: 0, distanceMeters: chain[80]!, durationSeconds: chain[80]! / 15 },
+    { text: "Arrive", type: "finish", geometryIndex: 80, distanceMeters: 0, durationSeconds: 0 },
+  ];
+  const ride = {
+    ...document,
+    intent: {
+      ...document.intent,
+      start: { ...document.intent.start!, coordinate: line[0]! },
+      finish: { ...document.intent.finish!, coordinate: line[80]! },
+    },
+  };
+  // A router that, like the real one, is free to pick other roads between
+  // the shaping points it is given: every point it returns sits 120 m off.
+  const requests: ProviderRouteRequest[] = [];
+  const router = {
+    beginAttempt: vi.fn(),
+    candidates: vi.fn(async (request: ProviderRouteRequest) => {
+      requests.push(request);
+      const through = [request.origin, ...request.shaping, request.destination];
+      const nudged = through.map((point, index) => (index === 0 || index === through.length - 1 ? point : { lon: point.lon, lat: point.lat + 120 * latPerMeter }));
+      const geometry = through.length === 2 ? [request.origin, request.destination] : nudged;
+      const meters = chainage(geometry).at(-1)!;
+      return { candidates: [{
+        providerId: "fake", profile: request.profile, geometry, distanceMeters: meters, durationSeconds: meters / 15,
+        instructions: [
+          { text: "Head out", type: "depart" as const, roadName: "Connector Road", geometryIndex: 0, distanceMeters: meters, durationSeconds: meters / 15 },
+          { text: "Arrive", type: "finish" as const, geometryIndex: geometry.length - 1, distanceMeters: 0, durationSeconds: 0 },
+        ],
+        providerMetadata: { candidateId: "route_start", bestRide: true },
+      }] };
+    }),
+  };
+
+  it("goes to the start of the line, then follows the planned line exactly (not a fresh route that only passes near it)", async () => {
+    const geometry = createMemoryGeometryStore();
+    const planner = createGuidedReroutePlanner({ rides: { loadRide: vi.fn(async () => ({ ok: true as const, document: ride })) } as never, geometry, provider: router });
+    const far = { lon: line[0]!.lon - 60_000 * lonPerMeter, lat: LAT };
+    const result = await planner.plan({
+      navigation: navigation({ position: { ...navigation().position, coordinate: far, headingDegrees: 90, speedMps: 15 } }),
+      aheadLine: line,
+      followLine: true,
+      route: { line, alongMeters: 0, instructions },
+      signal: new AbortController().signal,
+    });
+    expect(result.status).toBe("planned");
+    if (result.status !== "planned") return;
+    const stored = await geometry.get(result.routeGeometryRef);
+    const route = stored?.payload.kind === "line" ? stored.payload.coordinates : [];
+    expect(route[0]).toEqual(far);
+    // Every planned vertex is on the route as planned, so a rider on the planned line is on the route.
+    expect(route.slice(route.length - line.length)).toEqual(line);
+    // The router only had to find the way to the start.
+    expect(requests.at(-1)?.destination).toEqual(line[0]);
+    expect(requests.at(-1)?.shaping).toEqual([]);
+    expect(result.instructions?.at(-1)).toMatchObject({ type: "finish", geometryIndex: route.length - 1 });
+  });
+});

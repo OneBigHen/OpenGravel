@@ -606,6 +606,15 @@ function discoveryIssues(
       ),
     );
   }
+  const variation = value["variation"];
+  if (
+    variation !== undefined &&
+    (!isFiniteNumber(variation) || !Number.isInteger(variation) || variation < 0 || variation > 1000)
+  ) {
+    issues.push(
+      issue("invalid-value", "request.discovery.variation", "must be a whole number from 0 to 1000"),
+    );
+  }
   const origin = request["origin"];
   const destination = request["destination"];
   const sameOrigin =
@@ -872,6 +881,9 @@ export function parseRoutePlanRequestBody(
             ...(discoverySource["headingDegrees"] === undefined
               ? {}
               : { headingDegrees: discoverySource["headingDegrees"] as number }),
+            ...(discoverySource["variation"] === undefined
+              ? {}
+              : { variation: discoverySource["variation"] as number }),
           },
         }
       : {}),

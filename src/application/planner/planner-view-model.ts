@@ -535,8 +535,21 @@ const ERROR_COPY: Readonly<Record<PlanningErrorCode, string>> = {
 /** OG-01: nothing came back in time. Says what happened and what to do, never "stuck". */
 export const PLAN_TIMED_OUT_COPY = "Finding this ride took too long. Tap Retry to try again.";
 
-/** A loop has no destination to blame, so its no-route copy says "this ride". */
-const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point.";
+/**
+ * A loop that could not be found says what was asked and what to change
+ * (QA-13): the ride time the rider set, and the two things that most often
+ * leave no loop: that length from this start, or a road character the roads
+ * around it cannot give.
+ */
+function noLoopCopy(document: RideDocument): string {
+  const time = document.intent.time;
+  if (time.kind !== "budget") {
+    return "No loop found from this start with these settings. Move the start or change the road character, then try again.";
+  }
+  const minutes = Math.round(time.targetMinutes);
+  const length = minutes < 60 ? `${minutes} min` : `${Number((minutes / 60).toFixed(1))} h`;
+  return `No ${length} loop found from this start with these settings. Try a shorter ride time, a different road character, or move the start.`;
+}
 
 /** The commitment label per phase (04 §8, §29): never a success claim on error. */
 export const PLAN_LABEL_CREATE = "Create ride";
@@ -1289,7 +1302,7 @@ export function planningErrorCopy(code: PlanningErrorCode, document: RideDocumen
   if (timedOut === true) return PLAN_TIMED_OUT_COPY;
   if (code === "no-route" && riderMessage !== undefined && riderMessage.length > 0) return riderMessage;
   if (code === "no-route" && document.intent.shape === "loop") {
-    return NO_ROUTE_LOOP_COPY;
+    return noLoopCopy(document);
   }
   return ERROR_COPY[code];
 }

@@ -250,6 +250,12 @@ export interface ProviderRouteRequest {
      * rest.
      */
     readonly seedCount?: number;
+    /**
+     * How many times the rider has asked "Try another loop" for this same
+     * ride. Absent or 0 is the first ask; the same inputs and the same number
+     * always give the same engine seeds, so a repeated ask is a repeated loop.
+     */
+    readonly variation?: number;
   };
 }
 
