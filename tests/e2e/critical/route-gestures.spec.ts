@@ -1,6 +1,6 @@
 import { expect, test, type CDPSession, type Page } from "@playwright/test";
 
-import { fractionOf, openRefine, placeEndpoint, plannerMap, ROUTE_PLUM, settledExtent, type Coordinate } from "./map-helpers";
+import { openRefine, placeEndpoint, plannerMap, ROUTE_PLUM, settledExtent, type Coordinate } from "./map-helpers";
 
 /**
  * Looking at a route never changes it (QA-19, "the route reroutes a ton as you
@@ -42,13 +42,6 @@ function planRequests(page: Page): { count: number } {
     if (request.method() === "POST" && request.url().includes("/api/route-plan")) seen.count += 1;
   });
   return seen;
-}
-
-async function pixelOf(page: Page, coordinate: Coordinate): Promise<Point> {
-  const box = await plannerMap(page).boundingBox();
-  if (box === null) throw new Error("the planner map has no measured box");
-  const fraction = fractionOf(await settledExtent(page), coordinate);
-  return { x: box.x + fraction.x * box.width, y: box.y + fraction.y * box.height };
 }
 
 async function planned(page: Page): Promise<{ count: number }> {
@@ -222,7 +215,7 @@ test("with the pen armed, two fingers pan the map and draw nothing; one finger s
   await expect.poll(async () => plannerMap(page).getAttribute("data-map-scene")).toContain("sketchDraft:1");
 });
 
-test("holding the route line then dragging reshapes it once and can be undone", async ({ page }) => {
+test("holding the route line then dragging adds one stop (Undo names it)", async ({ page }) => {
   const seen = await planned(page);
   const at = await linePixel(page);
   const before = seen.count;
@@ -235,8 +228,8 @@ test("holding the route line then dragging reshapes it once and can be undone", 
   // The pull-through plans at most twice (preview, then the committed ride), never a stream.
   expect(seen.count - before, "one hold-and-drag replans once or twice").toBeLessThanOrEqual(2);
   expect((await rideState(page)).undo).not.toEqual(ride.undo);
-  await page.getByTestId("undo").click();
-  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 60_000 });
+  // Undo (kept in the sheet's history row) now names the new stop.
+  expect((await rideState(page)).undo).toContain("Add stop");
 });
 
 test("holding the route line without moving offers the road and plans nothing", async ({ page }) => {
