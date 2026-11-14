@@ -216,6 +216,7 @@
 
   .og-phone-style__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--og-space-3);
     min-width: 0;
@@ -230,12 +231,11 @@
 
   .og-phone-style__track {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 200px;
+    flex-wrap: wrap;
     gap: 2px;
     min-width: 0;
     padding: 2px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
     border-radius: var(--og-radius-control);
     background: var(--og-surface-2);
     scrollbar-width: none;

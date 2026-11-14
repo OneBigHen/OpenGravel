@@ -322,7 +322,8 @@ export function MapLayersPanel({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
-  const active = enabled.length;
+  // The count is of what this panel shows, so it agrees with the rows below it.
+  const active = layers.filter((layer) => offered(layer) && enabled.includes(layer.id)).length;
   return (
     <div className="og-layers" data-open={open ? "true" : "false"} data-testid="map-layers">
       <button
@@ -366,7 +367,7 @@ export function MapLayersPanel({
                 {lenses.map((lens) => {
                   const count = lens.layers.filter((id) => enabled.includes(id)).length;
                   const on = count === lens.layers.length;
-                  const state = on ? "On" : count === 0 ? "Off" : "Partial";
+                  const state = on ? "On" : count === 0 ? "Off" : `${count} of ${lens.layers.length} on`;
                   return (
                     <li key={lens.id}>
                       <button
@@ -380,7 +381,7 @@ export function MapLayersPanel({
                       >
                         <span className="og-layers__swatch"><LayerIcon id={lens.id} tint={LENS_TINT[lens.id] ?? "var(--og-primary)"} on={on} size={48} /></span>
                         <span className="og-layers__name">{lens.name}</span>
-                        <span className="og-layers__lens-state" data-state={state.toLowerCase()} aria-hidden="true">{on ? "✓" : count > 0 ? "◐" : "○"} {state}</span>
+                        <span className="og-layers__lens-state" data-state={on ? "on" : count === 0 ? "off" : "partial"} aria-hidden="true">{on ? "✓" : count > 0 ? "◐" : "○"} {state}</span>
                       </button>
                     </li>
                   );
