@@ -5,7 +5,7 @@ import type { IndexRow } from "@/application/route-library/types";
 import { STATE_BUBBLE_MAX_ZOOM, LINE_MIN_ZOOM } from "@/ui/explore/routes-overlay";
 
 /** The lower 48, for the first look at the whole country. */
-export const COUNTRY_EXTENT: MapExtent = { minLon: -126, minLat: 24, maxLon: -66, maxLat: 50 };
+export const COUNTRY_EXTENT: MapExtent = { minLon: -131, minLat: 22, maxLon: -61, maxLat: 51 };
 
 const TILE = 512;
 
@@ -102,8 +102,9 @@ export function statesInView(rows: readonly IndexRow[], bounds: ViewBounds): rea
  * Pushes overlapping bubbles apart so every count stays readable where states
  * crowd together (the north-east on a phone-wide country). Each point moves at
  * most a few bubble widths from where it truly sits, and only the crowded ones move.
+ * With `within` they also stay fully inside the map's frame.
  */
-export function spreadBubbles(points: { x: number; y: number }[], gap = 42, rounds = 14): void {
+export function spreadBubbles(points: { x: number; y: number }[], gap = 42, rounds = 14, within?: { width: number; height: number; margin: number }): void {
   for (let round = 0; round < rounds; round += 1) {
     let moved = false;
     for (let i = 0; i < points.length; i += 1) {
@@ -123,6 +124,12 @@ export function spreadBubbles(points: { x: number; y: number }[], gap = 42, roun
         a.x -= ux * push; a.y -= uy * push;
         b.x += ux * push; b.y += uy * push;
         moved = true;
+      }
+    }
+    if (within !== undefined) {
+      for (const point of points) {
+        point.x = Math.min(Math.max(point.x, within.margin), within.width - within.margin);
+        point.y = Math.min(Math.max(point.y, within.margin), within.height - within.margin);
       }
     }
     if (!moved) return;
