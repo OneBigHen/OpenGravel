@@ -251,7 +251,8 @@ test("QA-21 desktop: the destination shape does not say Make my loop, and the co
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await page.getByText("To a destination", { exact: true }).click();
+  // Desktop opens on "To a destination"; the big button must say what that does.
+  await page.getByTestId("ride-shape-destination").check({ force: true });
   await expect(page.getByTestId("compose-create")).not.toHaveText("Make my loop");
   const corners = await page.evaluate(() => {
     const box = (s: string): DOMRect | null => document.querySelector(s)?.getBoundingClientRect() ?? null;
