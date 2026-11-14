@@ -143,8 +143,10 @@ surface line says "Surface unknown".
 
 ## Screenshots
 
-The cold planner losing the "Not saved" label legitimately changes the phone
-`plan-idle`, `search-focused` and `planner-error` pictures in both themes. The
-last commit carries `[update-baselines]`; the GitHub visual job re-records them
-on the runner where they were made, after this branch was rebased onto the
-current `main`. The map fade is invisible on the gate's empty basemap.
+The cold planner losing the "Not saved" label legitimately changed the phone
+`plan-idle`, `search-focused` and `planner-error` pictures in both themes (12
+comparisons). The GitHub visual job re-recorded them on its own runner and
+committed the result to this branch ("Record screenshot baselines on the CI
+runner"); the same job also rewrites the remaining pictures from that runner, so
+those bytes are the runner's rendering, not a design change. The map fade is
+invisible on the gate's empty basemap.
