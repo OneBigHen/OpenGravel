@@ -34,6 +34,7 @@ import {
   type PreparedRouteStorage,
 } from "@/application/explore/ride-this";
 import { createExploreDerivative, type CatalogEntry } from "@/application/explore/catalog";
+import { buildPlannerViewModel } from "@/application/planner/planner-view-model";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
 import { validateSessionRouteBinding } from "@/domain/ride-session/validate";
 import type { ClientPlanningService } from "@/application/planner/client-planning-service";
@@ -119,6 +120,35 @@ async function prepared(overrides: Partial<CatalogEntry> = {}): Promise<{
 }
 
 describe("Explore ride-this handoff", () => {
+  it("carries the ride's published surface and curves into the plan, not 'Surface unknown' (QA-07)", async () => {
+    const { prepared: record, document } = await prepared({
+      surfaceSummary: "Mostly paved · 1.6 mi dirt",
+      curvatureSummary: "2.1 mi of curves",
+    });
+    const answer = preparedRouteAnswer(record);
+    expect(answer.candidates[0]?.publishedFacts).toEqual({
+      surfaceSummary: "Mostly paved · 1.6 mi dirt",
+      curvatureSummary: "2.1 mi of curves",
+    });
+
+    const viewModel = buildPlannerViewModel({ document, session: preparedRouteSession(record) });
+    const card = viewModel.routeCards[0];
+    expect(card?.badges).toEqual(expect.arrayContaining([
+      "Mostly paved · 1.6 mi dirt",
+      "2.1 mi of curves",
+    ]));
+    // The truth line speaks the ride's own mileage, never "unknown".
+    expect(card?.truth?.[0]).toEqual({ tone: "good", text: "1.6 mi dirt" });
+  });
+
+  it("labels a published line that comes back to its start as a loop (QA-07)", () => {
+    const closed = [...LINE, LINE[0]!];
+    const document = createExploreDerivative(entry({ geometry: closed }), NOW);
+    expect(document.intent.shape).toBe("loop");
+    // An open line is still a destination ride.
+    expect(createExploreDerivative(entry(), NOW).intent.shape).toBe("destination");
+  });
+
   it("opens a published catalog route as it is, and only a published catalog route", () => {
     expect(canOpenAsItsOwnRoute(entry())).toBe(true);
     expect(canOpenAsItsOwnRoute(entry({ geometry: LINE.slice(0, 1) }))).toBe(false);
@@ -161,9 +191,10 @@ describe("Explore ride-this handoff", () => {
       geometryStore,
       { now: () => NOW, storage: memoryStorage() },
     );
-    // 27.5 km at the 28 mph the route page states is 37 min, which the page
-    // rounds to the nearest quarter hour; the planner gets the same 30 min.
-    expect(record?.durationSeconds).toBe(30 * 60);
+    // 27.5 km at the 28 mph the route page states is 37 min; the estimate is
+    // rounded to the nearest five minutes on both surfaces, so the planner
+    // gets the route page's own 35 min.
+    expect(record?.durationSeconds).toBe(35 * 60);
   });
 
   it("writes nothing for a route it cannot ride as it is", async () => {

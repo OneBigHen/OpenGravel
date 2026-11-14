@@ -144,32 +144,45 @@ export function placeFromSearchFeature(feature: PhotonFeature, index: number): P
  * place it sits on when it sits on one (`Hawk Mountain Sanctuary, Kempton, PA`),
  * and `Near …` when the nearest named thing is far away. A street name alone is
  * not a place a rider recognizes, so roads and houses only contribute their town.
+ *
+ * `settlement` is the nearest town-level feature, when the caller found one. A
+ * reverse answer's nearest feature is often a building whose `city` tag belongs
+ * to the municipality the mapper recorded, not the one the point is in: the end
+ * of an imported track read "Palmerton" because the house 30 m away is tagged
+ * Palmerton, while the point itself is beside the next town. Naming from the
+ * settling itself fixes the pin, not the reader.
  */
 export function placeFromReverseFeature(
   feature: PhotonFeature,
   query: Coordinate,
+  settlement?: PhotonFeature,
 ): PlaceMatch | null {
   const coordinate = coordinateOf(feature);
   if (coordinate === null) return null;
   const properties = feature.properties ?? {};
-  const distance = haversine(query, coordinate);
+  const nearestDistance = haversine(query, coordinate);
+  const town = settlementNameOf(settlement);
+  const townCoordinate = settlement === undefined ? null : coordinateOf(settlement);
+  const townDistance = townCoordinate === null ? nearestDistance : haversine(query, townCoordinate);
   // A town feature is its own locality; everything else is *in* one.
-  const locality =
-    (properties.osm_key === "place" ? properties.name : undefined) ??
-    properties.city ??
-    properties.district ??
-    (properties.county === undefined ? undefined : `${properties.county} County`);
-  const region = regionLabel(properties);
+  const locality = town
+    ?? (properties.osm_key === "place" ? properties.name : undefined)
+    ?? properties.city
+    ?? properties.district
+    ?? (properties.county === undefined ? undefined : `${properties.county} County`);
+  const townRegion = settlement === undefined || town === undefined ? "" : regionLabel(settlement.properties ?? {});
+  const region = townRegion !== "" ? townRegion : regionLabel(properties);
   const poi =
     properties.name !== undefined &&
     !UNNAMEABLE_KEYS.has(properties.osm_key ?? "") &&
-    distance <= POI_NAME_RADIUS_METERS
+    nearestDistance <= POI_NAME_RADIUS_METERS
       ? properties.name
       : undefined;
   const parts = unique([poi, locality, region]);
   if (parts.length === 0 || (poi === undefined && locality === undefined)) return null;
   const base = parts.join(", ");
-  const label = distance > NEAR_THRESHOLD_METERS ? `Near ${base}` : base;
+  const labelDistance = town === undefined ? nearestDistance : townDistance;
+  const label = labelDistance > NEAR_THRESHOLD_METERS ? `Near ${base}` : base;
   return {
     id: featureId(properties, 0),
     label,
@@ -180,6 +193,17 @@ export function placeFromReverseFeature(
     coordinate: query,
     provider: "photon",
   };
+}
+
+/**
+ * The town-level name of a feature, or `undefined` when it is not one. A
+ * postcode, a house or a road is not a settlement.
+ */
+function settlementNameOf(feature: PhotonFeature | undefined): string | undefined {
+  const properties = feature?.properties ?? {};
+  if (properties.osm_key !== "place" || !TOWN_VALUES.has(properties.osm_value ?? "")) return undefined;
+  const name = properties.name?.trim();
+  return name === undefined || name === "" ? undefined : name;
 }
 
 /**
@@ -341,8 +365,25 @@ export function createPhotonGeocoder(options: PhotonOptions = {}): PhotonGeocode
       url.searchParams.set("lon", coordinate.lon.toFixed(5));
       url.searchParams.set("limit", "1");
       url.searchParams.set("lang", "en");
-      const [first] = await features(url, reverseOptions.signal);
-      return first === undefined ? null : placeFromReverseFeature(first, coordinate);
+      // The nearest feature names a POI; the nearest *settlement* names the
+      // place. One request cannot answer both (a building's city tag is not the
+      // town the point is in), so ask together and prefer the settlement.
+      const settlementUrl = new URL(url);
+      settlementUrl.searchParams.set("osm_tag", "place");
+      settlementUrl.searchParams.set("limit", "5");
+      settlementUrl.searchParams.set("radius", "10");
+      const [nearest, places] = await Promise.all([
+        features(url, reverseOptions.signal),
+        // An older Photon, or a filtered-out answer, costs the town name and
+        // nothing else: the nearest feature still names the pin.
+        features(settlementUrl, reverseOptions.signal).catch(() => [] as PhotonFeature[]),
+      ]);
+      const settlement = places.find((candidate) => settlementNameOf(candidate) !== undefined);
+      const [first] = nearest;
+      if (first === undefined) {
+        return settlement === undefined ? null : placeFromReverseFeature(settlement, coordinate);
+      }
+      return placeFromReverseFeature(first, coordinate, settlement);
     },
   };
 }
