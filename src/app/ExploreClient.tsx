@@ -50,6 +50,8 @@ export interface ExploreClientProps {
   readonly basemap?: BasemapMode;
   readonly mapboxToken?: string;
   readonly assetBasePath?: string;
+  /** False when the server has no ride library, so the browser never asks (and never logs a 404). */
+  readonly libraryOn?: boolean;
 }
 
 /** A route page's full line, which the list's card preview cannot stand in for. */
@@ -65,7 +67,7 @@ export function ExploreClient(props: ExploreClientProps) {
   return <RideExploreClient {...props} />;
 }
 
-function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: ExploreClientProps) {
+function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath, libraryOn = true }: ExploreClientProps) {
   const router = useRouter();
   const hostFactory = useMemo<MapHostFactory>(
     () =>
@@ -105,6 +107,7 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
   const [libraryWaited, setLibraryWaited] = useState(false);
   useEffect(() => {
     if (detailId !== undefined) return;
+    if (!libraryOn) { setLibraryWaited(true); return; }
     let active = true;
     const timer = window.setTimeout(() => setLibraryWaited(true), 3000);
     void loadRouteLibrary().then((loaded) => {
@@ -113,7 +116,7 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
       setLibraryWaited(true);
     });
     return () => { active = false; window.clearTimeout(timer); };
-  }, [detailId]);
+  }, [detailId, libraryOn]);
   /** The active garage bike, read on the client (EX-02, RS-01). */
   const [bike, setBike] = useState<BikeProfile | null>(null);
   useEffect(() => {

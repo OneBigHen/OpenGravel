@@ -1,0 +1,129 @@
+{
+  "target": "local",
+  "devices": [
+    "chromium-390"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "map": "fixture",
+  "repeat": 1,
+  "states": [
+    "explore-country-list",
+    "explore-country-map",
+    "explore-country-card",
+    "explore-country-here"
+  ],
+  "commit": "05d25077",
+  "branch": "",
+  "startedAt": "2026-11-14T04:36:02.172Z",
+  "finishedAt": "2026-11-14T04:36:24.903Z",
+  "shots": [
+    {
+      "state": "explore-country-list",
+      "device": "chromium-390",
+      "theme": "light",
+      "runs": [
+        {
+          "content": "explore-country-list-chromium-390-light-1.png",
+          "durationMs": 2174
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-map",
+      "device": "chromium-390",
+      "theme": "light",
+      "runs": [
+        {
+          "content": "explore-country-map-chromium-390-light-1.png",
+          "durationMs": 2145
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-card",
+      "device": "chromium-390",
+      "theme": "light",
+      "runs": [
+        {
+          "content": "explore-country-card-chromium-390-light-1.png",
+          "durationMs": 3087
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-here",
+      "device": "chromium-390",
+      "theme": "light",
+      "runs": [
+        {
+          "content": "explore-country-here-chromium-390-light-1.png",
+          "durationMs": 1934
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-list",
+      "device": "chromium-390",
+      "theme": "dark",
+      "runs": [
+        {
+          "content": "explore-country-list-chromium-390-dark-1.png",
+          "durationMs": 2381
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-map",
+      "device": "chromium-390",
+      "theme": "dark",
+      "runs": [
+        {
+          "content": "explore-country-map-chromium-390-dark-1.png",
+          "durationMs": 2231
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-card",
+      "device": "chromium-390",
+      "theme": "dark",
+      "runs": [
+        {
+          "content": "explore-country-card-chromium-390-dark-1.png",
+          "durationMs": 880
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    },
+    {
+      "state": "explore-country-here",
+      "device": "chromium-390",
+      "theme": "dark",
+      "runs": [
+        {
+          "content": "explore-country-here-chromium-390-dark-1.png",
+          "durationMs": 1754
+        }
+      ],
+      "error": null,
+      "maxDiffPercent": null
+    }
+  ],
+  "errors": []
+}
