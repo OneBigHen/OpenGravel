@@ -1,0 +1,19 @@
+# Lane A report: small phones and landscape
+
+All tests are in `tests/e2e/critical/small-phone-layout.spec.ts` (24 cases). I ran the same file against plain main first: the guard and the QA tests failed there, and pass on this branch.
+
+| QA | Cause | Fix | Test |
+|----|-------|-----|------|
+| 01 | At 320 the weather chip (temperature, sky icon and the alert name) is wider than the room left in the search bar, so it spilled over the menu button and squeezed the typed text. | Under 380px wide the chip drops its icon and alert name (it keeps the red alert colour and still opens on tap), and it hides entirely while you type. `top-search.css` | "QA-01 search with a weather alert at 320" (typed text fits, bar ends before the menu, placeholder has 100px) |
+| 02 | The filter-chip row bleeds out by the page margin, which stretched the header's single grid column to 352px on a 320px phone. Also "Explore" ran under the Ride/Things switch at 320. | Header column pinned to the header width; smaller title and gap at 360px and below. `explore.css` | Explore case of the guard at 320/390/844 (no sideways scroll, no clash, title ends before the switch) |
+| 08 | In landscape the Layers button used the desktop position (about 520px from the left), which lands on the rail's tabs; the edit bar was centred over the search; tabs had no nowrap; place buttons scrolled sideways so Share was cut off. | Landscape-only rules: Layers and edit bar sit under the search, tabs stay on one line, place buttons wrap. `layers.css`, `itinerary.css`, `nav.css`, `gmaps-layout.css` | Guard at 844x390 on home and plan sheet |
+| 09 | The climb text had an ellipsis rule and the time was capped at 38% width. | Climb wraps instead of being cut, time never wraps, the facts column drops under the time if it must. `route-context.css`, `gmaps-layout.css` | "QA-09 route summary shows the whole climb and time" at 320 and 390 |
+| 20 | MapLibre's corner (i) disc was placed 236px down, but the control column ends at 288px, so the disc sat behind Locate. | Disc moved to 300px, below the column. `map.css` | "QA-20 the map's corner (i) disc sits below the locate button". Note: the test map draws no attribution, so the test places the disc where MapLibre does and measures our CSS. Fails on main (disc 238-267 vs locate 240-288), passes now. The "map colour differs with/without location" half of the row is a separate map-style question and I did not touch it. |
+| 21 | The desktop shortcut button always said "Make my loop" even when "To a destination" was selected (the default). Scale bar and legend: no overlap found at 1440x900 (gap is a few px); the stray round button was the (i) disc under Locate at the bottom corner. | Shortcut only when Loop is the chosen shape (`PlannerWorkspaceDock.tsx`, not `PlannerWorkspace.tsx`); the desktop control column lifted from 40px to 76px above the corner. `map.css` | "QA-21 desktop" (button label, legend/scale, disc vs controls) |
+| 23 | In the compact "Finding you on the route" card the text ran to the card edge under the GPS warning badge. | 48px right padding on that text. `ride.css` | "QA-23 ... stays clear of the GPS warning badge at 320" (failed on main) |
+
+General guard: at 320x568, 390x844 and 844x390, on home (weather alert showing), plan sheet, Explore and the ride screen: no sideways scroll, no two floating controls overlapping, no control hidden under another, no control off the screen edge. Page content scrolling under the bottom tab bar is deliberately not counted.
+
+Not fixed / for the coordinator:
+- After "Directions" at 844x390 the search box keeps focus and its recent-places list stays open over the map. The guard blurs the box first. Probably PlannerWorkspace territory.
+- Night-only 320 failures in `ride-sheet-cap` / `search-card` are in PR #240 (separate).

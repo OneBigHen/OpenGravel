@@ -468,7 +468,7 @@
   .og-planner__map-slot .og-map__cluster {
     top: auto;
     right: var(--og-float-right);
-    bottom: 40px;
+    bottom: 76px; /* clear of the attribution disc in the corner (QA-21) */
   }
 
   .og-planner__map-slot .og-map .maplibregl-ctrl-bottom-right {
@@ -485,7 +485,7 @@
   /* The (i) disc sits under the Layers and Locate buttons: the floating
      glass sheet changes height, and the disc used to show through it. */
   .og-planner__map-slot .og-map .maplibregl-ctrl-bottom-right {
-    top: calc(var(--og-safe-top) + 236px);
+    top: calc(var(--og-safe-top) + 300px); /* below the whole control column, not behind it (QA-20) */
     right: var(--og-space-3);
     bottom: auto !important;
   }

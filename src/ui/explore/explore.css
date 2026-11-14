@@ -32,6 +32,7 @@
 .og-explore__header {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* chip row bleed must not widen it (QA-02) */
   gap: var(--og-space-2);
   padding-top: var(--og-space-4);
 }
@@ -847,10 +848,7 @@
     gap: var(--og-space-2);
   }
 
-  .og-explore__lens > [role="tab"] {
-    min-width: 64px;
-    padding-inline: var(--og-space-3);
-  }
+  .og-explore__lens > [role="tab"] { min-width: 64px; padding-inline: var(--og-space-3); }
 
   .og-explore__heading .og-eyebrow,
   .og-explore-card__region {
@@ -986,4 +984,9 @@
 
 .og-explore__more-count {
   color: var(--og-ink-2);
+}
+
+@media (max-width: 360px) { /* QA-02: "Explore" stays whole at the shared title size */
+  .og-explore__heading-row { gap: var(--og-space-2); }
+  .og-explore__lens > [role="tab"] { min-width: 56px; padding-inline: var(--og-space-2); }
 }
