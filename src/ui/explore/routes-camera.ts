@@ -67,7 +67,7 @@ const CLUSTER_PX = 56;
 
 /** A state's count bubble is a little bigger for more rides, but always small enough to leave room. */
 export function bubbleSize(count: number): number {
-  return Math.round(Math.min(40, 20 + 6 * Math.log10(Math.max(count, 1))));
+  return Math.round(Math.min(48, 44 + 2 * Math.log10(Math.max(count, 1))));
 }
 
 type Cluster = { states: string[]; count: number; x: number; y: number; size: number; box: [number, number, number, number] };
