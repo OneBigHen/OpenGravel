@@ -617,8 +617,7 @@
   padding: 0 var(--og-space-1) 0 var(--og-space-4);
 }
 
-.og-glance__button:focus-visible,
-.og-glance__retry:focus-visible {
+.og-glance__button:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
@@ -642,12 +641,6 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-}
-
-.og-glance__promise {
-  color: var(--og-ink);
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .og-glance__surface {
@@ -699,18 +692,6 @@
 
 .og-glance__button:hover .og-glance__open {
   color: var(--og-ink);
-}
-
-.og-glance__retry {
-  min-height: 40px;
-  padding: 0 var(--og-space-4);
-  border: 0;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 /* Tablets only: phones have the sheet's own summary, desktop the rail. */
