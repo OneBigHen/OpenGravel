@@ -113,6 +113,13 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
   settings: async (page) => {
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: "Settings" }).first()).toBeVisible();
+    // Some sections (offline areas, reported spots) fill in after first paint and reflow the
+    // columns; shoot only once every section is in and the page has stopped loading.
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText(/offline areas/i).first()).toBeVisible();
+    await expect(page.getByText(/spots you reported/i).first()).toBeVisible();
+    await expect(page.locator('.og-skeleton,[aria-busy="true"]')).toHaveCount(0, { timeout: 30_000 });
+    await page.evaluate(() => document.fonts.ready);
   },
   "planner-error": async (page) => {
     await page.route("**/api/route-plan", (route) =>
