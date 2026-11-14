@@ -28,7 +28,8 @@ Branch `library/l2b-facts`, built on L1a. Nothing pushed, nothing deployed.
   the source's own measured box; no location and no box stays `null`. Nothing is geocoded.
 - **`pack-builder.ts` and `build-pack.ts`.** Ten named gates, each with its own row in `pack-report.md`; any
   failure exits non-zero. `--allow-drop` is the only override and is printed in the report. The builder writes
-  `scripts/route-library/phrases.snapshot.json` and a "facts the source did not state" section in the report.
+  `phrases.snapshot.json` into the output folder, next to the pack and its report, and a "facts the source did
+  not state" section in the report. A build never edits a tracked source file.
 - **`scripts/route-library/phrases.snapshot.json` (new).** Every distinct phrasing this build saw for each
   fact, with its count and mapped value.
 - **Tests:** `tests/unit/route-library/facts.test.ts` and `gates.test.ts` (new). The existing L1a tests and
@@ -109,8 +110,9 @@ The value is `null` and its index `sf` is `null`; the page may repeat the words 
    reviewer reads the whole mapping.
 5. **The committed `phrases.snapshot.json` is the fixture build.** The full 5,815-ride library is not on this
    machine, so counts are for the 14 fixture records (surface 7 phrasings, legal 2, difficulty 3, permits 3,
-   season 3). The coordinator's full build regenerates it in place; a test fails if the committed file stops
-   matching a fresh fixture build, so the file cannot quietly drift.
+   season 3). A build now writes its snapshot into its own output folder; the repository's copy is regenerated
+   only from the fixture with `npm run route-library:snapshot`. A test fails if the committed file stops
+   matching a fresh fixture build, so the file cannot quietly drift, and the full build no longer touches it.
 6. **Two gates cannot fail by construction.** `validator-errors` and `credit` are structural: a record that
    fails the record check is skipped and listed (plan 5.1 stage 1), and a credit line is always written from
    the author and site name when the source gave none, so a shipped record cannot lack one. Their tests prove
@@ -119,16 +121,16 @@ The value is `null` and its index `sf` is `null`; the page may repeat the words 
 
 ## What the coordinator does next
 
-1. Run the full build as before (the CLI's default snapshot path is the repo file):
+1. Run the full build as before (the snapshot lands in the output folder; nothing tracked changes):
 
    ```
    node --max-old-space-size=320 --import tsx scripts/route-library/build-pack.ts \
      --library /root/Vibe/og-route-library-national --out <dir>
    ```
 
-   It rewrites `scripts/route-library/phrases.snapshot.json` with the whole library's phrasings (the 272
-   surface phrasings, 326 season phrasings and the permit texts), and prints the gate table. Commit the
-   snapshot with the pack: it is the mapping review.
+   It writes `phrases.snapshot.json` into `<dir>` with the whole library's phrasings and prints the gate
+   table. Commit the pack's report with it if the coordinator wishes; the repository's snapshot stays the
+   fixture build and is refreshed only by `npm run route-library:snapshot`.
 2. Read the snapshot rows for legal and difficulty first. Any row with `"tableRow": false` is a phrasing the
    tables do not know; it is `null`, which is honest, and is where a new row may belong.
 3. Expect `null-facts` to pass: every value must have a quote and a source. A claim whose record names no
@@ -211,7 +213,81 @@ pa-pa-wilds-bdr-x            {"value":null,"quote":"moderate","source":null}
   that `unsourcedClaims` lists exactly what was withheld, and that a sourced claim survives;
   `gates.test.ts` proves a record that cannot show a source now has the claim dropped and listed in the
   report while the `null-facts` gate passes.
-- The build's default snapshot path is the repo's `scripts/route-library/phrases.snapshot.json`; it was
-  restored to the committed fixture build afterwards, because the repository test compares it with a fresh
-  fixture build (judgement call 5 above). The whole-library phrasings are in
-  `/root/Vibe/og-route-library-build-l2b/pack-report.md`.
+- The build's default snapshot path is now the output folder, so the full build leaves the tracked
+  `scripts/route-library/phrases.snapshot.json` untouched; it was restored to the committed fixture build
+  afterwards in the earlier run, and a new test proves a build cannot change it.
+
+## Snapshot fix and the full build after merging main (2026-11-14)
+
+### The snapshot fix
+
+A full-library build used to overwrite the tracked `scripts/route-library/phrases.snapshot.json` with the
+whole library's phrasings, which dirtied the tree and broke the fixture-snapshot test. Now:
+
+- `buildPack` writes `phrases.snapshot.json` into `outDir`, next to the pack and `pack-report.md`; `--snapshot
+  <file>` still names another place.
+- The repository's copy is regenerated only from the fixture, deliberately:
+  `npm run route-library:snapshot`.
+- A new test builds with no `snapshotPath` at all, asserts the file appears in the output folder, and asserts
+  the tracked copy is byte-identical before and after. The existing "matches the committed snapshot" test is
+  unchanged, so the repo file is still proven to be a real fixture build's output.
+
+### The merge with main
+
+The branch was 12 commits behind `origin/main`, whose L1a came in as #237 plus the ride-page work in #336.
+The seven conflicting files (`.fable/LIBRARY-PLAN.md`, `build-pack.ts`, `pack-builder.ts`, `classify.ts`,
+`geometry.ts`, `ride-detail.ts`, `types.ts`) were add/add conflicts: main's copies are byte-identical to the
+L1a branch this work was built on, and this branch's copies are that content plus L2b's edits. Keeping this
+branch's copies therefore keeps main's L1a code exactly and layers L2b on top; no main behaviour is removed.
+
+### Full build on the merged tree (the exact command from the task)
+
+```
+flock /tmp/og-light.lock node --max-old-space-size=320 --import tsx scripts/route-library/build-pack.ts \
+  --library /root/Vibe/og-route-library-national \
+  --out /tmp/claude-0/-root/50c259cb-87a8-489c-bbd5-816e271a72d5/scratchpad/pack-l2b
+```
+
+Exit 0. `PASS version 8e85434154e2: 5815 rides, 4393 located, 3290 with a line`. Peak memory 375 MB, 2m49s.
+
+| Check | Result | Detail |
+|---|---|---|
+| id-collision | pass | no library id collides with a curated catalog id (112 curated ids checked) |
+| duplicate-id | pass | every library id appears once |
+| validator-errors | pass | 0 validator errors in 5815 shipped records (0 records skipped and listed below) |
+| credit | pass | every one of 5815 rides has a credit line and a source address |
+| ride-points | pass | the longest ride is 13365 points (cap 20000) |
+| index-size | pass | index 373.9 KB gzipped (cap 400.0 KB) |
+| state-line-size | pass | 51 state line files; largest is MI at 81.1 KB (cap 200.0 KB) |
+| pack-size | pass | pack 15.92 MB (cap 60 MB) |
+| null-facts | pass | no null fact is rendered as a value; 16619 facts are null and say so (listed below); 32 claim(s) dropped because the record names no source (listed below) |
+| ride-count-drop | pass | no earlier pack in this fresh output folder to compare |
+
+**Ride count before and after:** main's pack (L1a) has 5,815 rides; this branch's pack has 5,815 rides. No
+ride is lost. The build version `8e85434154e2` is the same as the pre-merge L2b build, because the facts,
+flags and gates do not change the packed content hash beyond what L2b already did.
+
+The output folder holds both the pack and `phrases.snapshot.json`; `git status --short` is empty after the
+build, which is the proof that a build no longer edits tracked files.
+
+### Checks on the merged tree
+
+- `npx tsc --noEmit`: clean.
+- `npx vitest run tests/unit/route-library --maxWorkers=2`: 8 files, 124 tests passed.
+- `npx eslint` on every touched `.ts` file: no output (clean).
+
+## What the rider sees
+
+- A ride whose source states the surface in a known phrase shows "Paved, the source says" (or Unpaved,
+  Mixed); a phrase the table cannot classify shows the source's own words as a quote and says the surface is
+  unknown, never a guessed surface.
+- Legal status appears only for `public-roads`, `designated-ohv` and `mixed`, in the source's words.
+- Difficulty appears only when the record's own `difficulty_source` names a source; a claim whose record
+  says "not stated on source page", leaves it blank, or says "unknown" is withheld and the page says the
+  difficulty is unknown.
+- Permits and season carry the source's wording as a quote; when the source said nothing the card stays
+  empty and the page says "Season not stated".
+- The rating shows only when the record carries a structured rating or the exact "rider rating N/5 (M
+  reviews)" wording; otherwise nothing is shown.
+- The map pin uses the served line's start, else the library's own location as supplied, else the middle of
+  the source's measured box; nothing is geocoded, and a ride with neither has no pin.
