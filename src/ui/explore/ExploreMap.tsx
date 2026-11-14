@@ -104,8 +104,9 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
       selectedObject: null,
     };
   }, [available, highlightedId, tools]);
-  const fitExtent = useMemo(() => extentOf(available), [available]);
-  const fitKey = useMemo(() => `${available.map((entry) => entry.id).join("|")}:${fitRevision}`, [available, fitRevision]);
+  // A ride with no line of ours (a library ride that links out) still has an area to frame.
+  const fitExtent = useMemo(() => extentOf(available) ?? extentOf(entries), [available, entries]);
+  const fitKey = useMemo(() => `${(available.length > 0 ? available : entries).map((entry) => entry.id).join("|")}:${fitRevision}`, [available, entries, fitRevision]);
 
   const onIntent = useCallback(
     (intent: MapIntent): void => {

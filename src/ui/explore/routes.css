@@ -217,7 +217,8 @@
 }
 
 .og-routes__card-actions > .og-primary {
-  flex: 1;
+  flex: 1 0 auto;
+  white-space: nowrap;
   min-height: var(--og-touch);
 }
 
