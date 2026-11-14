@@ -244,7 +244,7 @@
   .og-planner {
     /* Full keeps a 160px strip of map, so the place or ride stays in view; the
        8px the floating sheet sits above the tab bar comes out of the sheet. */
-    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-2) - var(--og-safe-top) - 160px);
+    --og-sheet-full: min(calc(100dvh - var(--og-tabbar-h) - var(--og-space-2) - var(--og-safe-top) - 160px), calc(60dvh - var(--og-tabbar-h) - var(--og-space-2)));
     --og-sheet-half: calc(50dvh - var(--og-tabbar-h) - var(--og-space-2));
   }
 
@@ -287,9 +287,16 @@
     max-height: var(--og-sheet-half);
   }
 
+  /* Full keeps at least 40% of the screen as map, so what is being edited stays in view. */
   .og-planner .og-planner__sheet[data-detent="full"] {
     height: var(--og-sheet-full);
     max-height: none;
+  }
+
+  /* Edit ride / Options are short: as tall as their rows, never a half-empty slab. */
+  .og-planner .og-planner__sheet[data-detent="full"]:is([data-sheet-view="edit"], [data-sheet-view="options"]) {
+    height: auto;
+    max-height: var(--og-sheet-full);
   }
 
   .og-planner .og-planner__sheet[data-dragging="true"] {
@@ -631,7 +638,7 @@
   }
 
   .og-planner {
-    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-1) - var(--og-safe-top) - 160px);
+    --og-sheet-full: min(calc(100dvh - var(--og-tabbar-h) - var(--og-space-1) - var(--og-safe-top) - 160px), calc(60dvh - var(--og-tabbar-h) - var(--og-space-1)));
     --og-sheet-half: calc(50dvh - var(--og-tabbar-h) - var(--og-space-1));
   }
 }
