@@ -251,6 +251,27 @@ for (const track of TRACKS) {
       expectNoViolations(result.violations);
     });
 
+    it("road blocked where the rider stands: the new route starts at the rider, leaves the spot, avoids it for good and rejoins beyond it", async () => {
+      const run = await runScenario({ track, route, scenario: "missed-turn", startMs: START_MS });
+      const memory = new Map<string, string>();
+      vi.stubGlobal("window", {
+        localStorage: {
+          getItem: (key: string) => memory.get(key) ?? null,
+          setItem: (key: string, value: string) => void memory.set(key, value),
+          removeItem: (key: string) => void memory.delete(key),
+        },
+      });
+      const riderAlong = 400;
+      const spot = pointAlong(route.geometry, chainage(route.geometry), riderAlong).coordinate;
+      const now = Date.now();
+      const report = newRiderReport({ id: `rr_here_${track.id}`, point: spot, headingDegrees: null, kind: "gate-closed", nowMs: now });
+      expect(saveRiderReport(report, now)).toBe(true);
+      const ring = reportsToAvoidAreas([report], now)[0]!.ring;
+      const result = await reportRerouteViolations(run, ring, riderAlong, true);
+      console.log(`BLOCKED-HERE ${track.id} rejoinAt=${result.joinAlong?.toFixed(0)}m`);
+      expectNoViolations(result.violations);
+    });
+
     it("30 s without GPS: no off-route, announcements and progress resume", async () => {
       const run = await runScenario({
         track,

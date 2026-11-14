@@ -70,7 +70,7 @@ test("Gate closed is marked once and avoided by the next plan until removed", as
   await expect(page.getByTestId("road-blocked-rough")).toBeVisible();
   await expect(page.getByTestId("road-blocked-cancel")).toBeVisible();
   await page.getByTestId("road-blocked-gate").click();
-  await expect(page.getByTestId("road-blocked-toast")).toContainText("Marked. Your next routes avoid this spot.");
+  await expect(page.getByTestId("road-blocked-toast")).toContainText("Marked and saved. Finding a way around it.");
   await expect(page.getByTestId("road-blocked-undo")).toBeVisible();
 
   const stored = await page.evaluate(() => window.localStorage.getItem("og-rider-reports"));

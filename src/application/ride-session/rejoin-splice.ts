@@ -213,6 +213,117 @@ export function ringSpanAlong(
   return Number.isFinite(first) ? { firstMeters: first, lastMeters: last } : null;
 }
 
+/** Whether `point` is inside the ring. */
+export function pointInRing(point: Coordinate, ring: readonly Coordinate[]): boolean {
+  return ring.length >= 3 && insideRing(point, ring);
+}
+
+/** How far back along the line the way out of a reported spot is looked for. */
+export const TURN_AROUND_MAX_METERS = 400;
+/** Clear of the spot by this much before the new road starts. */
+const TURN_AROUND_MARGIN_METERS = 10;
+/** The rider must be on the line (this close) for the road behind them to be used. */
+const TURN_AROUND_ON_LINE_METERS = 40;
+/** Speed assumed for the short ride back out of the spot. */
+const TURN_AROUND_SPEED_MPS = 6;
+
+export interface TurnAround {
+  /** The rider, then the ridden line backwards to the first point clear of the spot. */
+  readonly geometry: readonly Coordinate[];
+  readonly meters: number;
+  readonly seconds: number;
+  /** Where the new road starts: on the planned line, behind the rider, outside every ring. */
+  readonly anchor: Coordinate;
+}
+
+/**
+ * A rider standing inside a reported spot cannot start a new route there: the
+ * router would start it at the nearest road outside the spot, a jump from the
+ * rider. The road the rider just rode is real, so the way out is that road
+ * backwards to the first point clear of the spot. Null when the rider is not
+ * on the planned line or the line is not clear of the spot within reach.
+ */
+export function turnAroundOutOf(
+  line: readonly Coordinate[],
+  chain: readonly number[],
+  position: Coordinate,
+  fromAlongMeters: number,
+  rings: readonly (readonly Coordinate[])[],
+): TurnAround | null {
+  const here = pointAlong(line, chain, fromAlongMeters);
+  if (haversine(here.coordinate, position) > TURN_AROUND_ON_LINE_METERS) return null;
+  const around = rings.filter((ring) => pointInRing(position, ring));
+  if (around.length === 0) return null;
+  const clear = (point: Coordinate): boolean => !around.some((ring) => pointInRing(point, ring));
+  let along = here.alongMeters;
+  const floor = Math.max(0, here.alongMeters - TURN_AROUND_MAX_METERS);
+  let found: number | null = null;
+  while (along > floor) {
+    along = Math.max(floor, along - 5);
+    if (clear(pointAlong(line, chain, along).coordinate)) {
+      found = Math.max(0, along - TURN_AROUND_MARGIN_METERS);
+      break;
+    }
+  }
+  if (found === null) return null;
+  return turnAroundTo(line, chain, position, fromAlongMeters, found, around);
+}
+
+/**
+ * The rider, then the ridden line backwards to `toAlongMeters`. With `rings`
+ * the end must be clear of them. Null when it would be no distance at all.
+ */
+export function turnAroundTo(
+  line: readonly Coordinate[],
+  chain: readonly number[],
+  position: Coordinate,
+  fromAlongMeters: number,
+  toAlongMeters: number,
+  rings: readonly (readonly Coordinate[])[] = [],
+): TurnAround | null {
+  const here = pointAlong(line, chain, fromAlongMeters);
+  const anchor = pointAlong(line, chain, Math.min(toAlongMeters, here.alongMeters));
+  if (rings.some((ring) => pointInRing(anchor.coordinate, ring))) return null;
+  const back: Coordinate[] = [position, here.coordinate];
+  for (let index = here.segmentIndex; index > anchor.segmentIndex; index -= 1) back.push(line[index] as Coordinate);
+  back.push(anchor.coordinate);
+  const geometry = back.filter((point, index) => index === 0 || haversine(point, back[index - 1] as Coordinate) > 0.5);
+  const meters = chainage(geometry).at(-1) ?? 0;
+  if (geometry.length < 2 || meters < 1) return null;
+  return { geometry, meters, seconds: meters / TURN_AROUND_SPEED_MPS, anchor: anchor.coordinate };
+}
+
+/**
+ * The way out of the spot followed by the router's way from there: one
+ * connector. Its first instruction is the turn-around and carries the
+ * router's own first stretch, so every metre still has an instruction.
+ */
+export function connectorAfterTurnAround(turn: TurnAround, connector: ConnectorRoute): ConnectorRoute | null {
+  const instructions = connector.instructions ?? [];
+  const first = instructions[0];
+  if (first === undefined || first.geometryIndex === undefined || first.geometryIndex !== 0) return null;
+  const offset = turn.geometry.length - 1;
+  const rest = instructions.slice(1);
+  const merged: RouteInstruction = {
+    text: "Turn around",
+    type: "uturn",
+    maneuver: "uturn",
+    distanceMeters: turn.meters + first.distanceMeters,
+    durationSeconds: turn.seconds + first.durationSeconds,
+    geometryIndex: 0,
+    ...(first.roadName === undefined ? {} : { roadName: first.roadName }),
+  };
+  return {
+    geometry: [...turn.geometry, ...connector.geometry.slice(1)],
+    distanceMeters: turn.meters + connector.distanceMeters,
+    durationSeconds: turn.seconds + connector.durationSeconds,
+    instructions: [merged, ...rest.map((instruction) => ({ ...instruction, geometryIndex: (instruction.geometryIndex as number) + offset }))],
+    ...(connector.speedLimits === undefined ? {} : {
+      speedLimits: connector.speedLimits.map((span) => ({ ...span, fromIndex: span.fromIndex + offset, toIndex: span.toIndex + offset })),
+    }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 1. Targets
 

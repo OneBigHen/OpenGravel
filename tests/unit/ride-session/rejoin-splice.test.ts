@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   chainage,
   chooseRejoin,
+  connectorAfterTurnAround,
   connectorProblem,
   pointAlong,
+  turnAroundOutOf,
   rejoinTargets,
   splice,
   type ConnectorRoute,
@@ -278,5 +280,52 @@ describe("reportBlocksLineAhead (a new report reroutes the ride in progress)", (
     expect(reportBlocksLineAhead([ringAt(5_000)], ROUTE.geometry, 9_000)).toBe(false);
     expect(reportBlocksLineAhead([ringAt(11_000, -1_500)], ROUTE.geometry, 9_000)).toBe(false);
     expect(reportBlocksLineAhead([], ROUTE.geometry, 9_000)).toBe(false);
+  });
+});
+
+describe("turnAroundOutOf (road blocked where the rider stands)", () => {
+  const spot = pointAlong(ROUTE.geometry, CHAIN, 3_000).coordinate;
+  const ring = (half: number): Coordinate[] => [
+    { lon: spot.lon - half * LON_PER_METER, lat: spot.lat - half * LAT_PER_METER },
+    { lon: spot.lon + half * LON_PER_METER, lat: spot.lat - half * LAT_PER_METER },
+    { lon: spot.lon + half * LON_PER_METER, lat: spot.lat + half * LAT_PER_METER },
+    { lon: spot.lon - half * LON_PER_METER, lat: spot.lat + half * LAT_PER_METER },
+  ];
+
+  it("rides the road just ridden back to the first point clear of the spot", () => {
+    const turn = turnAroundOutOf(ROUTE.geometry, CHAIN, spot, 3_000, [ring(60)]);
+    expect(turn).not.toBeNull();
+    expect(haversine(turn!.geometry[0]!, spot)).toBeLessThan(1);
+    // Every point after the rider lies on the planned line, and the end is clear of the ring.
+    for (const point of turn!.geometry.slice(1)) expect(haversine(point, pointAlong(ROUTE.geometry, CHAIN, 3_000 - haversine(point, spot)).coordinate)).toBeLessThan(3);
+    expect(turn!.meters).toBeGreaterThan(60);
+    expect(turn!.meters).toBeLessThan(120);
+  });
+
+  it("gives up when the rider is off the line, outside the spot, or the line never clears it", () => {
+    const off = { lon: spot.lon, lat: spot.lat + 200 * LAT_PER_METER };
+    expect(turnAroundOutOf(ROUTE.geometry, CHAIN, off, 3_000, [ring(600)])).toBeNull();
+    expect(turnAroundOutOf(ROUTE.geometry, CHAIN, spot, 3_000, [ring(60).map((p) => ({ lon: p.lon + 1, lat: p.lat }))])).toBeNull();
+    expect(turnAroundOutOf(ROUTE.geometry, CHAIN, spot, 3_000, [ring(1_000)])).toBeNull();
+  });
+
+  it("joins the router's road after the way out as one connector with a turn-around first", () => {
+    const turn = turnAroundOutOf(ROUTE.geometry, CHAIN, spot, 3_000, [ring(60)])!;
+    const router: ConnectorRoute = {
+      geometry: [turn.anchor, { lon: turn.anchor.lon, lat: turn.anchor.lat + 300 * LAT_PER_METER }],
+      distanceMeters: 300,
+      durationSeconds: 30,
+      instructions: [
+        { text: "Head north", type: "depart", roadName: "Side Road", geometryIndex: 0, distanceMeters: 300, durationSeconds: 30 },
+        { text: "Arrive", type: "finish", geometryIndex: 1, distanceMeters: 0, durationSeconds: 0 },
+      ],
+    };
+    const whole = connectorAfterTurnAround(turn, router)!;
+    expect(whole.geometry).toHaveLength(turn.geometry.length + 1);
+    expect(whole.instructions![0]).toMatchObject({ type: "uturn", geometryIndex: 0 });
+    expect(whole.instructions![0]!.distanceMeters).toBeCloseTo(turn.meters + 300, 3);
+    expect(whole.instructions![1]).toMatchObject({ type: "finish", geometryIndex: turn.geometry.length });
+    // A router answer without a first instruction at the start cannot be joined exactly.
+    expect(connectorAfterTurnAround(turn, { ...router, instructions: [] })).toBeNull();
   });
 });

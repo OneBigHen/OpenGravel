@@ -104,6 +104,7 @@ import {
   type RideFocusTelemetryProvider,
   type RideFocusViewModel,
 } from "@/application/ride-session/ride-focus-view-model";
+import { pointInRing } from "@/application/ride-session/rejoin-splice";
 import type { BreadcrumbNavigationWaypoint, RideFocusPointer, RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
 import {
   createRiderSettings,
@@ -1040,7 +1041,11 @@ export function createRideFocusStore(
         const state = controller.snapshot();
         if (state === null || state.activity !== "guided" || state.plan.route === null) return;
         const along = navigationEngine?.snapshot().frame?.distanceAlongMeters;
-        if (along === undefined || !reportBlocksLineAhead(fresh, get().routeLine, along)) return;
+        // The rider marks the spot where they stand: that reroutes too, even
+        // when they are off the line or stopped just past its last match.
+        const rider = (controller.navigationState() ?? deriveSessionNavigation(state, { now: now() })).position.coordinate;
+        const standsInIt = rider !== null && fresh.some((ring) => pointInRing(rider, ring));
+        if (!standsInIt && (along === undefined || !reportBlocksLineAhead(fresh, get().routeLine, along))) return;
         void get().reroute(undefined, { reason: "report" });
       });
     }
@@ -2513,6 +2518,8 @@ export function createRideFocusStore(
         if (plan.status !== "planned") {
           const message = plan.reason === "gps"
             ? "Rerouting needs a fresh, accurate GPS fix."
+            : rerouteOptions?.reason === "report"
+              ? "Couldn't find a way around the spot you marked. Your route is unchanged and the spot is saved."
             : detour === undefined
               ? "A new route couldn't be found right now. Keep riding toward the line."
               : `A route via ${detour.label} couldn't be found right now.`;
@@ -2553,8 +2560,8 @@ export function createRideFocusStore(
           rerouteBusy: false,
           rerouteError: null,
           rerouteMessage: plan.rejoin !== undefined
-            ? `Back on your ride in ${formatDistance(plan.rejoin.connectorMeters)}${plan.rejoin.closureChecked ? "" : " · closure check did not answer"}`
-            : `${wholeRoute ? "Heading to the start" : detour === undefined ? "New route" : `Via ${detour.label}`} · ${formatDistance(plan.distanceMeters)} to go`,
+            ? `${rerouteOptions?.reason === "report" ? "Around the spot you marked · " : ""}Back on your ride in ${formatDistance(plan.rejoin.connectorMeters)}${plan.rejoin.closureChecked ? "" : " · closure check did not answer"}`
+            : `${rerouteOptions?.reason === "report" ? "Around the spot you marked" : wholeRoute ? "Heading to the start" : detour === undefined ? "New route" : `Via ${detour.label}`} · ${formatDistance(plan.distanceMeters)} to go`,
         });
         refresh();
         // Show the rider the new line, then keep following them along it.
