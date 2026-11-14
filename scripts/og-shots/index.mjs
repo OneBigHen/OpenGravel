@@ -17,6 +17,7 @@ const devices = {
   ipad11: { udid: "FB3FB66B-5D6E-4AF9-84E2-EA175F77BADC" },
   desktop: { viewport: { width: 1440, height: 900 } },
   "chromium-320": { viewport: { width: 320, height: 568 } },
+  "chromium-390": { viewport: { width: 390, height: 844 } },
 };
 const defaults = { target: "local", devices: "iphone17,desktop", themes: "light,dark", map: "fixture", repeat: "1", states: allStates.join(",") };
 function options(args) {
