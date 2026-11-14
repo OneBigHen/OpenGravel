@@ -236,15 +236,6 @@
   margin-left: auto;
 }
 
-.og-settings__row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--og-space-1);
-  margin-left: auto;
-}
-
 .og-settings__row-action,
 .og-settings__text-button {
   flex: none;
@@ -266,7 +257,6 @@
   opacity: 0.48;
 }
 
-.og-settings__row-action--danger,
 .og-settings__text-button--danger {
   color: var(--og-danger);
 }
@@ -311,7 +301,6 @@
   white-space: nowrap;
   cursor: pointer;
 }
-
 
 /* Disclosures. */
 .og-settings__disclosure > summary {
@@ -485,36 +474,7 @@
   white-space: normal;
 }
 
-/* Download progress. */
-.og-settings__progress {
-  display: flex;
-  flex: 1 1 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--og-space-2);
-}
-
-.og-settings__progress progress {
-  flex: 1 1 120px;
-  height: 8px;
-  accent-color: var(--og-primary);
-}
-
-.og-settings__progress-value {
-  min-width: 3ch;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-  font-variant-numeric: tabular-nums;
-}
-
-.og-settings__art {
-  width: calc(100% + 2 * var(--og-space-4));
-  max-width: none;
-  height: auto;
-  margin: calc(-1 * var(--og-space-4)) calc(-1 * var(--og-space-4)) var(--og-space-4);
-  aspect-ratio: 21 / 8;
-  object-fit: cover;
-}
+/* Offline downloads live in their own sheet. */
 
 @media (max-width: 760px) {
   .og-settings__header {
@@ -524,10 +484,6 @@
 
   .og-settings__field-row {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .og-settings__art {
-    aspect-ratio: 16 / 7;
   }
 }
 
