@@ -301,8 +301,7 @@
   .og-conditions__note, .og-conditions__glyph, .og-top-search__bar:focus-within .og-conditions { display: none; }
 }
 
-/* Short phones (iPhone SE): the bar sits 8px from the top and is 48px tall, so
-   the map between it and the sheet keeps room for a planned ride. */
+/* Short phones (iPhone SE): bar 8px from the top, 48px tall, so the map keeps room for a ride. */
 @media (max-height: 700px) and (min-height: 501px) and (max-width: 760px) {
   .og-top-search {
     top: calc(var(--og-safe-top) + var(--og-space-2));
@@ -514,8 +513,7 @@
   }
 }
 
-/* Narrow phones (320px): the weather note must not squeeze the search field. The
-   note steps away unless it is an alert, then it is short; "Search here" stays readable. */
+/* 320px: the weather note steps away unless it is an alert, so "Search here" stays readable. */
 @media (max-width: 360px) {
   .og-top-search .og-conditions__pill:not([data-tone="alert"]) .og-conditions__note { display: none; }
   .og-top-search .og-conditions__note { max-width: 56px; }

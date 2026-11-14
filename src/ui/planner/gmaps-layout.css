@@ -768,32 +768,12 @@
   }
 }
 
-/* A phone on its side (QA-08): the rail takes the right-hand 340px and the search
-   the top-left. The place card's buttons wrap instead of scrolling Share out of
-   sight; the tabs stay one line each; Layers and the edit bar wait under the
-   search instead of floating over the rail or the search. */
+/* Phone on its side (QA-08): place actions wrap, tabs stay one line, Layers and the edit bar sit under the search. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .og-planner .og-place-sheet .og-place-sheet__actions {
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-
-  .og-planner__nav a,
-  .og-planner__settings-link {
-    padding: 0 var(--og-space-2);
-    white-space: nowrap;
-  }
-
-  .og-planner__map-slot .og-layers {
-    top: calc(var(--og-safe-top) + 76px);
-    right: auto;
-    left: calc(var(--og-safe-left) + var(--og-space-4));
-  }
-
+  .og-planner .og-place-sheet .og-place-sheet__actions { flex-wrap: wrap; overflow-x: visible; }
+  .og-planner__nav a, .og-planner__settings-link { padding: 0 var(--og-space-2); white-space: nowrap; }
+  .og-planner__map-slot .og-layers { top: calc(var(--og-safe-top) + 76px); right: auto; left: calc(var(--og-safe-left) + var(--og-space-4)); }
   .og-planner .og-planner__map-slot > .og-editbar {
-    top: calc(var(--og-safe-top) + 132px);
-    left: calc(var(--og-safe-left) + var(--og-space-4));
-    justify-items: start;
-    transform: none;
+    top: calc(var(--og-safe-top) + 132px); left: calc(var(--og-safe-left) + var(--og-space-4)); justify-items: start; transform: none;
   }
 }
