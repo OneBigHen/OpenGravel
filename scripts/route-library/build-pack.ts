@@ -1,5 +1,7 @@
 /**
- * node --import tsx scripts/route-library/build-pack.ts --library <dir> --out <dir>
+
+ * node --max-old-space-size=320 --import tsx scripts/route-library/build-pack.ts --library <dir> --out <dir>
+ * (the heap flag keeps the full-library build near 380 MB instead of 620 MB)
  *   [--policy <file>] [--catalog <file>] [--name <file.sqlite>] [--allow-drop]
  * Exits 1 when a quality gate fails (see the report).
  */
