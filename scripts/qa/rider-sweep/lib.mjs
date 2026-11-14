@@ -91,3 +91,15 @@ export function finish(s) {
   fs.writeFileSync(path.join(s.dir, "log.json"), JSON.stringify({ log: s.log, consoleErrors: s.consoleErrors, failed: s.failed, apiReqCount: s.reqs.length, reqs: s.reqs.slice(0, 200) }, null, 1));
   return s.browser.close();
 }
+
+export async function planTo(s, query, pick) {
+  const p = s.page;
+  const f = p.getByTestId("top-place-search");
+  await f.click(); await f.fill(query); await p.waitForTimeout(2500);
+  await p.locator('[role=listbox] [role=option], [role=listbox] li').first().click().catch(async () => { await p.getByText(pick).first().click(); });
+  await p.getByTestId("place-sheet").waitFor({ timeout: 20000 });
+  await p.getByTestId("place-directions").click();
+  await p.getByTestId("start-ride").waitFor({ timeout: 60000 });
+  await p.waitForTimeout(2000);
+}
+export async function txt(page, id, ms = 1200) { return page.getByTestId(id).first().innerText({ timeout: ms }).catch(() => null); }
