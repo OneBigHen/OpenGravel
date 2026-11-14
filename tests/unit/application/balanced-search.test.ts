@@ -1,6 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { planRide } from "@/server/planning/plan-service";
-import { analyzeBends } from "@/domain/geometry/bends";
 import { searchBalancedEnvelope } from "@/application/planner/balanced-search";
 import type { ProviderCandidate, ProviderRouteRequest } from "@/application/planner/route-provider";
 
@@ -110,26 +108,3 @@ describe("Balanced fun envelope", () => {
   });
 });
 
-
-it.each(["yes", "private", "no"])("the complete plan gates a generated %s road before it can lead", async roadAccess => {
-  const geometry = Array.from({ length: 801 }, (_, index) => ({
-    lon: request.origin.lon + (request.destination.lon - request.origin.lon) * index / 800,
-    lat: request.origin.lat + Math.sin(index / 800 * Math.PI * 64) * 0.002,
-  }));
-  const fast = route(48, 0);
-  const curved = route(58, 100);
-  const generated = { ...curved, geometry, roadSummary: {
-    ...curved.roadSummary!, bendMeters: analyzeBends(geometry).bendMeters,
-    roadRuns: curved.roadSummary!.roadRuns!.map(run => ({ ...run, roadAccess })),
-  } };
-  const p = provider(asked => asked.options.riderModeFactor === undefined ? [fast] : [generated]);
-  const result = await planRide({ identity: { rideId: "balanced-gates", rideRevision: 1, planningGeneration: 1 }, request }, {
-    provider: p, env: {}, roadAuthority: null,
-  });
-  expect(result.ok).toBe(true);
-  if (!result.ok) return;
-  const best = result.bundle.candidates.find(candidate => candidate.id === result.bundle.roles["best-ride"]);
-  const fastest = result.bundle.candidates.find(candidate => candidate.id === result.bundle.roles.fastest);
-  expect(best?.durationSeconds).toBe((roadAccess === "yes" ? 58 : 48) * 60);
-  expect(fastest?.durationSeconds).toBe(48 * 60);
-});

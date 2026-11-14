@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundedRouteProvider, MAX_ROUTING_SEARCHES } from "@/infrastructure/routing/concurrency";
+import { boundedRouteProvider, MAX_LOOP_SEARCHES, MAX_ROUTING_SEARCHES } from "@/infrastructure/routing/concurrency";
 import type { ProviderRouteRequest, RouteCandidateProvider } from "@/application/planner/route-provider";
 
 const request: ProviderRouteRequest = {
@@ -8,6 +8,33 @@ const request: ProviderRouteRequest = {
   options: { includeAlternatives: false, avoidHighways: false, tollPolicy: "avoid", vehicle: "motorcycle" },
 };
 describe("boundedRouteProvider", () => {
+  it("lets a whole A-to-B wave (five calls) run at once, eight searches server-wide", () => {
+    expect(MAX_ROUTING_SEARCHES).toBe(8);
+  });
+  it("keeps a loop request to main's three searches while a wave may use more", async () => {
+    const started: string[] = [];
+    const release: Array<() => void> = [];
+    const provider: RouteCandidateProvider = {
+      id: "queued", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      async candidates(value) {
+        started.push(value.requestId);
+        await new Promise<void>(resolve => release.push(resolve));
+        return { candidates: [] };
+      },
+    };
+    const signal = new AbortController().signal;
+    const bounded = boundedRouteProvider(provider);
+    const loop = { ...request, discovery: { targetMinutes: 60, toleranceMinutes: 9 } };
+    const loops = Array.from({ length: MAX_LOOP_SEARCHES + 2 }, (_, index) => bounded.candidates({ ...loop, requestId: `loop${index}` }, signal));
+    await Promise.resolve();
+    expect(started).toHaveLength(MAX_LOOP_SEARCHES);
+    const wave = bounded.candidates({ ...request, requestId: "wave" }, signal);
+    await Promise.resolve();
+    expect(started).toContain("wave");
+    release.forEach(done => done());
+    for (let round = 0; round < 8; round += 1) { await new Promise(resolve => setTimeout(resolve, 0)); release.forEach(done => done()); }
+    await Promise.all([...loops, wave]);
+  });
   it("removes cancelled queued work, releases rejected searches and drains in order", async () => {
     const started: string[] = [];
     const release: Array<() => void> = [];
@@ -33,7 +60,7 @@ describe("boundedRouteProvider", () => {
     const next = boundedRouteProvider(provider).candidates({ ...request, requestId: "next" }, controller.signal);
     release[0]!();
     await new Promise(resolve => setTimeout(resolve, 0));
-    expect(started).toEqual(["0", "1", "2", "next"]);
+    expect(started).toEqual([...Array.from({ length: MAX_ROUTING_SEARCHES }, (_, index) => String(index)), "next"]);
     release.slice(1).forEach(done => done());
     await expect(next).resolves.toEqual({ candidates: [] });
     await Promise.all(running);
