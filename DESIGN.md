@@ -255,6 +255,11 @@ the primary button.
   ride", never stars. A library ride's list thumbnail is its own line shape. A fact a source claims reads "the
   source says"; unknown reads unknown. A ride with a stored line offers "Follow this track"; a ride with no line
   offers the source link first.
+- 2026-11-14 QA sweep (QA-10): a surface strip has four possible states, and paved and unknown used
+  the same grey, so the bar and its legend could not say which was which. Paved is now one solid
+  green (`--og-surface-paved`), unknown is a grey hatch (`--og-surface-unknown`) and never a solid
+  swatch, and the same pair is used in the bar, the legend dots and the surface line's own dot —
+  including "some of this was not measured", which used to wear the gravel tone's amber.
 
 ## Open proposals
 

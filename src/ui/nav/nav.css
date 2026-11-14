@@ -89,12 +89,6 @@
   text-decoration: none;
 }
 
-.og-appbar__tagline {
-  flex: 1;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
 .og-appbar__brand:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
@@ -104,10 +98,6 @@
   .og-appbar {
     min-height: 48px;
     padding-block: 0;
-  }
-
-  .og-appbar__tagline {
-    visibility: hidden;
   }
 }
 
@@ -125,8 +115,7 @@
     display: contents;
   }
 
-  .og-appbar__brand,
-  .og-appbar__tagline {
+  .og-appbar__brand {
     display: none;
   }
 

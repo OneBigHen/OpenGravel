@@ -1,6 +1,5 @@
-/* Route results: the list of route cards (desktop rail and inspector), the
-   elevation profile, and the one-line ride glance over a tablet's sheet.
-   The chosen ride is plum, alternatives route-alt grey (DESIGN.md §2). */
+/* Route results: route cards, the elevation profile, and the ride glance over a
+   tablet's sheet. The chosen ride is plum, alternatives route-alt grey (§2). */
 
 .og-route-choices {
   display: flex;
@@ -189,13 +188,11 @@
   border-radius: var(--og-radius-pill);
 }
 
-:is(.og-route-card__strip, .og-elevation__surface) > [data-surface="paved"] { background: var(--og-route-alt); }
+:is(.og-route-card__strip, .og-elevation__surface) > [data-surface="paved"] { background: var(--og-surface-paved); }
 :is(.og-route-card__strip, .og-elevation__surface) > [data-surface="gravel"] { background: var(--og-warn); }
 :is(.og-route-card__strip, .og-elevation__surface) > [data-surface="dirt"] { background: var(--og-ink-2); }
-.og-route-card__strip > [data-surface="unknown"],
-.og-elevation__surface > [data-surface="unknown"] {
-  background: repeating-linear-gradient(135deg, var(--og-line-strong) 0 3px, transparent 3px 6px);
-}
+/* Unknown is hatching, never a solid (QA-10): "not measured" is not a colour. */
+.og-route-card__strip > [data-surface="unknown"], .og-elevation__surface > [data-surface="unknown"] { background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 3px, var(--og-surface) 3px 6px); }
 
 /* "Why this ride?" */
 .og-route-card__why-toggle {
@@ -527,9 +524,11 @@
   background: var(--og-line-strong);
 }
 
-.og-elevation__legend > [data-surface="paved"]::before { background: var(--og-route-alt); }
+.og-elevation__legend > [data-surface="paved"]::before { background: var(--og-surface-paved); }
 .og-elevation__legend > [data-surface="gravel"]::before { background: var(--og-warn); }
 .og-elevation__legend > [data-surface="dirt"]::before { background: var(--og-ink-2); }
+/* The legend dot wears the bar's own hatching. */
+.og-elevation__legend > [data-surface="unknown"]::before { background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 2px, var(--og-surface) 2px 4px); }
 
 .og-elevation__ticks {
   display: flex;
@@ -618,8 +617,7 @@
   padding: 0 var(--og-space-1) 0 var(--og-space-4);
 }
 
-.og-glance__button:focus-visible,
-.og-glance__retry:focus-visible {
+.og-glance__button:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
@@ -643,12 +641,6 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-}
-
-.og-glance__promise {
-  color: var(--og-ink);
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .og-glance__surface {
@@ -702,18 +694,6 @@
   color: var(--og-ink);
 }
 
-.og-glance__retry {
-  min-height: 40px;
-  padding: 0 var(--og-space-4);
-  border: 0;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 /* Tablets only: phones have the sheet's own summary, desktop the rail. */
 @media (min-width: 761px) and (max-width: 1180px) and (min-height: 501px) {
   .og-glance--dock {
@@ -743,7 +723,7 @@
   --og-route-tint: var(--og-map-brown);
 }
 
-/* The one announced swap: what the settled pick improved over the first look. */
+/* What the settled pick improved over the first look. */
 .og-first-look-note {
   margin: 0;
   padding: var(--og-space-2) var(--og-space-3);
@@ -761,8 +741,9 @@
 .og-truth__line--jump .og-truth__text { text-decoration: underline; text-decoration-color: var(--og-ink-2); text-underline-offset: 3px; }
 .og-truth__dot { flex: none; width: 8px; height: 8px; border-radius: var(--og-radius-pill); background: var(--og-ink-2); transform: translateY(-1px); }
 .og-truth__dot[data-tone="good"] { background: var(--og-primary-text); }
-.og-truth__dot[data-tone="warn"] { background: var(--og-warn); }
-.og-truth__dot[data-tone="bad"] { background: var(--og-danger); }
+.og-truth__dot[data-tone="warn"] { background: var(--og-warn); } .og-truth__dot[data-tone="bad"] { background: var(--og-danger); }
+/* "Not measured" is the bar's hatch, not one more surface colour (QA-10). */
+.og-truth__dot[data-tone="unknown"] { background: repeating-linear-gradient(135deg, var(--og-surface-unknown) 0 2px, var(--og-surface) 2px 4px); }
 .og-route-card .og-truth { padding: 0 var(--og-space-3, 12px) var(--og-space-3, 12px); }
 
 /* Compare speaks one language (PF-8): each row's bar is its line's colour, by
