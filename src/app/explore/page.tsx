@@ -1,5 +1,6 @@
 import { assetBasePathFromEnv } from "@/app/asset-base-path";
 import { ExploreClient } from "@/app/ExploreClient";
+import { routeLibraryAvailable } from "@/server/route-library/pack";
 import { resolveBasemapMode } from "@/infrastructure/map/basemap";
 
 /**
@@ -23,6 +24,7 @@ export default function ExplorePage() {
         ? { mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN }
         : {})}
       assetBasePath={assetBasePathFromEnv(process.env)}
+      libraryOn={routeLibraryAvailable()}
     />
   );
 }
