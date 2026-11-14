@@ -114,7 +114,13 @@ async function rideState(page: Page): Promise<{ summary: string; undo: string }>
 
 async function openPen(page: Page): Promise<void> {
   const toggle = page.getByTestId("refine-toggle");
-  if (!(await toggle.isVisible())) await page.getByRole("button", { name: /Expand to half/ }).click();
+  // Pull the sheet up until the refine section shows (peek, then half, then full).
+  for (const name of [/Expand to half/, /Expand fully/]) {
+    if (await toggle.isVisible()) break;
+    const grip = page.getByRole("button", { name });
+    if (await grip.count() > 0) await grip.click();
+    await page.waitForTimeout(600);
+  }
   await openRefine(page);
   await page.getByTestId("start-drawing").click();
   await expect(page.getByTestId("start-drawing")).toHaveAttribute("aria-pressed", "true");
