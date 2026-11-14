@@ -1,5 +1,8 @@
 import type { LibraryRecord, RideKind, RideType } from "./types";
 
+/** The track sanity thresholds live in `track-flags.ts`; these stay the names the rest of the code used. */
+export { isLengthMismatch as lengthMismatch, isOldTrack, OLD_TRACK_YEAR } from "./track-flags";
+
 /** Lane to the rider's five words (plan section 3). Trail bundles and riding areas become Trails in `kindFor` users. */
 export function typeForLane(lane: string): RideType {
   switch (lane) {
@@ -58,12 +61,6 @@ export function trackYear(record: LibraryRecord): number | null {
   return fromCredit.length > 0 ? Math.max(...fromCredit) : null;
 }
 
-export const OLD_TRACK_YEAR = 2015;
-
-export function isOldTrack(year: number | null): boolean {
-  return year !== null && year <= OLD_TRACK_YEAR;
-}
-
 const MILES_PER_KM = 0.621371;
 
 /** The source's own length figure, in miles, when the record carries one. */
@@ -71,10 +68,4 @@ export function statedMiles(record: LibraryRecord): number | null {
   if (typeof record.claimed_distance_km === "number" && record.claimed_distance_km > 0) return record.claimed_distance_km * MILES_PER_KM;
   const run = /^\s*(\d+(?:\.\d+)?)\s*km run\b/i.exec(record.summary ?? "");
   return run === null ? null : Number(run[1]) * MILES_PER_KM;
-}
-
-/** `mismatch` flag: measured length differs from the source's stated length by more than 40%. */
-export function lengthMismatch(measuredMiles: number | null, stated: number | null): boolean {
-  if (measuredMiles === null || stated === null || stated <= 0) return false;
-  return Math.abs(measuredMiles - stated) / stated > 0.4;
 }
