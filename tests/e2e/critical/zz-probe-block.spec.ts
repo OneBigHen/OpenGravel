@@ -30,7 +30,6 @@ async function blocksOf(page: Page): Promise<{ readonly blocks: readonly Block[]
     const at = (y * info.width + x) * channels;
     return `${data[at]},${data[at + 1]},${data[at + 2]}`;
   };
-  // Rows of one flat colour at least 120 device px wide.
   const rows: { y: number; colour: string; x0: number; x1: number }[] = [];
   for (let y = 0; y < info.height; y += 2) {
     let start = 0;
@@ -44,7 +43,6 @@ async function blocksOf(page: Page): Promise<{ readonly blocks: readonly Block[]
       }
     }
   }
-  // Group consecutive rows with the same colour and overlapping x-range.
   const blocks: { y0: number; y1: number; colour: string; x0: number; x1: number }[] = [];
   for (const row of rows) {
     const last = blocks.at(-1);
@@ -64,7 +62,6 @@ async function blocksOf(page: Page): Promise<{ readonly blocks: readonly Block[]
     png,
     blocks: blocks
       .filter((block) => block.y1 - block.y0 >= 40)
-      // The day and night page backgrounds are the whole screen; ignore them.
       .map((block) => ({
         colour: block.colour,
         x: Math.round(block.x0 / 2),
@@ -82,50 +79,60 @@ async function report(page: Page, label: string, x: number, y: number): Promise<
       readonly data: Record<string, string>;
       readonly background: string;
       readonly rect: string;
-      readonly text: string;
+      readonly opacity: string;
     }
     const entries: Entry[] = [];
-    for (const element of document.elementsFromPoint(x, y).slice(0, 12)) {
+    for (const element of document.elementsFromPoint(x, y).slice(0, 10)) {
       const node = element as HTMLElement;
       const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
       entries.push({
         at: `${node.tagName.toLowerCase()}${node.id === "" ? "" : `#${node.id}`}${node.className === "" ? "" : `.${String(node.className).trim().replace(/\s+/g, ".")}`}`,
         data: Object.fromEntries(
           [...node.attributes]
-            .filter((attribute) => attribute.name.startsWith("data-") || attribute.name === "style")
-            .map((attribute) => [attribute.name, attribute.value.slice(0, 120)]),
+            .filter((attribute) => attribute.name.startsWith("data-"))
+            .map((attribute) => [attribute.name, attribute.value.slice(0, 100)]),
         ),
-        background: getComputedStyle(node).backgroundColor,
+        background: style.backgroundColor,
+        opacity: `${style.opacity} filter:${style.filter}`,
         rect: `${Math.round(rect.x)},${Math.round(rect.y)} ${Math.round(rect.width)}x${Math.round(rect.height)}`,
-        text: (node.textContent ?? "").trim().slice(0, 60),
       });
     }
-    const canvases = [...document.querySelectorAll("canvas")].map((canvas) => {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        class: canvas.className,
-        width: canvas.width,
-        height: canvas.height,
-        rect: `${Math.round(rect.x)},${Math.round(rect.y)} ${Math.round(rect.width)}x${Math.round(rect.height)}`,
-        parent: (canvas.parentElement?.className ?? "").slice(0, 80),
-      };
-    });
-    const gl = document.createElement("canvas").getContext("webgl");
-    const debug = gl?.getExtension("WEBGL_debug_renderer_info");
-    const renderer = gl === null || gl === undefined || debug === null || debug === undefined
-      ? "no webgl"
-      : String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL));
+    const canvas = document.querySelector("canvas.maplibregl-canvas") as HTMLCanvasElement | null;
+    let glInfo: Record<string, unknown> = {};
+    if (canvas !== null) {
+      const gl = canvas.getContext("webgl2") as WebGL2RenderingContext | null;
+      if (gl !== null) {
+        const clear = gl.getParameter(gl.COLOR_CLEAR_VALUE) as Float32Array;
+        const pixels = new Uint8Array(4);
+        const deviceX = Math.round(x * window.devicePixelRatio);
+        const deviceY = Math.round((window.innerHeight - y) * window.devicePixelRatio);
+        gl.readPixels(deviceX, deviceY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        glInfo = {
+          clear: [...clear],
+          readback: [...pixels],
+          drawingBuffer: [gl.drawingBufferWidth, gl.drawingBufferHeight],
+          lost: gl.isContextLost(),
+        };
+      }
+    }
     const map = document.querySelector("[data-testid=planner-map]");
     return {
       chain: entries,
-      canvases,
-      renderer,
-      dpr: window.devicePixelRatio,
+      glInfo,
+      canvases: [...document.querySelectorAll("canvas")].map((item) => {
+        const rect = item.getBoundingClientRect();
+        return {
+          class: item.className,
+          width: item.width,
+          height: item.height,
+          rect: `${Math.round(rect.x)},${Math.round(rect.y)} ${Math.round(rect.width)}x${Math.round(rect.height)}`,
+        };
+      }),
       map: map === null ? null : {
         load: map.getAttribute("data-map-load"),
         painted: map.getAttribute("data-map-painted"),
         basemap: map.getAttribute("data-basemap"),
-        rect: (() => { const r = map.getBoundingClientRect(); return `${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}`; })(),
       },
     };
   }, { x, y });
@@ -142,22 +149,35 @@ async function setTheme(page: Page, theme: "day" | "night"): Promise<void> {
   }, theme);
 }
 
+async function findAndReport(page: Page, label: string, dir: string): Promise<void> {
+  mkdirSync(dir, { recursive: true });
+  const first = await blocksOf(page);
+  writeFileSync(join(dir, `${label}-before.png`), first.png);
+  console.log(`\n### ${label} before: ${JSON.stringify(first.blocks)}`);
+  // A DOM repaint request (resize) — if the block is a stale canvas frame, this
+  // makes it go away; if it is an element, it stays.
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("resize"));
+  });
+  await page.waitForTimeout(1_200);
+  const after = await blocksOf(page);
+  writeFileSync(join(dir, `${label}-after.png`), after.png);
+  console.log(`\n### ${label} after resize: ${JSON.stringify(after.blocks)}`);
+  for (const block of [...first.blocks, ...after.blocks].slice(0, 3)) {
+    await report(page, `${label} ${block.colour}`, block.x + Math.round(block.width / 2), block.y + Math.round(block.height / 2));
+  }
+}
+
 for (const theme of ["day", "night"] as const) {
   test(`probe Explore block (${theme})`, async ({ page }) => {
     test.setTimeout(120_000);
     await setTheme(page, theme);
     await page.goto("/explore");
     await expect(page.getByTestId("explore-map")).toBeVisible();
+    await page.getByTestId("explore-map").scrollIntoViewIfNeeded();
     await expect(plannerMap(page)).toHaveAttribute("data-map-load", "ready", { timeout: 30_000 });
     await page.waitForTimeout(4_000);
-    const dir = join("test-results", "probe-blocks", `explore-${theme}`);
-    mkdirSync(dir, { recursive: true });
-    const { blocks, png } = await blocksOf(page);
-    writeFileSync(join(dir, "explore.png"), png);
-    console.log(`\n### Explore ${theme} blocks: ${JSON.stringify(blocks)}`);
-    for (const block of blocks.slice(0, 4)) {
-      await report(page, `Explore ${theme} block ${block.colour}`, block.x + Math.round(block.width / 2), block.y + Math.round(block.height / 2));
-    }
+    await findAndReport(page, `explore-${theme}`, join("test-results", "probe-blocks"));
   });
 
   test(`probe ride Menu block (${theme})`, async ({ page }) => {
@@ -166,13 +186,6 @@ for (const theme of ["day", "night"] as const) {
     await startRide(page);
     await openRideSheet(page);
     await page.waitForTimeout(3_000);
-    const dir = join("test-results", "probe-blocks", `ride-${theme}`);
-    mkdirSync(dir, { recursive: true });
-    const { blocks, png } = await blocksOf(page);
-    writeFileSync(join(dir, "ride.png"), png);
-    console.log(`\n### Ride ${theme} blocks: ${JSON.stringify(blocks)}`);
-    for (const block of blocks.slice(0, 4)) {
-      await report(page, `Ride ${theme} block ${block.colour}`, block.x + Math.round(block.width / 2), block.y + Math.round(block.height / 2));
-    }
+    await findAndReport(page, `ride-${theme}`, join("test-results", "probe-blocks"));
   });
 }
