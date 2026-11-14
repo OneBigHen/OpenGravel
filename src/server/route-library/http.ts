@@ -5,7 +5,7 @@ import { gunzipSync } from "node:zlib";
 import { rideGpx } from "@/application/route-library/gpx-out";
 import { splitSegments } from "@/application/route-library/geometry";
 
-import { packAsset, packManifest, packRide, packVersion } from "./pack";
+import { packAsset, packManifest, packRide, packTombstone, packVersion, type PackTombstone } from "./pack";
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
 const FIVE_MINUTES = "public, max-age=300";
@@ -16,6 +16,19 @@ const STATE_CODE = /^(?:[A-Z]{2}|NATIONAL)$/;
 
 function notFound(message = "Not found"): Response {
   return Response.json({ error: message }, { status: 404, headers: { "cache-control": "no-store" } });
+}
+
+/** 410: the id is known, and the library has removed it. Never cached as a live ride. */
+export function removedRideResponse(tombstone: PackTombstone): Response {
+  return Response.json(
+    {
+      error: "This ride was removed from the library.",
+      id: tombstone.id,
+      removedAt: tombstone.removedAt,
+      reason: tombstone.reason,
+    },
+    { status: 410, headers: { "cache-control": "no-store" } },
+  );
 }
 
 /** A stored gzip body is sent as it is; a client that cannot read gzip gets it unpacked. */
@@ -56,10 +69,13 @@ export function linesResponse(request: Request, version: string, stateFile: stri
 export function rideResponse(request: Request, id: string): Response {
   const version = packVersion();
   if (version === null || !RIDE_ID.test(id)) return notFound();
+  const ride = packRide(id);
+  if (ride === null) {
+    const tombstone = packTombstone(id);
+    return tombstone === null ? notFound("That ride is not in the library.") : removedRideResponse(tombstone);
+  }
   const etag = `"${version}"`;
   if (etagMatches(request, etag)) return new Response(null, { status: 304, headers: { etag, "cache-control": ONE_HOUR } });
-  const ride = packRide(id);
-  if (ride === null) return notFound("That ride is not in the library.");
   const segments = splitSegments(ride.line);
   const body = {
     ...ride.detail,
@@ -72,7 +88,10 @@ export function rideResponse(request: Request, id: string): Response {
 export function gpxResponse(id: string): Response {
   if (packVersion() === null || !RIDE_ID.test(id)) return notFound();
   const ride = packRide(id);
-  if (ride === null) return notFound("That ride is not in the library.");
+  if (ride === null) {
+    const tombstone = packTombstone(id);
+    return tombstone === null ? notFound("That ride is not in the library.") : removedRideResponse(tombstone);
+  }
   if (!ride.detail.track.gpxAllowed || ride.line === "") {
     return Response.json(
       {
