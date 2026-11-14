@@ -160,6 +160,17 @@ for (const size of SIZES) {
     test(`Explore fits, no controls overlap (${tag})`, async ({ page }) => {
       await page.goto("/explore");
       await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
+      // The title is not a control, so the guard cannot see it: it must end before the Ride / Things switch.
+      const title = await page.evaluate(() => {
+        const h = document.querySelector(".og-explore h1")!;
+        const range = document.createRange();
+        range.selectNodeContents(h);
+        const text = range.getBoundingClientRect();
+        const next = document.querySelector(".og-explore__heading-row [role='tablist'], .og-explore__heading-row [role='radiogroup'], .og-explore__heading-row > :nth-child(2)")!.getBoundingClientRect();
+        return { textRight: text.right, nextLeft: next.left, clipped: h.scrollWidth > h.clientWidth };
+      });
+      expect(title.textRight, "Explore title runs under the Ride / Things switch").toBeLessThanOrEqual(title.nextLeft + 1);
+      expect(title.clipped).toBe(false);
       await expectClean(page, `explore ${tag}`);
     });
 
