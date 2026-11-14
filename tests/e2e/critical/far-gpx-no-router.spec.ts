@@ -40,3 +40,23 @@ test("a far-away GPX opens on its own line and never asks the router", async ({ 
   await expect(page.getByText(/routing service/i)).toHaveCount(0);
   expect(plans, "route-plan requests for a ride that already has its own line").toBe(0);
 });
+
+test("an older saved ride brought in with the SwitchBack importer also opens on its own line", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ ...RIDER, accuracy: 10 });
+  let plans = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/route-plan")) plans += 1;
+  });
+  await page.goto("/rides");
+  await page.getByRole("button", { name: "More import options" }).click();
+  await page.getByLabel("SwitchBack GPX files").setInputFiles("tests/fixtures/m10/switchback-track-waypoints.gpx");
+  await page.getByRole("button", { name: "Import selected rides" }).click();
+  await expect(page.getByTestId("switchback-import-report")).toContainText("Imported 1 of 1");
+  await page.getByRole("button", { name: "Open Redacted sample loop" }).click();
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  await expect(page.getByTestId("start-ride")).toBeEnabled({ timeout: 30_000 });
+  await page.waitForTimeout(8_000);
+  await expect(page.getByText("No route yet")).toHaveCount(0);
+  expect(plans, "route-plan requests for an older saved ride that already has its own line").toBe(0);
+});
