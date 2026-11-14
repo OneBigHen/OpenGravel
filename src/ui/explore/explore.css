@@ -71,8 +71,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass);
   box-shadow: var(--og-glass-highlight);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-explore__lens > [role="tab"] {
@@ -111,8 +109,6 @@
   border-radius: var(--og-radius-control);
   background: var(--og-glass);
   box-shadow: var(--og-glass-highlight);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-body);
@@ -163,8 +159,6 @@
   border-radius: var(--og-radius-pill);
   background: var(--og-glass);
   box-shadow: var(--og-glass-highlight);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-meta);
@@ -232,8 +226,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-explore__controls[data-open="true"] > * {
@@ -498,8 +490,6 @@
   border-radius: var(--og-radius-card);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-explore-card {
@@ -848,8 +838,6 @@
     border-bottom: 1px solid var(--og-glass-edge);
     background: var(--og-glass-dense);
     box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-    -webkit-backdrop-filter: var(--og-glass-blur);
-    backdrop-filter: var(--og-glass-blur);
     pointer-events: none;
   }
 
