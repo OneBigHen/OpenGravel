@@ -2,6 +2,7 @@
 
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
+import { approachLabel } from "@/application/ride-session/approach-request";
 import { peekListPosition } from "@/ui/explore/list-position";
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -58,6 +59,8 @@ export interface RouteDetailProps {
   readonly entry: CatalogEntry;
   readonly variants?: readonly CatalogVariantSummary[];
   readonly onUse: (entry: CatalogEntry) => Promise<void> | void;
+  /** Open the ride and plan the way from the rider to its start first. */
+  readonly onRideToStart?: (entry: CatalogEntry) => Promise<void> | void;
   /** Keep this ride in the rider's own library without leaving the page. */
   readonly onSave?: (entry: CatalogEntry) => Promise<void> | void;
   /** Injected for later provider waves; absent means the honest zero-provider state. */
@@ -308,6 +311,7 @@ export function RouteDetail({
   entry,
   variants = [],
   onUse,
+  onRideToStart,
   onSave,
   preparation: providedPreparation,
   preparationProviders,
@@ -449,6 +453,7 @@ export function RouteDetail({
   // and where the route came from. Everything else waits below (§7 copy).
   // A credited route names its author and source in the credit line instead.
   const provenanceSource = entry.credit === undefined ? provenanceSourceName(entry.provenance) : "";
+  const toStartLabel = riderOrigin === undefined ? null : approachLabel(distanceToStartKm(riderOrigin, entry) * 1000);
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
 
   // The instrument panel uses the same evidence-backed facts as the route
@@ -643,6 +648,18 @@ export function RouteDetail({
           ) : null}
         </div>
       </section>
+
+      {onRideToStart !== undefined && toStartLabel !== null ? (
+        <button
+          type="button"
+          className="og-secondary og-route-detail__to-start"
+          data-testid="ride-to-start"
+          disabled={busy !== null || !fullGeometry}
+          onClick={() => void runAction("approach", () => onRideToStart(entry))}
+        >
+          {busy === "approach" ? "Finding the way to the start…" : toStartLabel}
+        </button>
+      ) : null}
 
       {status !== null ? <p className="og-route-detail__status" role="status">{status}</p> : null}
 

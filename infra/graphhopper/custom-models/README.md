@@ -55,3 +55,27 @@ every ETA a rider saw 10-18% slower than the road allows. The factor now sits in
 choice stays the same while times shrink to the truth. Changing a profile
 changes its hash, so the graph and landmarks must be re-imported; build it on
 the Windows PC, not docker-dev.
+
+## Router v2 profiles (RM-2, 2026-11-12)
+
+The v2 motorcycle router uses its own set in `infra/graphhopper/moto/custom-models/`
+(this folder stays production's set until RM-7 swaps the graph). `motorcycle-fastest.json`
+is byte-identical to production and is the baseline. Twisty and scenic no longer merge
+`motorcycle-base.json` or `prefer-curvature.json`: they carry the base access lines
+themselves and read the graph's own bend field `og_curve` (straight roads cost more,
+by band), and they penalise primaries, town streets, service roads and city edges, so
+bends are not farmed in town.
+
+**One clock.** Twisty, scenic and adventure merge `og-clock.json` last: speed is
+`car_average_speed` capped by `max_speed`, the same as fastest, then each profile's own
+unpaved caps (twisty and scenic 30 km/h, adventure 45, sand 18). Before, those three
+ignored speed limits, so a longer twisty route could show as quicker than fastest.
+Paved roads now take the same time in every profile; only the road choice differs.
+
+| File (v2) | SHA-256 |
+| --- | --- |
+| `motorcycle-adventure.json` | `45637ee2c081d3ffbaefaace2c823c476c449ffd1d1e07127b1f5a083e20a674` (unchanged) |
+| `motorcycle-fastest.json` | `dc0e507b1469a8c68736d55de8f8e9d10abfbc89a8f83aac730d6e261fc87d2c` (unchanged) |
+| `motorcycle-scenic.json` | `fca5c27664fa02ecdcb8a8468c349185f32cf2357640092cdc13001ceeb26d1d` |
+| `motorcycle-twisty.json` | `5d12262782e6b0c3aae01a99c3ef518a25ad0ba736eccf5be9e9f6e7c63206bd` |
+| `og-clock.json` | `b66343e821cd553defd2f7f9ec3041dd42000a522af0db6978363db4c7c530d2` |

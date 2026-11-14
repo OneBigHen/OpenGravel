@@ -15,7 +15,7 @@ import { LibraryChips, LibraryRows, useIsPhone } from "@/ui/explore/RoutesList";
 import { RoutesMap } from "@/ui/explore/RoutesMap";
 import type { MapView } from "@/ui/explore/routes-overlay";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
-import { routeFacts } from "@/ui/explore/route-facts";
+import { RideCardFacts } from "@/ui/explore/RideCardFacts";
 import { awayLabel } from "@/ui/explore/rider-distance";
 import { rememberListPosition, takeListPosition } from "@/ui/explore/list-position";
 import { RideRoadOpenings } from "@/ui/explore/RideRoadOpenings";
@@ -80,9 +80,8 @@ const SOURCE_LABEL: Readonly<Record<CatalogSource, string>> = {
   import: "Imported",
 };
 
-function distanceLabel(distanceKm: number | null): string {
-  return distanceKm === null ? "—" : formatDistance(distanceKm * 1000);
-}
+/** Rides drawn in the list at first, and added by each "Show more". */
+const EXPLORE_PAGE_SIZE = 20;
 
 function queryWith(query: ExploreQuery, patch: Partial<ExploreQuery>): ExploreQuery {
   const next = { ...query, ...patch };
@@ -157,19 +156,6 @@ function RouteCard({
   // The surface evidence arrives as "Mostly paved · 2.1 mi gravel". On the card
   // the middot is the line's own separator, so that fact keeps its two halves
   // as a comma rather than introducing another separator.
-  const time = routeFacts({
-    distanceKm: entry.distanceKm,
-    estimatedTimeMinutes: entry.estimatedTimeMinutes,
-    surfaceLabel: null,
-    curvatureSummary: undefined,
-    formatDistance,
-  }).find((fact) => fact.key === "time");
-  const facts: readonly { readonly text: string; readonly isTime?: boolean; readonly note?: string }[] = [
-    { text: distanceLabel(entry.distanceKm) },
-    ...(time === undefined ? [] : [{ text: time.text, note: time.note, isTime: true }]),
-    ...(entry.curvatureSummary === undefined ? [] : [{ text: entry.curvatureSummary }]),
-    ...(entry.surfaceSummary === undefined ? [] : [{ text: entry.surfaceSummary.split(" · ").join(", ") }]),
-  ];
   const teaser = entry.storyTeaser;
   // Who shared it is the one thing a rider needs from the story on a card; the
   // comment and photo counts are on the ride page, where the story itself is.
@@ -203,17 +189,12 @@ function RouteCard({
         <RoutePreview entry={entry} mapboxToken={mapboxToken} />
         <span className="og-explore-card__body">
           <strong className="og-explore-card__title">{entry.name}</strong>
-          <span className="og-explore-card__facts">
-            {facts.map((fact, index) => (
-              <span
-                key={`${index}-${fact.text}`}
-                className={fact.isTime ? "og-explore-card__duration" : "og-explore-card__fact"}
-                {...(fact.note === undefined ? {} : { title: fact.note })}
-              >
-                {fact.text}
-              </span>
-            ))}
-          </span>
+          <RideCardFacts
+            entry={entry}
+            className="og-explore-card__facts"
+            factClassName="og-explore-card__fact"
+            durationClassName="og-explore-card__duration"
+          />
           <span className="og-explore-card__credit">
             {away === null ? null : <span data-testid="explore-card-away">{away}</span>}
             <span className="og-explore-card__source" data-source={entry.source}>{SOURCE_LABEL[entry.source]}</span>
@@ -478,6 +459,12 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     setViewBounds(next.bounds);
     updateRef.current({ at: { lat: next.center.lat, lon: next.center.lon, zoom: next.zoom } }, false);
   }, []);
+  // The list shows the nearest rides first and the rest on request: 100+ cards
+  // in the page at once made Explore slow to open on a phone. The window starts
+  // over whenever the filters or the sort change the list.
+  const [listWindow, setListWindow] = useState({ query, count: EXPLORE_PAGE_SIZE });
+  const shownCount = listWindow.query === query ? listWindow.count : EXPLORE_PAGE_SIZE;
+  const listedEntries = useMemo(() => visibleEntries.slice(0, shownCount), [shownCount, visibleEntries]);
   const hasCatalogEntries = entries.some((entry) => entry.source === "catalog");
   const hasPersonalEntries = entries.some((entry) => entry.source === "personal");
   const hasSurfaceEvidence = entries.some((entry) => entry.surfaceSummary !== undefined
@@ -1004,17 +991,30 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           <div className={map === undefined ? undefined : "og-explore__split"}>
             <div className="og-routes__col">
               {visibleEntries.length > 0 ? (
-                <ul className="og-explore__list" aria-label="Explore routes">
-                  {visibleEntries.map((entry) => (
-                    <RouteCard
-                      key={entry.id}
-                      entry={entry}
-                      mapboxToken={mapboxToken}
-                      awayKm={origin === undefined ? undefined : distanceToStartKm(origin, entry)}
-                      {...(map === undefined ? {} : { onHighlight: setHighlightedId })}
-                    />
-                  ))}
-                </ul>
+                <div className="og-explore__listing">
+                  <ul className="og-explore__list" aria-label="Explore routes">
+                    {listedEntries.map((entry) => (
+                      <RouteCard
+                        key={entry.id}
+                        entry={entry}
+                        mapboxToken={mapboxToken}
+                        awayKm={origin === undefined ? undefined : distanceToStartKm(origin, entry)}
+                        {...(map === undefined ? {} : { onHighlight: setHighlightedId })}
+                      />
+                    ))}
+                  </ul>
+                  {listedEntries.length < visibleEntries.length ? (
+                    <button
+                      type="button"
+                      className="og-secondary og-explore__more"
+                      data-testid="explore-show-more"
+                      onClick={() => setListWindow({ query, count: shownCount + EXPLORE_PAGE_SIZE })}
+                    >
+                      Show {Math.min(EXPLORE_PAGE_SIZE, visibleEntries.length - listedEntries.length)} more rides
+                      <span className="og-explore__more-count"> · {visibleEntries.length - listedEntries.length} left</span>
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
               {libraryOn && libraryList.length > 0 ? (
                 <section className="og-routes__section" aria-labelledby="routes-title" data-testid="routes-section">
