@@ -300,7 +300,7 @@
 }
 
 /* Sections on the page: flat surfaces, no frames. */
-.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants, .og-route-detail__elevation) {
+.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants, .og-route-detail__elevation, .og-worth) {
   --og-card-pad: var(--og-space-4);
   width: 100%;
   padding: var(--og-card-pad);
@@ -312,7 +312,7 @@
   backdrop-filter: var(--og-glass-blur);
 }
 
-.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants, .og-route-detail__elevation, .og-route-detail__take-away) h2 {
+.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants, .og-route-detail__elevation, .og-route-detail__take-away, .og-worth) h2 {
   margin: 0;
   font-family: var(--og-face-display);
   font-size: var(--og-text-headline);

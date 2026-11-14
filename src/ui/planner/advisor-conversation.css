@@ -78,26 +78,6 @@
   font-weight: 600;
 }
 
-.og-advisor__changes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--og-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.og-advisor__changes li {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: var(--og-space-1) var(--og-space-3);
-  border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
-  font-size: var(--og-text-meta);
-  line-height: 1.35;
-}
-
 .og-advisor__was,
 .og-advisor__brief,
 .og-advisor__note {
