@@ -585,7 +585,7 @@
     inset: auto 0 var(--og-tabbar-h, 0px);
     z-index: var(--og-z-overlay);
     width: 100%;
-    max-height: calc(85dvh - var(--og-tabbar-h, 0px));
+    max-height: calc(55dvh - var(--og-tabbar-h, 0px));
     border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
     box-shadow: var(--og-shadow-sheet);
   }

@@ -119,6 +119,10 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     setSelection(null); setResults(null); setOptionsOpen(outcome.status === "located");
     uiStore.getState().cancelPlacement();
     uiStore.getState().setSheetDetent("half");
+    // The search box that found the place keeps focus (and its recent-places
+    // list) otherwise, covering the route on a short landscape phone.
+    const focused = window.document.activeElement;
+    if (focused instanceof HTMLInputElement) focused.blur();
     toast("Directions set", true);
     if (outcome.status === "located") {
       uiStore.getState().setCameraUserOwned(false);
