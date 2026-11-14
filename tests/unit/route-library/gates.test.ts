@@ -1,6 +1,8 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { gunzipSync } from "node:zlib";
 
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -114,16 +116,33 @@ describe("each gate fails on a crafted input and names the record", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("null-facts names a record whose claim has no source behind it", () => {
+  it("drops a claim the record cannot show a source for, and lists it", () => {
     const dir = library("facts-lib", (record) => {
       const surface = record["surface"] as Record<string, unknown>;
       delete surface["surface_claim_source"];
     });
     const result = build("facts", { libraryDir: dir });
-    const check = gate(result, "null-facts");
-    expect(check.ok).toBe(false);
-    expect(check.detail).toContain(`${RECORD_ID}: surface is "paved" with no source named`);
-    expect(result.ok).toBe(false);
+    expect(gate(result, "null-facts").ok).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(result.report).toContain("Claims dropped because the record names no source");
+    expect(result.report).toContain(`| ${RECORD_ID} | surface | paved | paved |`);
+    expect(result.report).toContain(`| ${RECORD_ID} | legal | public-roads | public-roads |`);
+    const detail = JSON.parse(
+      gunzipSync((new DatabaseSync(path.join(work, "facts/pack.sqlite"), { readOnly: true }).prepare("SELECT detail FROM ride WHERE id = ?").get(RECORD_ID) as { detail: Uint8Array }).detail).toString("utf8"),
+    ) as { facts: { surface: { value: string | null; quote: string | null; source: string | null } } };
+    expect(detail.facts.surface).toEqual({ value: null, quote: "paved", source: null });
+  });
+
+  it("keeps the difficulty's own source and never borrows the surface source", () => {
+    const dir = library("difficulty-lib", (record) => {
+      const surface = record["surface"] as Record<string, unknown>;
+      surface["difficulty"] = "moderate";
+      delete surface["difficulty_source"];
+    });
+    const result = build("difficulty", { libraryDir: dir });
+    expect(gate(result, "null-facts").ok).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(result.report).toContain(`| ${RECORD_ID} | difficulty | moderate | moderate |`);
   });
 
   it("ride-count-drop names both counts, and --allow-drop is the only way past it", () => {

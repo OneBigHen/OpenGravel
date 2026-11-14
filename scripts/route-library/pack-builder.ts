@@ -11,7 +11,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 
 import { buildIndexRow } from "@/application/route-library/index-row";
 import { buildGeometry, MAX_RIDE_POINTS } from "@/application/route-library/geometry";
-import { hasFactRow, phraseFor, saysNothing, type FactName, type RideFacts } from "@/application/route-library/facts";
+import { FACT_NAMES, hasFactRow, phraseFor, saysNothing, unsourcedClaims, type FactName, type RideFacts } from "@/application/route-library/facts";
 import { parseSourcesPolicy, policyForSource, type SourcesPolicy } from "@/application/route-library/policy";
 import { checkLibraryRecord } from "@/application/route-library/record";
 import { deriveRide } from "@/application/route-library/ride-detail";
@@ -136,8 +136,6 @@ function table(title: string, counts: ReadonlyMap<string, number>): string {
   return [`### ${title}`, "", "| Value | Rides |", "|---|---|", ...rows.map(([key, value]) => `| ${key} | ${value} |`), ""].join("\n");
 }
 
-const FACT_NAMES: readonly FactName[] = ["surface", "legal", "difficulty", "permits", "season"];
-
 /** One phrase seen, how often, and the value the tables gave it. This is what a reviewer reads. */
 interface PhraseRow {
   readonly phrase: string;
@@ -234,6 +232,8 @@ export function buildPack(options: BuildOptions): BuildResult {
     season: new Map(),
   };
   const nullFacts: { id: string; fact: FactName; quote: string | null }[] = [];
+  /** Claims the record states but cannot show a source for; null on the ride, listed in the report. */
+  const droppedClaims: { id: string; fact: FactName; value: string; quote: string | null }[] = [];
   let derivedCredit = 0;
   let maxPoints = 0;
   let mismatches = 0;
@@ -292,9 +292,12 @@ export function buildPack(options: BuildOptions): BuildResult {
       maxPoints = Math.max(maxPoints, derived.detail.points);
       if (derived.detail.points > budgets.ridePoints) pointsProblems.push(`${record.id} has ${derived.detail.points} points (cap ${budgets.ridePoints})`);
       if (derived.detail.track.mismatch) mismatches += 1;
+      const unsourced = new Map(unsourcedClaims(record).map((claim) => [claim.fact, claim] as const));
       for (const [fact, value] of factsWithValue(derived.detail)) {
         if (value.value === null) {
-          nullFacts.push({ id: record.id, fact, quote: value.quote });
+          const dropped = unsourced.get(fact);
+          if (dropped === undefined) nullFacts.push({ id: record.id, fact, quote: value.quote });
+          else droppedClaims.push({ id: record.id, fact, value: dropped.value, quote: dropped.quote });
           continue;
         }
         if (value.quote === null) factProblems.push(`${record.id}: ${fact} is "${String(value.value)}" with no quote from the source`);
@@ -444,7 +447,7 @@ export function buildPack(options: BuildOptions): BuildResult {
   gate(
     "null-facts",
     [...factProblems, ...nonAnswerProblems(snapshot)],
-    `no null fact is rendered as a value; ${nullFacts.length} facts are null and say so (listed below)`,
+    `no null fact is rendered as a value; ${nullFacts.length} facts are null and say so (listed below); ${droppedClaims.length} claim(s) dropped because the record names no source (listed below)`,
   );
   gate("ride-count-drop", dropProblems, dropDetail);
   const failures = gates.flatMap((entry) => entry.problems.map((problem) => `${entry.name}: ${problem}`));
@@ -463,6 +466,7 @@ export function buildPack(options: BuildOptions): BuildResult {
     `- Records skipped by the gate: ${skipped.length}; hidden by policy: ${hidden.length}; tracks that could not be read: ${unreadable.length}`,
     `- Tracks the app importer refused (too many tracks or long text) that were read by the point scanner instead: ${fallbackRead.length}`,
     `- Credit lines taken from the source: ${indexRows.length - derivedCredit}; written from author and site name: ${derivedCredit}; missing: 0`,
+    `- Claims dropped because the record names no source: ${droppedClaims.length} (all listed below)`,
     `- Length mismatches flagged (measured vs source's stated miles, over 40%): ${mismatches}`,
     `- Duplicate groups: 0 (dedupe is package L2; \`alias\` is empty)`,
     "",
@@ -496,6 +500,18 @@ export function buildPack(options: BuildOptions): BuildResult {
           "|---|---|---|",
           ...nullFacts.slice(0, 200).map((entry) => `| ${entry.id} | ${entry.fact} | ${entry.quote === null ? "(nothing)" : entry.quote.replace(/\|/g, "\\|")} |`),
           nullFacts.length > 200 ? `| ... ${nullFacts.length - 200} more | | |` : "",
+        ]),
+    "",
+    "## Claims dropped because the record names no source",
+    "",
+    "The record states a value the tables understand, but the field that records where it came from is empty, says the source did not state it, or names nothing. The claim does not reach riders (`value: null`); the record's own words are kept here so the record can be fixed and the claim restored.",
+    "",
+    ...(droppedClaims.length === 0
+      ? ["None."]
+      : [
+          "| Ride | Fact | Would have claimed | The record's words |",
+          "|---|---|---|---|",
+          ...droppedClaims.map((entry) => `| ${entry.id} | ${entry.fact} | ${entry.value.replace(/\|/g, "\\|")} | ${entry.quote === null ? "(nothing)" : entry.quote.replace(/\|/g, "\\|")} |`),
         ]),
     "",
     "## Phrase snapshot",
