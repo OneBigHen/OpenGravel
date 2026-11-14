@@ -44,14 +44,17 @@ test("opens on a bubble per state, zooms in to a line, shows the card, opens the
   await expect(plannerMap(page)).toHaveAttribute("data-map-load", "ready");
   // The whole country: one bubble per state, each with its count.
   // At country zoom, states that would touch share one bubble (44 px each is the thumb rule), so North Carolina may sit in a group.
-  const northCarolina = page.locator('.og-routes__bubble[data-state="NC"], .og-routes__bubble[data-states*="NC"]').first();
-  await expect(northCarolina).toBeVisible();
+  await expect(page.locator('.og-routes__bubble[data-state="NC"], .og-routes__bubble[data-states*="NC"]').first()).toBeVisible();
   await expect(page.locator('.og-routes__bubble[data-kind="state"]').first()).toBeVisible();
   await expect(page.getByTestId("routes-pill")).toHaveText(/rides? here · List/);
 
   // Into the Smokies: a state bubble, then a group, then the line itself.
-  await northCarolina.click();
   const groups = page.locator('.og-routes__bubble[data-kind="group"]');
+  // Each tap on the bubble holding North Carolina comes in closer, until it is a state of its own and then groups.
+  for (let step = 0; step < 4 && (await groups.count()) === 0; step += 1) {
+    await page.locator('.og-routes__bubble[data-state="NC"], .og-routes__bubble[data-states*="NC"]').first().click();
+    await page.waitForTimeout(1200);
+  }
   await expect(groups.first()).toBeVisible();
   // Several bubbles can be panned out of the phone's window; tap one that is on screen.
   const findOnScreen = () => groups.evaluateAll((nodes) => nodes.findIndex((node) => {
