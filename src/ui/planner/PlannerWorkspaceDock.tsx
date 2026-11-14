@@ -519,7 +519,7 @@ export function PlannerWorkspaceDock({
               {selectedOption === "roads" && refine.roadSpans !== null ? <RoadSpansPanel {...refine.roadSpans} /> : null}
               {selectedOption === "sketch" ? <SketchPanel {...refine.sketch} /> : null}
             </div>) : null}
-          {(!optionsMode || activeSheetView === "edit") && <PlannerRefineWorkspace {...refine} />}
+          {(!optionsMode || activeSheetView === "edit") && <PlannerRefineWorkspace {...refine} startOpen={optionsMode} />}
 
       </Sheet>
     </div>
