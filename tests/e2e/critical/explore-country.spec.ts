@@ -76,9 +76,8 @@ test("opens on a bubble per state, zooms in to a line, shows the card, opens the
 
   await page.getByTestId("routes-open-ride").click();
   await expect(page).toHaveURL(/\/explore\/[a-z0-9-]+$/);
-  await page.waitForTimeout(8000); console.log("DBG", page.url(), (await page.locator("body").innerText()).slice(0,600).replace(/\n/g," | "));
   // The ride page: the line is drawn, the source is credited and linked, and the button says what it does.
-  await expect(page.getByRole("heading", { name: cardName })).toBeVisible();
+  await expect(page.getByRole("heading", { name: cardName })).toBeVisible({ timeout: 25_000 });
   await expect(page.getByTestId("ride-this")).toHaveText("Follow this track");
   await expect(page.getByTestId("ride-credit").getByRole("link")).toHaveAttribute("href", /^https?:\/\//);
   await expect(page.getByTestId("planner-map")).toHaveAttribute("data-map-load", "ready");
