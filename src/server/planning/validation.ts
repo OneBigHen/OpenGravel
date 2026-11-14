@@ -664,6 +664,9 @@ function requestOptionsIssues(value: unknown, issues: ValidationIssue[]): void {
   if (value["traffic"] !== undefined && !["protect-ride", "minimize-delay"].includes(String(value["traffic"]))) {
     issues.push(issue("invalid-value", "request.options.traffic", "invalid traffic preference"));
   }
+  if (value["rideBudget"] !== undefined && !["direct", "balanced", "scenic"].includes(String(value["rideBudget"]))) {
+    issues.push(issue("invalid-value", "request.options.rideBudget", "invalid ride budget"));
+  }
   const target = value["targetUnpavedShare"];
   if (target !== undefined && (typeof target !== "number" || !Number.isFinite(target) || target < 0 || target > 1)) {
     issues.push(issue("invalid-value", "request.options.targetUnpavedShare", "must be between zero and one"));
@@ -902,6 +905,7 @@ export function parseRoutePlanRequestBody(
           }),
       ...(optionsSource["traffic"] === undefined ? {} : { traffic: optionsSource["traffic"] as ProviderRouteRequest["options"]["traffic"] }),
       ...(optionsSource["targetUnpavedShare"] === undefined ? {} : { targetUnpavedShare: optionsSource["targetUnpavedShare"] as number }),
+      ...(optionsSource["rideBudget"] === undefined ? {} : { rideBudget: optionsSource["rideBudget"] as NonNullable<ProviderRouteRequest["options"]["rideBudget"]> }),
       ...(optionsSource["departureNow"] === undefined ? {} : { departureNow: optionsSource["departureNow"] as boolean }),
       ...(optionsSource["bike"] === undefined ? {} : { bike: { category: (optionsSource["bike"] as NonNullable<ProviderRouteRequest["options"]["bike"]>).category, maintainedGravel: (optionsSource["bike"] as NonNullable<ProviderRouteRequest["options"]["bike"]>).maintainedGravel, roughTracks: (optionsSource["bike"] as NonNullable<ProviderRouteRequest["options"]["bike"]>).roughTracks } }),
       vehicle: "motorcycle",

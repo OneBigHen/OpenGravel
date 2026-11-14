@@ -106,6 +106,10 @@ export function createFallbackRouteProvider(options: FallbackRouteProviderOption
       return options.primary.capabilities();
     },
 
+    // The primary graph decides which request rules exist; the hosted plan
+    // sends no custom model at all.
+    ...(options.primary.graph === undefined ? {} : { graph: (signal: AbortSignal) => options.primary.graph!(signal) }),
+
     hostedBudget(): HostedBudgetState {
       rollDay();
       return { day, used, budget: options.dailyBudget };
