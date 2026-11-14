@@ -99,7 +99,7 @@ describe("ride cards on a phone", () => {
     expect(declaration(row!.body, "flex-wrap")).toBeNull();
     expect(declaration(row!.body, "scroll-padding-inline")).toBe("var(--og-space-4)");
     // 40px to the eye, with a hit area 4px taller on each side: 48px to the thumb.
-    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("40px");
+    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("44px");
     expect(declarationsFor(".og-explore__quick-chip::before")["inset"]).toBe("-4px 0");
   });
 });
