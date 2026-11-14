@@ -123,6 +123,8 @@ export default defineConfig({
       // those windows for this server only (`src/server/rate-limit.ts`).
       OGV_RATE_LIMIT_UNLIMITED: "1",
       OGV_CATALOG_FIXTURE: "1",
+      // The national library's fixture pack for the "Also on" gate (L2a): one merged card, two old ids as aliases.
+      OGV_ROUTE_LIBRARY_PACK: join(process.cwd(), "tests/fixtures/route-library/dedupe-pack.sqlite"),
       COMMUNITY_DB_PATH: ":memory:",
       OGV_SHARE_DB_PATH: join(mkdtempSync(join(tmpdir(), "og-share-e2e-")), "shares.sqlite"),
       OGV_ROUTE_PLAN_FIXTURE_DELAY_MS: FIXTURE_DELAY_MS,

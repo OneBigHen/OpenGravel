@@ -1,7 +1,8 @@
 /**
  * The national ride library pack builder (plan section 5.1, stages 1 to 6 and 9).
  * Reads `<library>/routes/<ST>/<id>.json` (+ its GPX), one file at a time, and
- * writes one SQLite pack. Dedupe and locate are package L2: `alias` stays empty.
+ * writes one SQLite pack. Dedupe (L2a) merges one road listed by several sites into
+ * one card and records every old id in `alias`; locating is package L2b.
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -9,13 +10,14 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { gunzipSync, gzipSync } from "node:zlib";
 
+import { findSameRoad, type DedupeItem, type DedupePair } from "@/application/route-library/dedupe";
 import { buildIndexRow } from "@/application/route-library/index-row";
-import { buildGeometry, MAX_RIDE_POINTS } from "@/application/route-library/geometry";
+import { buildGeometry, decodeLine, MAX_RIDE_POINTS, type BuiltGeometry } from "@/application/route-library/geometry";
 import { FACT_NAMES, hasFactRow, phraseFor, saysNothing, unsourcedClaims, type FactName, type RideFacts } from "@/application/route-library/facts";
 import { parseSourcesPolicy, policyForSource, type SourcesPolicy } from "@/application/route-library/policy";
 import { checkLibraryRecord } from "@/application/route-library/record";
 import { deriveRide } from "@/application/route-library/ride-detail";
-import type { IndexRow, LibraryRecord, RideDetail } from "@/application/route-library/types";
+import { FLAG, type IndexRow, type LibraryRecord, type RideCreditLine, type RideDetail } from "@/application/route-library/types";
 import { parseGpx } from "@/infrastructure/import/gpx-parser";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -65,6 +67,47 @@ export interface BuildResult {
   readonly failures: readonly string[];
   readonly gates: readonly GateResult[];
   readonly counts: { readonly rides: number; readonly located: number; readonly withLine: number };
+  /** Cards before merging, groups merged, aliases written (L2a). */
+  readonly dedupe: { readonly before: number; readonly groups: number; readonly aliases: number; readonly pairs: number };
+  /** Where the full list of merges was written. */
+  readonly groupsPath: string;
+}
+
+/** What the loop keeps for each shipped record until the dedupe stage has decided who is a card. */
+interface Entry {
+  readonly id: string;
+  readonly sourceName: string;
+  readonly detailGz: Buffer;
+  readonly line: string;
+  readonly points: number;
+  readonly row: IndexRow;
+  readonly mapLine: string | null;
+  readonly states: readonly string[];
+  readonly type: string;
+  readonly kind: string;
+  readonly mode: string;
+  readonly availability: string;
+  readonly credit: RideCreditLine;
+  readonly hosted: boolean;
+  readonly year: number | null;
+  readonly verified: string;
+  readonly score: number;
+  readonly name: string;
+  readonly match: DedupeItem;
+}
+
+function lineLoader(stored: string): () => Coordinate[] {
+  return () => decodeLine(stored);
+}
+
+/** Best track wins the card: a track we host, then more points, then a newer track, then the better score. */
+export function betterPrimary(a: Pick<Entry, "id" | "hosted" | "points" | "year" | "verified" | "score">, b: typeof a): number {
+  if (a.hosted !== b.hosted) return a.hosted ? -1 : 1;
+  if (a.points !== b.points) return b.points - a.points;
+  if ((a.year ?? 0) !== (b.year ?? 0)) return (b.year ?? 0) - (a.year ?? 0);
+  if (a.verified !== b.verified) return a.verified < b.verified ? 1 : -1;
+  if (a.score !== b.score) return b.score - a.score;
+  return a.id < b.id ? -1 : 1;
 }
 
 interface Skipped { readonly id: string; readonly reasons: readonly string[] }
@@ -215,6 +258,7 @@ export function buildPack(options: BuildOptions): BuildResult {
   const hidden: string[] = [];
   const unreadable: { id: string; why: string }[] = [];
   const fallbackRead: string[] = [];
+  const entries: Entry[] = [];
   const rows: { row: IndexRow; sourceName: string }[] = [];
   const mapLines = new Map<string, { id: string; line: string }[]>();
   const seen = new Set<string>();
@@ -277,14 +321,20 @@ export function buildPack(options: BuildOptions): BuildResult {
       }
       seen.add(record.id);
 
-      let built = null;
-      if (rule.mode === "host" && record.gpx.availability === "hosted" && record.gpx.local_file !== undefined) {
+      let built: BuiltGeometry | null = null;
+      // A track on disk is also read for a "link" source, only to compare it with other sites' lines.
+      // It is never served: `deriveRide` is handed it only when the policy hosts the source.
+      let compared: BuiltGeometry | null = null;
+      if (record.gpx.availability === "hosted" && record.gpx.local_file !== undefined) {
         const gpxPath = path.join(folder, record.gpx.local_file);
         try {
-          built = buildGeometry(readSegments(gpxPath, record.gpx.is_bundle === true, () => fallbackRead.push(record.id)), { bundle: record.gpx.is_bundle === true });
-          if (built === null) unreadable.push({ id: record.id, why: "track has no line of two points" });
+          compared = buildGeometry(readSegments(gpxPath, record.gpx.is_bundle === true, () => fallbackRead.push(record.id)), { bundle: record.gpx.is_bundle === true });
+          if (rule.mode === "host") {
+            built = compared;
+            if (built === null) unreadable.push({ id: record.id, why: "track has no line of two points" });
+          }
         } catch (error) {
-          unreadable.push({ id: record.id, why: error instanceof Error ? error.message : "unreadable track" });
+          if (rule.mode === "host") unreadable.push({ id: record.id, why: error instanceof Error ? error.message : "unreadable track" });
         }
       }
       const derived = deriveRide(record, rule, built);
@@ -315,34 +365,112 @@ export function buildPack(options: BuildOptions): BuildResult {
         else seenPhrase.count += 1;
       }
 
-      const detailJson = JSON.stringify(derived.detail);
-      insertRide.run(record.id, gzipSync(Buffer.from(detailJson), { level: 9 }), derived.line, derived.detail.points);
-      hash.update(`${record.id}\n${detailJson}\n${derived.line}\n`);
+      const bundle = record.gpx.is_bundle === true;
+      const libraryMiles = typeof record.gpx.distance_km === "number" ? record.gpx.distance_km * 0.621371 : null;
       const row = buildIndexRow(derived, -1);
-      rows.push({ row, sourceName: record.source.name });
-      if (derived.mapLine !== null && derived.mapLine !== "") {
-        for (const state of derived.detail.states) {
-          const list = mapLines.get(state) ?? [];
-          list.push({ id: record.id, line: derived.mapLine });
-          mapLines.set(state, list);
-        }
-      }
-      tally(byType, derived.detail.type);
-      tally(byKind, derived.detail.kind);
-      tally(byMode, rule.mode);
-      tally(bySource, record.source.name);
-      tally(byAvailability, derived.detail.track.availability);
-      for (const [name, bit] of [["line", 1], ["loop", 2], ["gpx", 4], ["old", 8], ["rough", 16], ["notes", 32], ["stops", 64]] as const) {
-        if ((row.f & bit) !== 0) tally(byFlag, name);
-      }
+      entries.push({
+        id: record.id,
+        sourceName: record.source.name,
+        detailGz: gzipSync(Buffer.from(JSON.stringify(derived.detail)), { level: 9 }),
+        line: derived.line,
+        points: derived.detail.points,
+        row,
+        mapLine: derived.mapLine,
+        states: derived.detail.states,
+        type: derived.detail.type,
+        kind: derived.detail.kind,
+        mode: rule.mode,
+        availability: derived.detail.track.availability,
+        credit: derived.detail.credit,
+        hosted: derived.line !== "",
+        year: derived.detail.track.year,
+        verified: record.last_verified,
+        score: record.value_score,
+        name: record.name,
+        match: {
+          id: record.id,
+          name: record.name,
+          source: record.source.name,
+          states: derived.detail.states,
+          line: compared !== null && !bundle && !compared.rough ? lineLoader(compared.line) : null,
+          bounds: compared?.bounds ?? (record.gpx.availability === "none" ? null : record.gpx.bounds ?? null),
+          miles: compared?.miles ?? libraryMiles,
+        },
+      });
     }
   }
 
+  // Stage 7, dedupe (L2a): one road, one card. The best track is the card; every other site is credited on it.
+  const before = entries.length;
+  const sameRoad = findSameRoad(entries.map((entry) => entry.match));
+  const byId = new Map(entries.map((entry) => [entry.id, entry] as const));
+  const dedupeProblems = sameRoad.oversized.map((group) => `a group of ${group.length} rides would merge into one card (cap 12): ${group.slice(0, 6).join(", ")}...`);
+  const aliasOf = new Map<string, string>();
+  const mergedInto = new Map<string, Entry[]>();
+  for (const group of sameRoad.groups) {
+    const ranked = group.map((id) => byId.get(id)!).sort(betterPrimary);
+    const [primary, ...others] = ranked;
+    mergedInto.set(primary!.id, others);
+    for (const other of others) aliasOf.set(other.id, primary!.id);
+  }
+  const insertAlias = db.prepare("INSERT INTO alias (id, primary_id) VALUES (?, ?)");
+  for (const [id, primaryId] of [...aliasOf.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) insertAlias.run(id, primaryId);
+
+  const finalEntries: { entry: Entry; detailJson: string; detailGz: Buffer; others: readonly Entry[] }[] = [];
+  for (const entry of entries) {
+    if (aliasOf.has(entry.id)) continue;
+    const others = mergedInto.get(entry.id) ?? [];
+    if (others.length === 0) {
+      finalEntries.push({ entry, detailJson: gunzipSync(entry.detailGz).toString("utf8"), detailGz: entry.detailGz, others });
+      continue;
+    }
+    // Every other site's credit stays, one entry per page; the card's own credit is not repeated.
+    const seenUrls = new Set([entry.credit.sourceUrl]);
+    const alsoOn: RideCreditLine[] = [];
+    for (const other of others) {
+      if (seenUrls.has(other.credit.sourceUrl)) continue;
+      seenUrls.add(other.credit.sourceUrl);
+      alsoOn.push(other.credit);
+    }
+    const detail = JSON.parse(gunzipSync(entry.detailGz).toString("utf8")) as RideDetail;
+    const merged: RideDetail = { ...detail, alsoOn };
+    const detailJson = JSON.stringify(merged);
+    finalEntries.push({ entry, detailJson, detailGz: gzipSync(Buffer.from(detailJson), { level: 9 }), others });
+  }
+
+  for (const { entry, detailJson, detailGz } of finalEntries) {
+    insertRide.run(entry.id, detailGz, entry.line, entry.points);
+    hash.update(`${entry.id}\n${detailJson}\n${entry.line}\n`);
+    rows.push({ row: entry.row, sourceName: entry.sourceName });
+    if (entry.mapLine !== null && entry.mapLine !== "") {
+      for (const state of entry.states) {
+        const list = mapLines.get(state) ?? [];
+        list.push({ id: entry.id, line: entry.mapLine });
+        mapLines.set(state, list);
+      }
+    }
+    tally(byType, entry.type);
+    tally(byKind, entry.kind);
+    tally(byMode, entry.mode);
+    tally(bySource, entry.sourceName);
+    tally(byAvailability, entry.availability);
+    for (const [name, bit] of [["line", 1], ["loop", 2], ["gpx", 4], ["old", 8], ["rough", 16], ["notes", 32], ["stops", 64]] as const) {
+      if ((entry.row.f & bit) !== 0) tally(byFlag, name);
+    }
+    if ((mergedInto.get(entry.id)?.length ?? 0) > 0) tally(byFlag, "merged");
+  }
+  const mergedOthers = new Map(finalEntries.map((item) => [item.entry.id, item.others] as const));
+
   // Index: sources list sorted by name; rows ordered by id so the file is stable.
-  const sources = [...new Set(rows.map((entry) => entry.sourceName))].sort((a, b) => a.localeCompare(b));
+  const sources = [...new Set([...rows.map((entry) => entry.sourceName), ...finalEntries.flatMap((item) => item.others.map((other) => other.sourceName))])].sort((a, b) => a.localeCompare(b));
   const sourceIndex = new Map(sources.map((name, index) => [name, index]));
   const indexRows: IndexRow[] = rows
-    .map((entry) => ({ ...entry.row, s: sourceIndex.get(entry.sourceName) ?? 0 }))
+    .map((entry) => {
+      const others = mergedOthers.get(entry.row.id) ?? [];
+      const otherSources = [...new Set(others.filter((other) => other.sourceName !== entry.sourceName).map((other) => sourceIndex.get(other.sourceName) ?? 0))].sort((a, b) => a - b);
+      const base = { ...entry.row, s: sourceIndex.get(entry.sourceName) ?? 0 };
+      return others.length === 0 ? base : { ...base, f: base.f | FLAG.merged, o: otherSources };
+    })
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const stateCounts: Record<string, number> = {};
   for (const row of indexRows) for (const state of row.st) stateCounts[state] = (stateCounts[state] ?? 0) + 1;
@@ -450,6 +578,7 @@ export function buildPack(options: BuildOptions): BuildResult {
     `no null fact is rendered as a value; ${nullFacts.length} facts are null and say so (listed below); ${droppedClaims.length} claim(s) dropped because the record names no source (listed below)`,
   );
   gate("ride-count-drop", dropProblems, dropDetail);
+  gate("dedupe-groups", dedupeProblems, `${sameRoad.groups.length} groups merged, none above ${12} rides`);
   const failures = gates.flatMap((entry) => entry.problems.map((problem) => `${entry.name}: ${problem}`));
 
   const seconds = Math.round((Date.now() - started) / 100) / 10;
@@ -468,7 +597,7 @@ export function buildPack(options: BuildOptions): BuildResult {
     `- Credit lines taken from the source: ${indexRows.length - derivedCredit}; written from author and site name: ${derivedCredit}; missing: 0`,
     `- Claims dropped because the record names no source: ${droppedClaims.length} (all listed below)`,
     `- Length mismatches flagged (measured vs source's stated miles, over 40%): ${mismatches}`,
-    `- Duplicate groups: 0 (dedupe is package L2; \`alias\` is empty)`,
+    `- One road, one card (L2a): ${before} records became ${indexRows.length} cards; ${sameRoad.groups.length} groups merged (${sameRoad.pairs.filter((pair) => pair.method === "line").length} line matches, ${sameRoad.pairs.filter((pair) => pair.method === "box").length} name-and-box matches); ${aliasOf.size} old ids kept in \`alias\`; full list in \`dedupe-groups.json\``,
     "",
     "## Gates",
     "",
@@ -557,7 +686,33 @@ export function buildPack(options: BuildOptions): BuildResult {
     hidden.length === 0 ? "None." : hidden.slice(0, 200).map((id) => `- ${id}`).join("\n"),
     "",
   ].join("\n");
+  const groupsPath = path.join(options.outDir, "dedupe-groups.json");
+  const describe = (entry: Entry) => ({ id: entry.id, name: entry.name, states: entry.states, source: entry.sourceName, url: entry.credit.sourceUrl, credit: entry.credit.creditLine, hosted: entry.hosted, points: entry.points, year: entry.year, miles: entry.match.miles === null ? null : Math.round(entry.match.miles * 10) / 10 });
+  const pairsOf = new Map<string, DedupePair[]>();
+  for (const pair of sameRoad.pairs) {
+    const primary = aliasOf.get(pair.a) ?? pair.a;
+    const list = pairsOf.get(primary) ?? [];
+    list.push(pair);
+    pairsOf.set(primary, list);
+  }
+  writeFileSync(
+    groupsPath,
+    `${JSON.stringify(
+      {
+        before,
+        cards: indexRows.length,
+        aliases: aliasOf.size,
+        groups: sameRoad.groups.map((group) => {
+          const primaryId = aliasOf.get(group[0]!) ?? group[0]!;
+          return { primary: describe(byId.get(primaryId)!), members: (mergedInto.get(primaryId) ?? []).map(describe), pairs: pairsOf.get(primaryId) ?? [] };
+        }),
+        oversized: sameRoad.oversized,
+      },
+      null,
+      1,
+    )}\n`,
+  );
   const reportPath = path.join(options.outDir, "pack-report.md");
   writeFileSync(reportPath, report);
-  return { ok: failures.length === 0, version, packPath, reportPath, report, failures, gates, counts: { rides: indexRows.length, located, withLine } };
+  return { ok: failures.length === 0, version, packPath, reportPath, report, failures, gates, counts: { rides: indexRows.length, located, withLine }, dedupe: { before, groups: sameRoad.groups.length, aliases: aliasOf.size, pairs: sameRoad.pairs.length }, groupsPath };
 }

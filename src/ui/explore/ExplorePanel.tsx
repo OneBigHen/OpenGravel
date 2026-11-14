@@ -153,13 +153,15 @@ function RouteCard({
   const teaser = entry.storyTeaser;
   // Who shared it is the one thing a rider needs from the story on a card; the
   // comment and photo counts are on the ride page, where the story itself is.
-  const byline = entry.credit !== undefined
+  const baseByline = entry.credit !== undefined
     ? creditText(entry.credit)
     : teaser === undefined
     ? null
     : teaser.sharedBy === undefined
       ? `From ${teaser.sourceName}`
       : `Shared by ${teaser.sharedBy}`;
+  const alsoOnNames = [...new Set((entry.alsoOn ?? []).map((other) => other.sourceName))];
+  const byline = alsoOnNames.length === 0 || baseByline === null ? baseByline : `${baseByline} · also on ${alsoOnNames.join(", ")}`;
   const versionCount = Math.max(entry.variantCount ?? 0, entry.exportCount ?? 0);
   const versions = versionCount > 1 ? `${versionCount} versions` : null;
   return (
