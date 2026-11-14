@@ -157,6 +157,9 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     {...(rideStyle === undefined ? {} : { rideStyle })}
     showQuickStyle={phone}
     weatherLine={weatherLine}
+    /* The directions view shows this summary with no choices list under it, so
+       the plan's own sentences (a basic route) have to be in the summary. */
+    showPlanNotices={showOptions && compact}
     {...(quick === undefined ? {} : { quick })}
     // On a phone the sheet is short; "Why this ride?" stays on the wide tier.
     explanation={phone ? null : choices.explanation}
