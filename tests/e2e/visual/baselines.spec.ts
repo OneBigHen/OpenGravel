@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import { expectDrawnScene, plannerMap, pressPlan, settledExtent } from "../critical/map-helpers";
 import { rideMapReady, startRide } from "../critical/ride-focus-helpers";
@@ -145,7 +145,10 @@ for (const device of DEVICES) {
           // would show Night chrome under a "light" name.
           const look = theme === "dark" ? "night" : "day";
           await page.addInitScript((value) => { try { window.localStorage.setItem("og-appearance", value); } catch { /* storage off */ } }, look);
-          if (state !== "active-ride") await page.clock.setFixedTime(FIXED_TIME);
+          // Every screen starts at the same pinned moment. The ride screen's position feed needs time to
+          // pass, so its clock starts there and runs on; the others stand still.
+          if (state === "active-ride") await page.clock.install({ time: FIXED_TIME });
+          else await page.clock.setFixedTime(FIXED_TIME);
           await reach(page, device);
           await quiet(page);
           await expect(page).toHaveScreenshot(`${state}-${device.name}-${theme}.png`, {
@@ -164,4 +167,64 @@ for (const device of DEVICES) {
       }
     });
   }
+}
+
+/**
+ * BASELINE-CLOCK (#319): the gallery does not depend on the hour CI happens to run at.
+ *
+ * Each screen is drawn twice, in two fresh browsers whose clocks read mid-afternoon and just before
+ * dawn (same look pinned, same weather, same place), and the two pictures must match byte for byte. If
+ * anything on a screen follows the wall clock (a sunset line, a "tonight" greeting, a theme that
+ * follows the sun), the pair differs and this fails on a runner of any hour, instead of only when the
+ * recorded baselines meet an unlucky hour. The comparison is between the two pictures, so it needs no
+ * recorded file and works on any machine.
+ *
+ * The ride screen is left out on purpose: its position feed needs the real clock (its baseline masks
+ * the clock readouts).
+ */
+const HOURS = [new Date("2026-06-15T14:00:00-04:00"), new Date("2026-06-15T04:20:00-04:00")] as const;
+
+async function drawAt(browser: Browser, device: Device, theme: (typeof THEMES)[number], state: string, when: Date): Promise<Buffer> {
+  const context = await browser.newContext({
+    viewport: device.viewport,
+    hasTouch: device.compact,
+    isMobile: false,
+    colorScheme: theme,
+    reducedMotion: "reduce",
+    locale: "en-US",
+    timezoneId: "America/New_York",
+    geolocation: RIDER,
+    permissions: ["geolocation"],
+    baseURL: test.info().project.use.baseURL as string,
+  });
+  try {
+    const page = await context.newPage();
+    const look = theme === "dark" ? "night" : "day";
+    await page.addInitScript((value) => { try { window.localStorage.setItem("og-appearance", value); } catch { /* storage off */ } }, look);
+    await page.clock.setFixedTime(when);
+    await STATES[state]!(page, device);
+    await quiet(page);
+    return await page.screenshot({ animations: "disabled", caret: "hide" });
+  } finally {
+    await context.close();
+  }
+}
+
+for (const theme of THEMES) {
+  test.describe(`any hour ${theme}`, () => {
+    for (const state of Object.keys(STATES).filter((name) => name !== "active-ride")) {
+      test(`${state} looks the same at 2 pm and 4 am`, async ({ browser }, testInfo) => {
+        const device = DEVICES[0];
+        const [afternoon, predawn] = [
+          await drawAt(browser, device, theme, state, HOURS[0]),
+          await drawAt(browser, device, theme, state, HOURS[1]),
+        ];
+        if (!afternoon.equals(predawn)) {
+          await testInfo.attach("2pm.png", { body: afternoon, contentType: "image/png" });
+          await testInfo.attach("4am.png", { body: predawn, contentType: "image/png" });
+        }
+        expect(predawn.equals(afternoon), `${state} (${theme}) changes with the hour of the day`).toBe(true);
+      });
+    }
+  });
 }

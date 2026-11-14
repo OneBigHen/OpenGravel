@@ -178,7 +178,9 @@ export async function settledExtent(page: Page, quietSamples = 1): Promise<Exten
   let steady = 0;
   for (let attempt = 0; attempt < 150 + quietSamples; attempt += 1) {
     const extent = await readExtentOrNull(page);
-    const measured = await plannerMap(page).boundingBox();
+    // A map that is being remounted (a ride screen swapping its renderer) has no box for a moment; that
+    // is "not settled yet", not a 30 s wait inside boundingBox() (#67).
+    const measured = await plannerMap(page).boundingBox({ timeout: 1_500 }).catch(() => null);
     const box =
       measured === null ? null : { width: measured.width, height: measured.height };
     if (
