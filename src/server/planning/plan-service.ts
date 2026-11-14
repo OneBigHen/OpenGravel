@@ -49,7 +49,10 @@ import { roadAuthorityFromEnv } from "./road-authority";
 import {
   createFallbackRouteProvider,
   engineCoverage,
+  type CoverageBox,
 } from "@/infrastructure/routing/graphhopper/fallback-provider";
+import { createValhallaRouter, type ValhallaRouter } from "@/infrastructure/routing/valhalla/router";
+import { leavesCoverage, planBasicRide } from "./basic-plan";
 import { newRouteCandidateId } from "@/domain/route/ids";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
@@ -196,6 +199,14 @@ export interface PlanServiceDeps {
    * deployment's coordinator by default, `null` when `OGV_ROAD_AUTHORITY` is off.
    */
   readonly roadAuthority?: RoadAuthorityCoordinator | null;
+  /**
+   * Basic routing (Valhalla) for rides our graph cannot answer. On by default
+   * for the deployment provider; `null` turns it off. Off when a provider is
+   * injected or the planning fixture is active, unless a router is injected too.
+   */
+  readonly basicRouter?: ValhallaRouter | null;
+  /** The GraphHopper graph's coverage box; the router's own `/info` by default. */
+  readonly coverage?: () => Promise<CoverageBox | null>;
 }
 
 /**
@@ -688,11 +699,59 @@ function seeksDirt(options: ProviderRouteRequest["options"]): boolean {
 
 export async function planRide(input: PlanRideInput, deps: PlanServiceDeps = {}): Promise<PlanServiceResult> {
   const signal = deps.signal ?? new AbortController().signal;
-  try {
-    return await planRideAttempt(input, { ...deps, signal });
-  } catch (error) {
-    return { ok: false, error: normalizePlanFailure(error, signal.aborted) };
+  const env = deps.env ?? process.env;
+  const basic = basicRouterFor(deps, env);
+  const parsed = basic === null ? null : parseRoutePlanRequestBody(input);
+  const ride = parsed?.ok === true && parsed.value.request.profile !== "hike" ? parsed.value : null;
+  const basicOptions = { signal, graphVersion: deps.versions?.graph ?? DEFAULT_PLAN_VERSIONS.graph };
+  // GraphHopper answers wherever its graph reaches; a ride that leaves the
+  // graph's box gets a basic route instead of an outside-coverage refusal.
+  if (basic !== null && ride !== null) {
+    const box = await (deps.coverage ?? coverageFromEnv(env))().catch(() => null);
+    if (leavesCoverage(ride.request, box)) return planBasicRide(ride, basic, "outside-coverage", basicOptions);
   }
+  let result: PlanServiceResult;
+  try {
+    result = await planRideAttempt(input, { ...deps, signal });
+  } catch (error) {
+    result = { ok: false, error: normalizePlanFailure(error, signal.aborted) };
+  }
+  if (result.ok || basic === null || ride === null || signal.aborted) return result;
+  // Off our graph inside its box (GraphHopper could not place a point): the
+  // basic answer, or its own clearer refusal, replaces "outside the coverage".
+  if (result.error.code === "outside-coverage") return planBasicRide(ride, basic, "outside-coverage", basicOptions);
+  // Our router is down: a labelled basic route beats "No route yet". If the
+  // basic service fails too, the rider sees our router's own error.
+  if (ROUTER_DOWN_CODES.has(result.error.code) && ride.request.discovery === undefined) {
+    const fallback = await planBasicRide(ride, basic, "router-down", basicOptions);
+    return fallback.ok ? fallback : result;
+  }
+  return result;
+}
+
+/** Plan failures that mean our own router could not answer at all. */
+const ROUTER_DOWN_CODES: ReadonlySet<string> = new Set(["provider-unavailable", "provider-timeout", "network"]);
+
+let sharedBasicRouter: { readonly key: string; readonly router: ValhallaRouter } | null = null;
+const sharedCoverage = new Map<string, () => Promise<CoverageBox | null>>();
+
+function basicRouterFor(deps: PlanServiceDeps, env: Readonly<Record<string, string | undefined>>): ValhallaRouter | null {
+  if (deps.basicRouter !== undefined) return deps.basicRouter;
+  if (deps.provider !== undefined || fixturePlanModeFromEnv(env) !== null) return null;
+  const key = env["STADIA_API_KEY"]?.trim() ?? "";
+  if (sharedBasicRouter?.key !== key) sharedBasicRouter = { key, router: createValhallaRouter({ env }) };
+  return sharedBasicRouter.router;
+}
+
+/** One cached `/info` reader per router address, shared across requests. */
+function coverageFromEnv(env: Readonly<Record<string, string | undefined>>): () => Promise<CoverageBox | null> {
+  const baseUrl = graphHopperUrlFromEnv(env);
+  let reader = sharedCoverage.get(baseUrl);
+  if (reader === undefined) {
+    reader = engineCoverage({ baseUrl });
+    sharedCoverage.set(baseUrl, reader);
+  }
+  return reader;
 }
 
 async function planRideAttempt(

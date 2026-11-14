@@ -400,6 +400,16 @@ describe("buildPlannerViewModel — route cards", () => {
     expect(vm.routeCards[0]!.notices).toEqual([message]);
   });
 
+  it("states a basic route's label as a sentence and a badge", () => {
+    const message = "Basic route — OpenGravel's curvy and gravel tuning covers PA, NJ and NY only.";
+    const route = { ...BEST, warnings: [{ id: "provider:basic-routing", code: "basic-routing", severity: "info" as const, message }] };
+    const vm = buildPlannerViewModel(input({ session: session("ready", {
+      committedBundle: bundle([route], BEST_ID), selectedRouteId: BEST_ID,
+    }) }));
+    expect(vm.routeCards[0]!.notices).toEqual([message]);
+    expect(vm.routeCards[0]!.badges).toContain("Basic routing");
+  });
+
   const ready = (): PlanningSessionSnapshot =>
     session("ready", {
       committedBundle: bundle([BEST, FAST], BEST_ID, {

@@ -1,0 +1,10 @@
+{
+  "default": { "mode": "host", "basis": "owner-confirmed permission 2026-11-13" },
+  "sources": {
+    "ridebdr.com": { "mode": "link", "basis": "owner-confirmed permission 2026-11-13", "note": "tracks not on disk; fetch waits for the owner to name this source" },
+    "Backcountry Discovery Routes": { "mode": "link", "basis": "owner-confirmed permission 2026-11-13", "note": "tracks not on disk; fetch waits for the owner to name this source" },
+    "Backcountry Discovery Routes (ridebdr.com)": { "mode": "link", "basis": "owner-confirmed permission 2026-11-13", "note": "tracks not on disk; fetch waits for the owner to name this source" },
+    "MotorcycleRoads.com": { "mode": "link", "basis": "owner-confirmed permission 2026-11-13", "note": "tracks not on disk; fetch waits for the owner to name this source" },
+    "MotorcycleRoads": { "mode": "link", "basis": "owner-confirmed permission 2026-11-13", "note": "tracks not on disk; fetch waits for the owner to name this source" }
+  }
+}

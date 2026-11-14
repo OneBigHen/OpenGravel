@@ -128,8 +128,14 @@ export async function expectAboveSheet(page: Page, coordinates: readonly { lat: 
   }, { timeout: 15_000, message: "route and pins fit between the search chrome and the sheet" }).toBe(true);
 }
 
-for (const width of [320, 1024]) {
-  test(`shared detents frame a place and Directions at ${width}px`, async ({ page }) => {
+const CLOCKS = [
+  { name: "by day", at: "2026-11-14T17:00:00Z" },
+  { name: "after dark", at: "2026-11-15T05:15:00Z" },
+] as const;
+
+for (const clock of CLOCKS) for (const width of [320, 1024]) {
+  test(`shared detents frame a place and Directions at ${width}px ${clock.name}`, async ({ page }) => {
+    await page.clock.setFixedTime(clock.at);
     await page.setViewportSize({ width, height: width === 320 ? 568 : 900 });
     if (width === 1024) {
       const handle = page.getByTestId("sheet-handle"), sheet = page.getByTestId("planner-sheet");
