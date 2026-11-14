@@ -24,16 +24,24 @@ function Line({ line, kind, onShowStretch }: {
   readonly kind: LineKind;
   readonly onShowStretch?: ((stretch: RideTruthStretch) => void) | undefined;
 }) {
+  /*
+    The surface line's `warn` tone means one thing: part of this ride was not
+    measured. It used to draw the amber tone dot, which is the gravel swatch's
+    own colour, so "paved where known · 6 mi surface unknown" sat next to a dot
+    that said "gravel" (QA-10). It wears the unknown surface's hatch instead, the
+    same mark the bar and the legend use.
+  */
+  const tone = kind === "surface" && line.tone === "warn" ? "unknown" : line.tone;
   const body = <>
-    <span className="og-truth__dot" data-tone={line.tone} aria-hidden="true" />
+    <span className="og-truth__dot" data-tone={tone} aria-hidden="true" />
     <span className="og-truth__text" {...(kind === "surface" ? { "data-testid": "phone-surface-line" } : {})}>{line.text}</span>
   </>;
   const jump = line.jumpTo;
   if (jump !== undefined && onShowStretch !== undefined) {
-    return <button type="button" className="og-truth__line og-truth__line--jump" data-truth={kind} data-tone={line.tone}
+    return <button type="button" className="og-truth__line og-truth__line--jump" data-truth={kind} data-tone={tone}
       aria-label={`${line.text}. Show it on the map`} onClick={() => onShowStretch(jump)}>{body}</button>;
   }
-  return <p className="og-truth__line" data-truth={kind} data-tone={line.tone}>{body}</p>;
+  return <p className="og-truth__line" data-truth={kind} data-tone={tone}>{body}</p>;
 }
 
 export function RideTruthLines({ truth, fuel = null, surfaceBar = null, riderReports = true, onShowStretch, testId = "ride-truth" }: {
