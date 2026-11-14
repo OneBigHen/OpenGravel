@@ -694,6 +694,12 @@ export function PlannerWorkspace({
   });
 
   const planning = isPlanningInFlight(session.phase);
+  // OG-05: only a drawing being snapped swaps the numbers for skeletons. Other
+  // replans keep the ride on screen until the new answer lands (the sheet does
+  // not change shape under the rider mid-plan).
+  const drawingIsSnapping =
+    (activeTool === "sketch" || showingSketchPreview) &&
+    (session.phase === "validating" || session.phase === "routing-primary");
 
   /**
    * Where the rider is coming from, so a tapped road is entered at the near
@@ -710,7 +716,7 @@ export function PlannerWorkspace({
     cards: viewModel.routeCards, route: activeRoute,
     elevationSource: preparationProviders?.elevationProfile, failed: viewModel.failed,
     planning, onRetry: handlePlan, plannerUiStore,
-    computing: session.phase === "validating" || session.phase === "routing-primary",
+    computing: drawingIsSnapping,
   });
 
   const tripCard = viewModel.routeCards.length > 0 || planning ? (
@@ -861,7 +867,7 @@ export function PlannerWorkspace({
             sheetExpanded: sheetDetent === "expanded",
             // OG-05: the numbers on screen belong to an older answer while a new
             // one is being found, so the summary shows skeletons, not them.
-            computing: session.phase === "validating" || session.phase === "routing-primary",
+            computing: drawingIsSnapping,
             hike: plannedHike,
           }}
           refine={{
