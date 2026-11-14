@@ -219,7 +219,7 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
             aria-label={bubble.label}
             style={{
               ...(bubble.inset === true ? {} : { visibility: "hidden" as const }),
-              ...(bubble.size === undefined ? {} : bubble.inset === true ? { minWidth: 0, height: bubble.size, padding: "0 10px", fontSize: 12 } : { width: bubble.size, minWidth: bubble.size, height: bubble.size, padding: 0, fontSize: bubble.size >= 38 ? 14 : 12 }),
+              ...(bubble.size === undefined ? {} : bubble.inset === true ? { minWidth: 0, height: bubble.size, padding: "0 10px", fontSize: 12 } : { width: bubble.size, minWidth: bubble.size, height: bubble.size, padding: 0, fontSize: bubble.size >= 32 ? 13 : 11 }),
             }}
             onClick={() => openBubble(bubble)}
           >

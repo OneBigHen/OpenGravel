@@ -162,6 +162,11 @@
   inset: -4px;
 }
 
+/* State bubbles are small to leave room, so their touch area reaches further. */
+.og-routes__bubble[data-kind="state"]::before {
+  inset: -9px;
+}
+
 /* The glass card for the tapped ride. */
 .og-routes__card {
   position: absolute;
