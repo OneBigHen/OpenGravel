@@ -331,7 +331,11 @@ export function reduceInteraction(
       if (ownership !== null) {
         // A second finger cancels the neutral gesture, including a temporarily
         // grabbed route. A pinch can neither author a point nor commit a drag.
-        return ownership.pointerId !== event.pointerId && (ownership.tool === "pan" || ownership.routePress)
+        // A pen stroke is cancelled the same way (OG-03): the map still zooms
+        // under a pinch while drawing, and the first finger's path through that
+        // pinch was being kept as a stroke and snapped into a new route.
+        return ownership.pointerId !== event.pointerId &&
+          (ownership.tool === "pan" || ownership.routePress || ownership.tool === "sketch")
           ? cancelled(state, "multi-pointer")
           : { state, effects: [] };
       }

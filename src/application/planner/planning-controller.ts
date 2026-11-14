@@ -199,7 +199,21 @@ interface PlanningControllerBaseDeps {
   readonly now?: () => string;
   /** Snapshot notification for a surface; it must not throw. */
   readonly onUpdate?: (snapshot: PlanningSessionSnapshot) => void;
+  /**
+   * How long an attempt may run with **no ride at all** before it is ended as a
+   * retryable failure (OG-01). A stalled request must never leave the rider on
+   * "on its way" with nothing moving; once a first ride is on screen the
+   * alternatives keep loading under each provider's own ceiling. `0` turns the
+   * deadline off. {@link FIRST_ANSWER_DEADLINE_MS} by default.
+   */
+  readonly firstAnswerDeadlineMs?: number;
 }
+
+/** The longest a rider waits for a first ride before the attempt fails (OG-01). */
+export const FIRST_ANSWER_DEADLINE_MS = 20_000;
+
+/** The diagnostic note of an attempt the first-answer deadline ended. */
+export const NOTE_FIRST_ANSWER_DEADLINE = "first-answer-deadline";
 
 /**
  * A pipeline is required, or a geometry store is: the placeholder pipeline
@@ -458,6 +472,8 @@ interface Run {
   input: BeginPlanningInput;
   /** Resolves `begin`; called exactly once per run. */
   readonly closed: () => void;
+  /** The first-answer deadline timer, while it is armed. */
+  deadline: ReturnType<typeof setTimeout> | null;
 }
 
 /** Resolves a `begin` promise when its run is closed (settled, superseded, disposed). */
@@ -506,6 +522,7 @@ class PlanningSessionController implements PlanningController {
   private readonly requestContext: PlanningRequestContext;
   private readonly pipeline: CandidatePipeline;
   private readonly now: () => string;
+  private readonly firstAnswerDeadlineMs: number;
   private readonly onUpdate:
     | ((snapshot: PlanningSessionSnapshot) => void)
     | undefined;
@@ -518,6 +535,7 @@ class PlanningSessionController implements PlanningController {
     this.requestContext = deps.requestContext;
     this.pipeline = pipeline;
     this.now = deps.now ?? ((): string => new Date().toISOString());
+    this.firstAnswerDeadlineMs = deps.firstAnswerDeadlineMs ?? FIRST_ANSWER_DEADLINE_MS;
     this.onUpdate = deps.onUpdate;
     const empty = emptyPlanningSession(null);
     this.state = {
@@ -618,12 +636,14 @@ class PlanningSessionController implements PlanningController {
       reportRetried: false,
       input,
       closed: closed.close,
+      deadline: null,
     };
     this.run = run;
     // (b) …and only then is the previous attempt aborted.
     if (previous !== null) this.abandon(previous);
     this.emit();
     // (d) New work starts last.
+    this.armDeadline(run);
     void this.launch(run, input);
     return closed.promise;
   }
@@ -633,6 +653,7 @@ class PlanningSessionController implements PlanningController {
     const run = this.run;
     if (run === null || run.cancelled || run.finished) return;
     run.cancelled = true;
+    this.disarmDeadline(run);
     run.controller.abort();
     // Every provider still in flight is cancelled by *us*; a provider that
     // answers later cannot change this record (21 §8).
@@ -676,6 +697,7 @@ class PlanningSessionController implements PlanningController {
     const run = this.run;
     if (run !== null && !run.finished) {
       run.cancelled = true;
+      this.disarmDeadline(run);
       run.controller.abort();
       run.finished = true;
       run.closed();
@@ -710,6 +732,7 @@ class PlanningSessionController implements PlanningController {
 
   private abandon(run: Run): void {
     run.cancelled = true;
+    this.disarmDeadline(run);
     run.controller.abort();
     run.finished = true;
     run.closed();
@@ -738,6 +761,7 @@ class PlanningSessionController implements PlanningController {
   private settle(run: Run, phase: "ready"): void {
     if (!this.isCurrent(run)) return;
     run.finished = true;
+    this.disarmDeadline(run);
     this.setPhase(run, phase);
     run.closed();
   }
@@ -745,9 +769,47 @@ class PlanningSessionController implements PlanningController {
   private fail(run: Run, error: PlanningError): void {
     if (!this.isCurrent(run)) return;
     run.finished = true;
+    this.disarmDeadline(run);
     this.state.error = error;
     this.setPhase(run, "failed");
     run.closed();
+  }
+
+  /**
+   * OG-01: an attempt that has produced no ride within the deadline is ended
+   * as a retryable failure. The request is aborted (so a stalled connection is
+   * released), every provider still waiting is recorded as timed out, and the
+   * last-good ride, if any, stays on screen.
+   */
+  private armDeadline(run: Run): void {
+    const ms = this.firstAnswerDeadlineMs;
+    if (!(ms > 0) || !Number.isFinite(ms)) return;
+    run.deadline = setTimeout(() => {
+      run.deadline = null;
+      if (!this.isLive(run) || this.state.committed !== null) return;
+      run.controller.abort(new Error("first-answer deadline"));
+      for (const providerId of [...run.pending]) {
+        this.recordDiagnostic(run, {
+          providerId,
+          outcome: "timeout",
+          candidateCount: 0,
+          note: NOTE_FIRST_ANSWER_DEADLINE,
+        });
+      }
+      run.pending.clear();
+      this.fail(run, {
+        code: "provider-unavailable",
+        message: "no ride arrived before the first-answer deadline",
+        recoverable: true,
+        timedOut: true,
+      });
+    }, ms);
+  }
+
+  private disarmDeadline(run: Run): void {
+    if (run.deadline === null) return;
+    clearTimeout(run.deadline);
+    run.deadline = null;
   }
 
   private recordDiagnostic(run: Run, diagnostic: ProviderDiagnostic): void {
@@ -987,6 +1049,8 @@ class PlanningSessionController implements PlanningController {
       const isPrimaryCommit = this.state.committed === null;
       this.setCommitted(run, bundle, selection);
       if (isPrimaryCommit) {
+        // A ride is on screen: the rider is no longer waiting on nothing.
+        this.disarmDeadline(run);
         this.setPhase(run, "primary-ready");
         if (run.pending.size > 0) this.setPhase(run, "alternatives-loading");
       }

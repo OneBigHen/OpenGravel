@@ -825,17 +825,33 @@ describe("buildPlannerViewModel — commitment label and recovery (04 §8, §29)
     // A ride with no destination keeps it: its disabled state carries the single
     // instruction that says which point is missing.
     expect(buildPlannerViewModel(input({ document: documentWith() })).showPlanAction).toBe(true);
-    // A failure keeps it too: `Plan again` is a deliberate retry, never a claim
-    // that the update succeeded.
-    expect(
-      buildPlannerViewModel(
-        input({
-          session: session("failed", {
-            error: { code: "no-route", message: "x", recoverable: false },
+    // A failure does not (OG-04): its one Retry sits in the error row beside the
+    // message, so the composer must not offer a second "Plan again" — not even
+    // for a loop, which otherwise always keeps its press.
+    for (const document of [READY_DOCUMENT, documentWith({ ...READY_DOCUMENT.intent, shape: "loop" })]) {
+      expect(
+        buildPlannerViewModel(
+          input({
+            document,
+            session: session("failed", {
+              error: { code: "no-route", message: "x", recoverable: false },
+            }),
           }),
+        ).showPlanAction,
+      ).toBe(false);
+    }
+  });
+
+  it("says a timed-out plan took too long, in words a rider can act on (OG-01)", () => {
+    const vm = buildPlannerViewModel(
+      input({
+        session: session("failed", {
+          error: { code: "provider-unavailable", message: "deadline", recoverable: true, timedOut: true },
         }),
-      ).showPlanAction,
-    ).toBe(true);
+      }),
+    );
+    expect(vm.errorMessage).toBe("Finding this ride took too long. Tap Retry to try again.");
+    expect(vm.showPlanAction).toBe(false);
   });
 
   it("blames no destination on a loop, which has none", () => {
@@ -1345,5 +1361,21 @@ describe("buildPlannerViewModel — the itinerary states each leg (04 §15)", ()
     });
 
     expect(viewModel.shapingPoints.map((row) => row.leg)).toEqual([null]);
+  });
+});
+
+describe("the From / To card under a drawn route (owner, 2026-11-13)", () => {
+  it("names the ends of a drawn route on screen instead of 'No start yet'", () => {
+    const empty = documentWith();
+    const ends = { start: ORIGIN, finish: DESTINATION };
+    const shown = buildPlannerViewModel(input({ document: empty, sketchPreviewEndpoints: ends }));
+    expect(shown.startLabel).toBe("From your sketch");
+    expect(shown.finishLabel).toBe("From your sketch");
+    // Labels only: an unkept drawing does not make the ride plannable.
+    expect(shown.canPlan).toBe(buildPlannerViewModel(input({ document: empty })).canPlan);
+
+    const none = buildPlannerViewModel(input({ document: empty }));
+    expect(none.startLabel).toBe("No start yet");
+    expect(none.finishLabel).toBe("No destination yet");
   });
 });

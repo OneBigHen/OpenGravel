@@ -471,3 +471,25 @@
     min-width: 0;
   }
 }
+
+/* OG-01: a plan in flight turns, so a slow answer never looks frozen. */
+.og-composer__spinner {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-right: var(--og-space-2);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--og-radius-pill);
+  vertical-align: -3px;
+  animation: og-composer-spin 0.9s linear infinite;
+}
+
+@keyframes og-composer-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-composer__spinner { animation-duration: 2.4s; }
+}

@@ -32,7 +32,6 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { UNKNOWN_VALUE } from "@/application/planner/measurements";
-import { useActivityMode } from "@/ui/stores/activity-mode";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 
 /** Feet in a metre, for the climb the elevation profile measured. */
@@ -195,12 +194,20 @@ export interface MapRideGlanceProps {
   readonly summary: RideGlanceSummary | null;
   /** A plan is in flight: with no route card yet the metrics read as "still measuring", not as numbers. */
   readonly planning: boolean;
-  /** The last attempt failed: with no route to show, the pill offers Retry. */
-  readonly failed: boolean;
+  /**
+   * A new answer is being found and `summary` belongs to the previous one
+   * (OG-05): the pill measures again instead of showing numbers about to change.
+   */
+  readonly computing?: boolean;
+  /**
+   * The last attempt failed. Kept for callers; the pill no longer has a failed
+   * state of its own (OG-04): the sheet's error row says it, with the one Retry.
+   */
+  readonly failed?: boolean;
   /** The trailing tap target: show the ride details (the `ride` detent). */
   readonly onOpenRide: () => void;
-  /** Plan again, from the pill's own failed state. */
-  readonly onRetry: () => void;
+  /** Unused since OG-04; the error row owns the retry. */
+  readonly onRetry?: () => void;
   /**
    * Which composition slot renders it. The map slot shows the strip at the top
    * centre of the wide tiers; the sheet's column shows it directly above the
@@ -212,22 +219,18 @@ export interface MapRideGlanceProps {
 export function MapRideGlance({
   summary,
   planning,
-  failed,
+  computing = false,
   onOpenRide,
-  onRetry,
   placement = "map",
 }: MapRideGlanceProps): ReactElement | null {
-  const statement = statementFor(summary, planning);
+  const statement = statementFor(computing ? null : summary, planning || computing);
   const announced = useGlanceAnnouncement(statement);
-  const hiking = useActivityMode() === "hike";
-  // No route, nothing being planned and nothing failed: there is no ride to
-  // summarise, and an empty pill would be a claim about a ride that does not exist.
-  if (summary === null && !planning && !failed) return null;
   // "Still measuring" is only honest while nothing has been measured. A card that
   // is already on screen has its numbers, so the pill shows them instead of a
   // skeleton that would outlive the answer (the alternatives can still be on
   // their way long after the primary route and its card are there).
-  const measuring = summary === null && planning;
+  // While a new answer is computed (OG-05) the old numbers are not shown either.
+  const measuring = (summary === null && planning) || (summary !== null && computing);
 
   const className = `og-glance og-glance--${placement}`;
   const testId = `ride-glance-${placement}`;
@@ -237,24 +240,10 @@ export function MapRideGlance({
     </span>
   );
 
-  if (summary === null && !planning) {
-    // A hike's failure is explained in the sheet; the pill would sit on top of it.
-    if (hiking) return null;
-    return (
-      <div
-        className={`${className} og-glance--failed`}
-        data-testid={testId}
-        data-state="failed"
-        data-placement={placement}
-      >
-        <span className="og-glance__promise">No route yet</span>
-        <button type="button" className="og-glance__retry" onClick={onRetry}>
-          Retry
-        </button>
-        {live}
-      </div>
-    );
-  }
+  // OG-04: a failed plan is said once, in the sheet's error row with its one
+  // Retry. A pill here floated over that row, clipped its message and offered a
+  // second Retry, so with no ride to summarise the pill is simply absent.
+  if (summary === null && !planning) return null;
 
   return (
     <div
@@ -294,7 +283,7 @@ export function MapRideGlance({
             )}
           </span>
         )}
-        {summary === null ? null : (
+        {summary === null || measuring ? null : (
           <span
             className={summary.surface.known ? "og-glance__surface" : "og-glance__surface og-glance__surface--unknown"}
             data-testid="ride-glance-surface"

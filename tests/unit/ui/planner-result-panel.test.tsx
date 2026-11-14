@@ -220,6 +220,31 @@ describe("PlannerResultPanel on a phone", () => {
   });
 });
 
+it("shows placeholders, not the previous answer's numbers, while a new route is found (OG-05)", () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }));
+  const ride = rideWithWaypoints();
+  const props = {
+    inspector: null,
+    choices: { cards: [card("route_computing")], explanation: null, onSelect: vi.fn() },
+    actions: { document: ride, libraryService: undefined, shareService: undefined, route: null, start: null },
+    briefing: {
+      route: null, ride, bikes: [], providers: {}, offlineRoute: null,
+      actions: { setBike: vi.fn(), setDeparture: vi.fn(), setArriveBy: vi.fn() },
+      onRouteTraffic: vi.fn(),
+    },
+  } as const;
+  try {
+    const { rerender } = render(<PlannerResultPanel {...props} computing />);
+    expect(screen.getByTestId("summary-computing")).toHaveAttribute("aria-busy", "true");
+    expect(document.querySelector(".og-phone-summary__time")).toBeNull();
+    expect(document.querySelector(".og-phone-summary__arrive")).toBeNull();
+    // The answer lands: the numbers come back.
+    rerender(<PlannerResultPanel {...props} />);
+    expect(screen.queryByTestId("summary-computing")).toBeNull();
+    expect(document.querySelector(".og-phone-summary__time")).not.toBeNull();
+  } finally { vi.unstubAllGlobals(); }
+});
+
 it("keeps saved work and route context available in the compact directions preview", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }));
   const ride = rideWithWaypoints();

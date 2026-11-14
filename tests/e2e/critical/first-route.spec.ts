@@ -222,7 +222,7 @@ test("placing a start and a destination records exactly the clicked coordinates"
   // phone-first wording (OGV-D-214).
   await page.getByTestId("finish-chip").click();
   const hint = page.getByTestId("map-hint");
-  await expect(hint).toHaveText("Tap the map to set your destination.");
+  await expect(hint).toHaveText("Tap the map to move your destination.");
   await expect(hint).toHaveAttribute("role", "note");
   expect(await hint.evaluate((element) => element.tagName)).not.toBe("BUTTON");
   await expect(page.getByTestId("finish-chip")).toHaveAttribute("data-armed", "true");

@@ -582,7 +582,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-.og-explore-card__facts > :not(:first-child)::before {
+/*
+ * The separator belongs to the fact before it, so a line that wraps starts
+ * with a fact ("2.1 mi of curves") rather than a stranded "· 2.1 mi of curves".
+ */
+.og-explore-card__facts > :not(:last-child)::after {
   content: " · ";
 }
 

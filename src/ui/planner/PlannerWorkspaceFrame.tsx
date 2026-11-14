@@ -12,7 +12,7 @@ import { useEffect, type ComponentProps, type ReactNode, type RefObject } from "
 
 import type { RideDocument } from "@/domain/ride/types";
 import type { LibraryServicePort } from "@/application/library/library-service";
-import { PlannerMap, TOOL_HINTS } from "@/ui/map/PlannerMap";
+import { PlannerMap, TOOL_HINTS, TOOL_MOVE_HINTS } from "@/ui/map/PlannerMap";
 import type { MapLayersProps } from "@/ui/layers/LayeredMap";
 import { PlannerPlacesMap, type PlannerPlacesProps } from "@/ui/places/PlannerPlacesMap";
 import { PrimaryNav } from "@/ui/nav/PrimaryNav";
@@ -104,10 +104,16 @@ export function PlannerWorkspaceFrame({
   const scrubbed = scrub === null ? map.scene : { ...map.scene, scrubMarker: scrub };
   const scene = comparing ? { ...scrubbed, comparing: true } : scrubbed;
   // The edit bar says what a stop tap does, so the map does not say it twice.
+  // The words follow the ride itself (OG-04): an end that is already placed is
+  // moved by the next tap, never "set" as if it were missing.
+  const placedEnd =
+    armedTool === "start" ? document.intent.start !== null : armedTool === "finish" ? document.intent.finish !== null : false;
   const hint =
-    armedTool !== null && !(armedTool === "stop" && editBar !== undefined)
-      ? TOOL_HINTS[armedTool]
-      : null;
+    armedTool === null || (armedTool === "stop" && editBar !== undefined)
+      ? null
+      : placedEnd && armedTool !== "stop"
+        ? TOOL_MOVE_HINTS[armedTool]
+        : TOOL_HINTS[armedTool];
   /*
     The surface's own two camera controls join the map's one control column,
     under the compass and the zoom buttons (`PlannerMap` renders the column).
