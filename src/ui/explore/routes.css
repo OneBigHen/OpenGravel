@@ -143,6 +143,18 @@
   will-change: transform;
 }
 
+/* Alaska and Hawaii: one small labelled bubble each at the map's lower left, clear of the chips and the pill. */
+.og-routes__bubble[data-inset] {
+  top: auto;
+  bottom: 84px;
+  left: 10px;
+  white-space: nowrap;
+}
+
+.og-routes__bubble[data-inset="HI"] {
+  left: 84px;
+}
+
 /* 40px to the eye, 48px to the thumb. */
 .og-routes__bubble::before {
   content: "";

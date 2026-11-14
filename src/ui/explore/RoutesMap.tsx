@@ -8,7 +8,7 @@ import { sortBest, type LibraryChip, type RouteLibrary } from "@/application/rou
 import type { IndexRow } from "@/application/route-library/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
-import { bubblesFor, COUNTRY_EXTENT, extentFromCamera, spreadBubbles, statesInView, type Bubble } from "@/ui/explore/routes-camera";
+import { bubblesFor, COUNTRY_EXTENT, COUNTRY_INSETS, extentFromCamera, statesInView, zoomForBounds, type Bubble } from "@/ui/explore/routes-camera";
 import { createRoutesOverlay, LINE_MIN_ZOOM, STATE_BUBBLE_MAX_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
 import { RoutesMapCard } from "@/ui/explore/RoutesMapCard";
 
@@ -97,8 +97,8 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   useEffect(() => {
     if (host === null || fitExtent === null || fitted.current === host) return;
     fitted.current = host;
-    host.fitBounds(fitExtent, { top: 0, right: 0, bottom: 0, left: 0 });
-  }, [host, fitExtent]);
+    host.fitBounds(fitExtent, initial === null ? COUNTRY_INSETS : { top: 0, right: 0, bottom: 0, left: 0 });
+  }, [host, fitExtent, initial]);
 
   useEffect(() => {
     overlay.setAllRows(library.rows);
@@ -156,16 +156,10 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   const place = useCallback((): void => {
     const layer = bubbleRef.current;
     if (layer === null) return;
-    const placed: { element: HTMLElement; x: number; y: number }[] = [];
     for (const element of layer.querySelectorAll<HTMLElement>("[data-lon]")) {
       const point = overlay.project(Number(element.dataset["lon"]), Number(element.dataset["lat"]));
       if (point === null) continue;
-      placed.push({ element, x: point.x, y: point.y });
-    }
-    // The states crowd the east coast on a phone: nudge their bubbles apart so each count reads.
-    if (placed.length > 1 && placed[0]?.element.dataset["kind"] === "state") spreadBubbles(placed, 42, 14, { minX: 24, maxX: layer.clientWidth - 24, minY: 84, maxY: layer.clientHeight - 100 });
-    for (const { element, x, y } of placed) {
-      element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+      element.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
       element.style.visibility = "visible";
     }
   }, [overlay]);
@@ -174,6 +168,14 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
 
   function openBubble(bubble: Bubble): void {
     const zoom = view?.zoom ?? 3;
+    if (bubble.bounds !== undefined) {
+      // Several states merged: look at all of them, and always come in at least a step closer.
+      const frame = frameRef.current;
+      const [west, south, east, north] = bubble.bounds;
+      const fit = frame === null ? zoom + 1.5 : zoomForBounds(bubble.bounds, frame.clientWidth - 24, frame.clientHeight - 200);
+      overlay.zoomTo((west + east) / 2, (south + north) / 2, Math.max(fit, zoom + 1));
+      return;
+    }
     if (bubble.kind === "state") {
       // Look where the state's best ride is, not at the state's middle: a state's rides can all be at one edge.
       let best: IndexRow | null = null;
@@ -209,15 +211,19 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
             key={bubble.key}
             type="button"
             className="og-routes__bubble"
-            data-lon={bubble.lon}
-            data-lat={bubble.lat}
+            {...(bubble.inset === true ? {} : { "data-lon": bubble.lon, "data-lat": bubble.lat })}
             data-kind={bubble.kind}
             {...(bubble.state === undefined ? {} : { "data-state": bubble.state })}
+            {...(bubble.states === undefined ? {} : { "data-states": bubble.states.join(",") })}
+            {...(bubble.inset === true ? { "data-inset": bubble.state } : {})}
             aria-label={bubble.label}
-            style={{ visibility: "hidden" }}
+            style={{
+              ...(bubble.inset === true ? {} : { visibility: "hidden" as const }),
+              ...(bubble.size === undefined ? {} : bubble.inset === true ? { minWidth: 0, height: bubble.size, padding: "0 10px", fontSize: 12 } : { width: bubble.size, minWidth: bubble.size, height: bubble.size, padding: 0, fontSize: bubble.size >= 38 ? 14 : 12 }),
+            }}
             onClick={() => openBubble(bubble)}
           >
-            {bubble.count}
+            {bubble.inset === true ? `${bubble.state} ${bubble.count}` : bubble.count}
           </button>
         ))}
       </div>

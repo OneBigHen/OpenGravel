@@ -1,11 +1,17 @@
 import type { MapExtent } from "@/application/map/build-map-scene";
-import { STATE_CENTRES } from "@/application/route-library/state-centres";
+import { STATE_BBOXES, STATE_CENTRES } from "@/application/route-library/state-centres";
 import { countByState, type ViewBounds } from "@/application/route-library/client";
 import type { IndexRow } from "@/application/route-library/types";
 import { STATE_BUBBLE_MAX_ZOOM, LINE_MIN_ZOOM } from "@/ui/explore/routes-overlay";
 
 /** The lower 48, for the first look at the whole country. */
-export const COUNTRY_EXTENT: MapExtent = { minLon: -131, minLat: 22, maxLon: -61, maxLat: 51 };
+export const COUNTRY_EXTENT: MapExtent = { minLon: -125, minLat: 24.5, maxLon: -66.9, maxLat: 49.4 };
+
+/** Room the country frame keeps for the chip row above and the List pill below, and a little at the sides. */
+export const COUNTRY_INSETS = { top: 84, right: 8, bottom: 112, left: 8 } as const;
+
+/** States far from the lower 48 get one small labelled bubble at the edge of the map instead of a place on it. */
+export const INSET_STATES: readonly string[] = ["AK", "HI"];
 
 const TILE = 512;
 
@@ -39,18 +45,101 @@ export function extentFromCamera(lat: number, lon: number, zoom: number, width: 
   };
 }
 
-export type Bubble = { readonly key: string; readonly kind: "state" | "group"; readonly count: number; readonly lat: number; readonly lon: number; readonly label: string; readonly state?: string };
+export type Bubble = {
+  readonly key: string;
+  readonly kind: "state" | "group";
+  readonly count: number;
+  readonly lat: number;
+  readonly lon: number;
+  readonly label: string;
+  /** One state's bubble. */
+  readonly state?: string;
+  /** Several nearby states merged into one bubble: who they are and the box they cover. */
+  readonly states?: readonly string[];
+  readonly bounds?: readonly [number, number, number, number];
+  /** Diameter in CSS pixels; bigger counts get bigger bubbles. */
+  readonly size?: number;
+  /** Drawn at the edge of the map (Alaska, Hawaii), not at a place on it. */
+  readonly inset?: boolean;
+};
 
 const CLUSTER_PX = 56;
 
-/** One neutral bubble per state with the number of rides in it. */
-export function stateBubbles(rows: readonly IndexRow[]): readonly Bubble[] {
+/** A state's count bubble is a little bigger for more rides, but always small enough to leave room. */
+export function bubbleSize(count: number): number {
+  return Math.round(26 + 6 * Math.log10(Math.max(count, 1)));
+}
+
+type Cluster = { states: string[]; count: number; x: number; y: number; size: number; box: [number, number, number, number] };
+
+const WORD_GAP_PX = 3;
+
+function clampInto(value: number, low: number, high: number): number {
+  return Math.min(Math.max(value, low), high);
+}
+
+/**
+ * One neutral bubble per state with the number of rides in it. Where bubbles
+ * would collide at this zoom, the states merge into one bubble for the group
+ * (the number is the sum); a bubble never leaves the box of the states it counts.
+ * Alaska and Hawaii get a small labelled bubble at the map's edge.
+ */
+export function stateBubbles(rows: readonly IndexRow[], zoom = 3): readonly Bubble[] {
   const counts = countByState(rows);
-  return Object.entries(counts).flatMap(([state, count]) => {
+  const clusters: Cluster[] = [];
+  const insets: Bubble[] = [];
+  for (const [state, count] of Object.entries(counts)) {
     const centre = STATE_CENTRES[state];
-    if (centre === undefined || count === 0) return [];
-    return [{ key: `s-${state}`, kind: "state" as const, count, lat: centre[0], lon: centre[1], label: `${state}, ${count} ${count === 1 ? "ride" : "rides"}`, state }];
+    const box = STATE_BBOXES[state];
+    if (centre === undefined || box === undefined || count === 0) continue;
+    if (INSET_STATES.includes(state)) {
+      insets.push({ key: `s-${state}`, kind: "state", count, lat: centre[0], lon: centre[1], label: `${state}, ${count} ${count === 1 ? "ride" : "rides"}`, state, size: bubbleSize(count), inset: true });
+      continue;
+    }
+    clusters.push({ states: [state], count, x: worldX(centre[1], zoom), y: worldY(centre[0], zoom), size: bubbleSize(count), box: [...box] });
+  }
+  for (;;) {
+    let best: [number, number] | null = null;
+    let bestGap = 0;
+    for (let i = 0; i < clusters.length; i += 1) {
+      for (let j = i + 1; j < clusters.length; j += 1) {
+        const a = clusters[i]!;
+        const b = clusters[j]!;
+        const gap = Math.hypot(a.x - b.x, a.y - b.y) - (a.size + b.size) / 2 - WORD_GAP_PX;
+        if (gap < 0 && (best === null || gap < bestGap)) { best = [i, j]; bestGap = gap; }
+      }
+    }
+    if (best === null) break;
+    const a = clusters[best[0]]!;
+    const b = clusters[best[1]]!;
+    const count = a.count + b.count;
+    const box: [number, number, number, number] = [Math.min(a.box[0], b.box[0]), Math.min(a.box[1], b.box[1]), Math.max(a.box[2], b.box[2]), Math.max(a.box[3], b.box[3])];
+    // Stay inside the union box: it is where these states actually are.
+    const x = clampInto((a.x * a.count + b.x * b.count) / count, worldX(box[0], zoom), worldX(box[2], zoom));
+    const y = clampInto((a.y * a.count + b.y * b.count) / count, worldY(box[3], zoom), worldY(box[1], zoom));
+    clusters.splice(best[1], 1);
+    clusters[best[0]] = { states: [...a.states, ...b.states], count, x, y, size: bubbleSize(count), box };
+  }
+  const placed = clusters.map((cluster): Bubble => {
+    const lat = latAt(cluster.y, zoom);
+    const lon = lonAt(cluster.x, zoom);
+    const rides = `${cluster.count} ${cluster.count === 1 ? "ride" : "rides"}`;
+    if (cluster.states.length === 1) {
+      const state = cluster.states[0]!;
+      return { key: `s-${state}`, kind: "state", count: cluster.count, lat, lon, label: `${state}, ${rides}`, state, size: cluster.size };
+    }
+    const states = [...cluster.states].sort();
+    return { key: `m-${states.join("")}`, kind: "state", count: cluster.count, lat, lon, label: `${rides} in ${states.join(", ")}`, states, bounds: cluster.box, size: cluster.size };
   });
+  return [...placed, ...insets];
+}
+
+/** The zoom at which a box just fits a map of this many pixels (never past `max`). */
+export function zoomForBounds(box: readonly [number, number, number, number], width: number, height: number, max = 12): number {
+  const spanX = worldX(box[2], 0) - worldX(box[0], 0);
+  const spanY = worldY(box[1], 0) - worldY(box[3], 0);
+  const zoom = Math.min(Math.log2(width / Math.max(spanX, 1e-6)), Math.log2(height / Math.max(spanY, 1e-6)));
+  return Math.min(zoom, max);
 }
 
 /** Rides that have a place, gathered into bubbles about one thumb wide at this zoom. */
@@ -78,7 +167,7 @@ export function groupBubbles(rows: readonly IndexRow[], zoom: number, bounds: Vi
 
 /** Which bubbles the map shows at this zoom: by state, then by group, then none (the rides draw). */
 export function bubblesFor(rows: readonly IndexRow[], zoom: number, bounds: ViewBounds): readonly Bubble[] {
-  if (zoom < STATE_BUBBLE_MAX_ZOOM) return stateBubbles(rows);
+  if (zoom < STATE_BUBBLE_MAX_ZOOM) return stateBubbles(rows, zoom);
   if (zoom < LINE_MIN_ZOOM) return groupBubbles(rows, zoom, bounds);
   return [];
 }
@@ -98,40 +187,3 @@ export function statesInView(rows: readonly IndexRow[], bounds: ViewBounds): rea
   return [...wanted];
 }
 
-/**
- * Pushes overlapping bubbles apart so every count stays readable where states
- * crowd together (the north-east on a phone-wide country). Each point moves at
- * most a few bubble widths from where it truly sits, and only the crowded ones move.
- * With `within` they also stay fully inside the map's frame.
- */
-export function spreadBubbles(points: { x: number; y: number }[], gap = 42, rounds = 14, within?: { minX: number; maxX: number; minY: number; maxY: number }): void {
-  for (let round = 0; round < rounds; round += 1) {
-    let moved = false;
-    for (let i = 0; i < points.length; i += 1) {
-      const a = points[i];
-      if (a === undefined) continue;
-      for (let j = i + 1; j < points.length; j += 1) {
-        const b = points[j];
-        if (b === undefined) continue;
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        let distance = Math.hypot(dx, dy);
-        if (distance >= gap) continue;
-        if (distance < 0.01) { dx = 1; dy = 0; distance = 1; }
-        const push = (gap - distance) / 2 + 0.5;
-        const ux = dx / distance;
-        const uy = dy / distance;
-        a.x -= ux * push; a.y -= uy * push;
-        b.x += ux * push; b.y += uy * push;
-        moved = true;
-      }
-    }
-    if (within !== undefined) {
-      for (const point of points) {
-        point.x = Math.min(Math.max(point.x, within.minX), within.maxX);
-        point.y = Math.min(Math.max(point.y, within.minY), within.maxY);
-      }
-    }
-    if (!moved) return;
-  }
-}
