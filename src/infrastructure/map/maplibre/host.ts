@@ -1426,14 +1426,6 @@ export async function createMapLibreHost(
   }
 
   /**
-   * Adds the overlay layers above the basemap.
-   *
-   * One failing layer must not take the others with it (05 §22: "custom layer
-   * failure: mark only layer unavailable"), so each addition is guarded and the
-   * failures are reported on the surface as machine-readable tokens instead of
-   * being swallowed. The map keeps drawing whatever did load.
-   */
-  /**
    * Re-draws the theme-coloured images and the two labels whose colours pair
    * with them (QA-05).
    *
@@ -1481,6 +1473,14 @@ export async function createMapLibreHost(
     }
   }
 
+  /**
+   * Adds the overlay layers above the basemap.
+   *
+   * One failing layer must not take the others with it (05 §22: "custom layer
+   * failure: mark only layer unavailable"), so each addition is guarded and the
+   * failures are reported on the surface as machine-readable tokens instead of
+   * being swallowed. The map keeps drawing whatever did load.
+   */
   function addOverlayLayers(map: MapLibreMap): void {
     // First, so the scrim sits under the line layers added below it.
     syncNightScrim(map);
