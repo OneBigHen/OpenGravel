@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 
-import { drawnRoutesKey } from "@/application/map/build-map-scene";
+import { drawnRoutesKey, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
 import { computeInsets, toRect, type Rect } from "@/application/map/insets";
 import type { MapScene } from "@/application/map/types";
 import type { PlanningSessionSnapshot } from "@/application/planner/planning-session";
@@ -93,6 +93,18 @@ function inspectorOf(mapSlot: HTMLElement): HTMLElement | null {
   return mapSlot.parentElement?.querySelector<HTMLElement>(":scope > .og-planner__inspector") ?? null;
 }
 
+/** Whether `inner` sits inside `outer` grown by a third of its size on every side. */
+function extentWithin(inner: MapExtent, outer: MapExtent): boolean {
+  const lat = (outer.maxLat - outer.minLat) / 3;
+  const lon = (outer.maxLon - outer.minLon) / 3;
+  return (
+    inner.minLat >= outer.minLat - lat &&
+    inner.maxLat <= outer.maxLat + lat &&
+    inner.minLon >= outer.minLon - lon &&
+    inner.maxLon <= outer.maxLon + lon
+  );
+}
+
 export function usePlannerCamera(input: {
   readonly scene: MapScene;
   readonly session: PlanningSessionSnapshot;
@@ -106,10 +118,32 @@ export function usePlannerCamera(input: {
   // and move the roads away from the finger). Done re-frames on the answer.
   const drawing = useStore(plannerUiStore, (state) => state.activeTool === "sketch");
 
-  const autoFitKey = useMemo(
+  const rawFitKey = useMemo(
     () => (cameraUserOwned || drawing ? null : drawnRoutesKey(scene)),
     [cameraUserOwned, drawing, scene],
   );
+  const routesExtent = useMemo(() => (rawFitKey === null ? null : sceneExtent(scene)), [rawFitKey, scene]);
+  // A route that arrives later in the same attempt (an upgrade, or the other
+  // roads) must not move the map the rider is already looking at: the first
+  // fit stands while the new lines sit inside it. A rider's own choice, or a
+  // line that leaves the view, still re-frames.
+  const [fitHold, setFitHold] = useState<{ readonly generation: number; readonly key: string; readonly extent: MapExtent } | null>(null);
+  const attemptGeneration = session.identity.planningGeneration;
+  const autoFitKey =
+    rawFitKey !== null &&
+    routesExtent !== null &&
+    fitHold !== null &&
+    fitHold.generation === attemptGeneration &&
+    fitHold.key !== rawFitKey &&
+    session.selectionSource === "automatic" &&
+    extentWithin(routesExtent, fitHold.extent)
+      ? fitHold.key
+      : rawFitKey;
+  if (autoFitKey === null) {
+    if (fitHold !== null) setFitHold(null);
+  } else if (routesExtent !== null && (fitHold === null || fitHold.key !== autoFitKey || fitHold.generation !== attemptGeneration)) {
+    setFitHold({ generation: attemptGeneration, key: autoFitKey, extent: routesExtent });
+  }
   const fitExtent = fitRequest?.extent ?? null;
   const autoFitKeyRef = useRef(autoFitKey);
   useEffect(() => {

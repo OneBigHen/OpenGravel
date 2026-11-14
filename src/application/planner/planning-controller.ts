@@ -68,6 +68,7 @@ import {
   type PlanRequestVersions,
 } from "./build-plan-request";
 import {
+  type RouteUpgrade,
   emptyPlanningSession,
   emptyRouteRoles,
   type PlanningError,
@@ -428,6 +429,8 @@ interface InternalState {
    * when the identical line comes back under a new id.
    */
   selectedRouteFingerprint: string | null;
+  /** A better route replaced the first one in this attempt (see `RouteUpgrade`). */
+  upgrade: RouteUpgrade | null;
   error: PlanningError | null;
   /** Keyed by provider id; rendered in provider (priority) order. */
   diagnostics: Map<string, ProviderDiagnostic>;
@@ -548,6 +551,7 @@ class PlanningSessionController implements PlanningController {
       selectionSource: empty.selectionSource,
       selectedRouteId: empty.selectedRouteId,
       selectedRouteFingerprint: null,
+      upgrade: null,
       error: null,
       diagnostics: new Map<string, ProviderDiagnostic>(),
       startedAt: empty.startedAt,
@@ -576,6 +580,7 @@ class PlanningSessionController implements PlanningController {
       committedBundle: this.state.committed,
       selectionSource: this.state.selectionSource,
       selectedRouteId: this.state.selectedRouteId,
+      upgrade: this.state.upgrade === null ? null : { ...this.state.upgrade },
       error: this.state.error === null ? null : { ...this.state.error },
       diagnostics,
       startedAt: this.state.startedAt,
@@ -610,6 +615,8 @@ class PlanningSessionController implements PlanningController {
       selectionSource: retainedSelectionSource,
       selectedRouteId: retainedSelectedRouteId,
       selectedRouteFingerprint: retainedSelectedRouteFingerprint,
+      // An edit drops any upgrade that was still on its way or on offer.
+      upgrade: null,
       phase: "validating",
       committed: null,
       error: null,
@@ -686,6 +693,8 @@ class PlanningSessionController implements PlanningController {
     this.state.selectionSource = "rider";
     this.state.selectedRouteId = routeId;
     this.state.selectedRouteFingerprint = chosen?.fingerprint ?? null;
+    // Any choice of the rider's ends the upgrade offer (Undo is such a choice).
+    this.state.upgrade = null;
     if (this.state.committed !== null) this.state.committed = updated;
     if (this.state.lastGood === target) this.state.lastGood = updated;
     this.emit();
@@ -1047,7 +1056,26 @@ class PlanningSessionController implements PlanningController {
     if (bundle !== null) {
       const selection: RouteSelectionSource = bundle.selectionSource;
       const isPrimaryCommit = this.state.committed === null;
+      // The route on screen before this commit, and whether the rider chose it.
+      const shown = this.state.selectedRouteId;
+      const shownByRider = this.state.selectionSource === "rider";
       this.setCommitted(run, bundle, selection);
+      // A later answer of the same attempt that names a different best ride
+      // replaces the first route the rider was given. The first route stays in
+      // the bundle, so choosing it again is the Undo.
+      if (
+        !isPrimaryCommit &&
+        !shownByRider &&
+        shown !== null &&
+        bundle.selectedRouteId !== shown &&
+        bundle.candidates.some((candidate) => candidate.id === shown)
+      ) {
+        this.state.upgrade = {
+          fromRouteId: this.state.upgrade?.fromRouteId ?? shown,
+          toRouteId: bundle.selectedRouteId,
+        };
+        this.emit();
+      }
       if (isPrimaryCommit) {
         // A ride is on screen: the rider is no longer waiting on nothing.
         this.disarmDeadline(run);

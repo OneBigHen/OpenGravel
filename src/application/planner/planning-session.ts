@@ -114,6 +114,17 @@ export interface PlanningError {
 }
 
 /**
+ * The shown route was quietly replaced by a better one that arrived later in
+ * the same attempt. `fromRouteId` is the first route the rider saw; choosing it
+ * again is the Undo. It is gone as soon as the rider picks a route, starts to
+ * ride or edits the ride.
+ */
+export interface RouteUpgrade {
+  readonly fromRouteId: RouteCandidateId;
+  readonly toRouteId: RouteCandidateId;
+}
+
+/**
  * Everything a surface needs to render one planning attempt. The snapshot is
  * rebuilt (and frozen) on every read, so a consumer can never observe a
  * half-written generation.
@@ -127,6 +138,8 @@ export interface PlanningSessionSnapshot {
   readonly committedBundle: RouteBundle | null;
   readonly selectionSource: RouteSelectionSource;
   readonly selectedRouteId: RouteCandidateId | null;
+  /** Set while a better route has just replaced the first one; see {@link RouteUpgrade}. */
+  readonly upgrade?: RouteUpgrade | null;
   readonly error: PlanningError | null;
   readonly diagnostics: readonly ProviderDiagnostic[];
   readonly startedAt: string;

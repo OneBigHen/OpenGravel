@@ -312,6 +312,10 @@ export function PlannerClient({
 
   const startRide = useCallback(
     async (request: RideHandoffRequest): Promise<RideStartOutcome> => {
+      // The route being ridden is the one on screen: a better one that is still
+      // on its way must not swap it afterwards.
+      const shownRoute = planningSessionStore.getState().snapshot.selectedRouteId;
+      if (shownRoute !== null) planningSessionStore.getState().selectRoute(shownRoute);
       // A session for *this* ride is resumed rather than duplicated (8 §1: one
       // physical activity). A session for another ride is left in its own
       // journal; picking between two active sessions is not this wave's.
@@ -338,7 +342,7 @@ export function PlannerClient({
       }
       return outcome;
     },
-    [recordingWorkflow, rideSessions, router],
+    [planningSessionStore, recordingWorkflow, rideSessions, router],
   );
   const recordRide = useCallback(
     async (document: RideDocument) => {
