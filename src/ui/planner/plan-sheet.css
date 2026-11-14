@@ -167,8 +167,6 @@
   .og-phone-summary .og-phone-summary__strip { display: flex; width: 100%; max-width: none; height: 10px; flex: none; margin: 2px 0 4px; padding: 0; border: 0; background: none; }
   .og-phone-summary button.og-phone-summary__strip { cursor: pointer; min-height: 10px; }
   .og-phone-summary .og-truth { margin-top: var(--og-space-2); }
-  /* A plan sentence (a basic route) sits under the honest lines it qualifies. */
-  .og-phone-summary .og-route-choices__note { margin: var(--og-space-2) 0 0; }
 
   .og-phone-summary__start {
     margin-top: var(--og-space-2);
@@ -406,7 +404,7 @@
   }
 
   /* Peek: the answer and Start. Everything else is one flick up. */
-  .og-planner .og-planner__sheet[data-directions="true"][data-detent="peek"] .og-phone-summary[data-comparing="false"] :is(.og-truth, .og-route-card__why-toggle, .og-route-card__why, .og-phone-summary__compare, .og-phone-summary__meta, .og-route-choices__note) {
+  .og-planner .og-planner__sheet[data-directions="true"][data-detent="peek"] .og-phone-summary[data-comparing="false"] :is(.og-truth, .og-route-card__why-toggle, .og-route-card__why, .og-phone-summary__compare, .og-phone-summary__meta) {
     display: none;
   }
 
