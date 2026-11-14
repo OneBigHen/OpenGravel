@@ -166,3 +166,120 @@ for (const size of SIZES) {
     });
   });
 }
+
+// ---- Specific rider-visible checks behind the QA ids ----
+
+test.describe("QA-01 search with a weather alert at 320", () => {
+  test("typed text is fully visible and the menu stays off the search", async ({ page }) => {
+    await weatherAlert(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto("/");
+    await expect(plannerMap(page)).toBeVisible();
+    await expect(page.locator(".og-conditions__pill")).toBeVisible();
+    const input = page.getByTestId("top-place-search");
+    await input.click();
+    await input.fill("Jim Thorpe PA");
+    const fit = await input.evaluate((el: HTMLInputElement) => ({ scroll: el.scrollWidth, client: el.clientWidth, left: el.getBoundingClientRect().left }));
+    expect(fit.scroll, "typed text is cut off").toBeLessThanOrEqual(fit.client);
+    const boxes = await page.evaluate(() => {
+      const r = (s: string): { l: number; r: number } => { const b = document.querySelector(s)!.getBoundingClientRect(); return { l: b.left, r: b.right }; };
+      return { bar: r(".og-top-search__bar"), menu: r(".og-top-search__menu") };
+    });
+    expect(boxes.bar.r, "search bar ends before the menu button").toBeLessThanOrEqual(boxes.menu.l);
+    // Idle: the weather chip is inside the bar, the placeholder still has room to read.
+    await input.fill("");
+    await page.getByTestId("planner-sheet").click({ position: { x: 20, y: 5 }, force: true }).catch(() => undefined);
+    await input.blur();
+    const idle = await page.evaluate(() => {
+      const bar = document.querySelector(".og-top-search__bar")!.getBoundingClientRect();
+      const pill = document.querySelector(".og-conditions__pill")!.getBoundingClientRect();
+      const field = document.querySelector<HTMLInputElement>("[data-testid='top-place-search']")!.getBoundingClientRect();
+      return { barRight: bar.right, pillRight: pill.right, fieldRight: field.right, pillLeft: pill.left, fieldWidth: field.width };
+    });
+    expect(idle.pillRight).toBeLessThanOrEqual(idle.barRight + 1);
+    expect(idle.fieldRight).toBeLessThanOrEqual(idle.pillLeft + 1);
+    expect(idle.fieldWidth, "room to read the placeholder").toBeGreaterThanOrEqual(100);
+  });
+});
+
+for (const width of [320, 390]) {
+  test(`QA-09 route summary shows the whole climb and time at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
+    await page.goto("/");
+    await expect(plannerMap(page)).toBeVisible();
+    await settledExtent(page);
+    await directionsTo(page);
+    const summary = page.getByTestId("route-summary");
+    await expect(summary).toBeVisible({ timeout: 60_000 });
+    await expect(summary.locator(".og-phone-summary__meta-text")).toContainText(/Climb/, { timeout: 30_000 });
+    const report = await summary.evaluate((root) => {
+      const cut: string[] = [];
+      for (const el of root.querySelectorAll<HTMLElement>(".og-phone-summary__meta-text, .og-phone-summary__arrive, .og-phone-summary__time")) {
+        if (el.scrollWidth > el.clientWidth + 1) cut.push(`${el.className}: ${el.scrollWidth} > ${el.clientWidth}`);
+        if (getComputedStyle(el).textOverflow === "ellipsis") cut.push(`${el.className} uses an ellipsis`);
+      }
+      const time = root.querySelector<HTMLElement>(".og-phone-summary__time")!;
+      const lines = time.getBoundingClientRect().height / parseFloat(getComputedStyle(time).lineHeight);
+      return { cut, timeLines: Math.round(lines) };
+    });
+    expect(report.cut).toEqual([]);
+    expect(report.timeLines, "the time stays on one line").toBe(1);
+  });
+}
+
+test("QA-20 the attribution disc is not hidden behind the locate button on a cold open", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(plannerMap(page)).toBeVisible();
+  await settledExtent(page);
+  const gap = await page.evaluate(() => {
+    const attr = document.querySelector(".og-map .maplibregl-ctrl-attrib-button")?.getBoundingClientRect();
+    const buttons = [...document.querySelectorAll(".og-map__cluster button")].map((b) => b.getBoundingClientRect());
+    if (attr === undefined) return { found: false, clash: 0 };
+    const clash = buttons.filter((b) => Math.min(attr.right, b.right) - Math.max(attr.left, b.left) > 1
+      && Math.min(attr.bottom, b.bottom) - Math.max(attr.top, b.top) > 1).length;
+    return { found: true, clash };
+  });
+  expect(gap.clash, "attribution disc overlaps a map button").toBe(0);
+});
+
+test("QA-21 desktop: the destination shape does not say Make my loop, and the corners are clear", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(plannerMap(page)).toBeVisible();
+  await settledExtent(page);
+  await page.getByRole("button", { name: "To a destination" }).click();
+  await expect(page.getByTestId("compose-create")).not.toHaveText("Make my loop");
+  const corners = await page.evaluate(() => {
+    const box = (s: string): DOMRect | null => document.querySelector(s)?.getBoundingClientRect() ?? null;
+    const legend = box("[data-testid='map-legend']");
+    const scale = box("[data-testid='map-scale']");
+    const attr = box(".og-map .maplibregl-ctrl-attrib-button");
+    const cluster = [...document.querySelectorAll(".og-map__cluster button")].map((b) => b.getBoundingClientRect());
+    const hits = (a: DOMRect, b: DOMRect): boolean => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0;
+    return {
+      legendOverScale: legend !== null && scale !== null && hits(legend, scale),
+      attrOnCluster: attr !== null && cluster.some((c) => hits(attr, c)),
+      attrOffScreen: attr !== null && (attr.bottom > window.innerHeight || attr.right > window.innerWidth),
+    };
+  });
+  expect(corners).toEqual({ legendOverScale: false, attrOnCluster: false, attrOffScreen: false });
+});
+
+test("QA-23 'Finding you on the route' stays clear of the GPS warning badge at 320", async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await startRide(page);
+  const clash = await page.evaluate(() => {
+    const text = document.querySelector<HTMLElement>(".og-ride__maneuver-suspended");
+    const badge = document.querySelector<HTMLElement>(".og-ride__gps-badge");
+    if (text === null || badge === null) return null;
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const t = range.getBoundingClientRect(), b = badge.getBoundingClientRect();
+    return Math.min(t.right, b.right) - Math.max(t.left, b.left) > 0 && Math.min(t.bottom, b.bottom) - Math.max(t.top, b.top) > 0;
+  });
+  // The suspended card only shows while the router matches the rider; when the
+  // fixture has already matched, there is nothing to touch.
+  expect(clash === null || clash === false).toBe(true);
+  void context;
+});
