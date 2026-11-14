@@ -259,6 +259,12 @@ export interface ProviderRouteRequest {
      */
     readonly seedCount?: number;
     /**
+     * How many times the rider has asked "Try another loop" for this same
+     * ride. Absent or 0 is the first ask; the same inputs and the same number
+     * always give the same engine seeds, so a repeated ask is a repeated loop.
+     */
+    readonly variation?: number;
+    /**
      * This is the quick first answer, not the full plan: ask the engine once
      * at the distance a first ask usually needs (no correction passes), and
      * only re-ask for a dead-end spur while the answer is still quick. The full

@@ -132,6 +132,29 @@ describe("GraphHopper provider", () => {
     expect(answer.candidates).toHaveLength(3);
   });
 
+  it("asks the engine for the same loops when the same loop is requested again (QA-13)", async () => {
+    const seedsFor = async (request: ProviderRouteRequest): Promise<unknown[]> => {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE)]);
+      await createGraphHopperProvider({ baseUrl: "http://router.test", fetcher }).candidates(request, new AbortController().signal);
+      return calls.map(({ body }) => body["round_trip.seed"]).sort();
+    };
+    const discovery = { targetMinutes: 75, toleranceMinutes: 15 };
+    const base: ProviderRouteRequest = { ...REQUEST, destination: HARRISBURG, discovery };
+    const first = await seedsFor({ ...base, requestId: "req_aaaa-1111" });
+    const second = await seedsFor({ ...base, requestId: "req_bbbb-2222" });
+    expect(second).toEqual(first);
+    // A rider's explicit "Try another loop" is the one thing that moves the seeds.
+    const another = await seedsFor({ ...base, requestId: "req_cccc-3333", discovery: { ...discovery, variation: 1 } });
+    expect(another).not.toEqual(first);
+    // A different start is a different loop.
+    const elsewhere = await seedsFor({ ...base, origin: LANCASTER, destination: LANCASTER, requestId: "req_aaaa-1111" });
+    expect(elsewhere).not.toEqual(first);
+    // The balanced-curves search keeps its own seed family.
+    const balanced = await seedsFor({ ...base, requestId: "req_aaaa-1111:balanced-curves" });
+    expect(balanced).not.toEqual(first);
+    expect(await seedsFor({ ...base, requestId: "req_zzzz:balanced-curves" })).toEqual(balanced);
+  });
+
   it("asks one engine seed for a loop's first answer, the same seed the full set starts with", async () => {
     const fixtures = [() => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE)];
     const discovery = { targetMinutes: 75, toleranceMinutes: 15 };

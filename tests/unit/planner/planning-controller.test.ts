@@ -405,6 +405,31 @@ describe("PlanningSession snapshot", () => {
  * Generation ownership (21 §7, 02 §9)
  * ---------------------------------------------------------------------- */
 
+describe("asking for the same loop again (QA-13)", () => {
+  it("sends the same loop request each time, and only 'Try another loop' moves it on", async () => {
+    const alpha = fakeProvider("alpha");
+    const loop = plannedIntent({
+      shape: "loop",
+      finish: null,
+      time: { kind: "budget", targetMinutes: 120, toleranceMinutes: 15 },
+    });
+    const controller = buildController({ providers: [alpha.provider], now: FIXED_CLOCK });
+    const secondController = buildController({ providers: [alpha.provider], now: FIXED_CLOCK });
+    void begin(controller, 1, loop);
+    await flush();
+    void begin(secondController, 1, loop);
+    await flush();
+    void begin(controller, 1, loop);
+    await flush();
+    const discoveries = alpha.calls.map((call) => call.request.discovery);
+    expect(discoveries[0]).toBeDefined();
+    // A fresh session asking for the same loop sends the very same ask.
+    expect(discoveries[1]).toEqual(discoveries[0]);
+    // Pressing "Try another loop" on the same ride is the one thing that changes it.
+    expect(discoveries[2]?.variation).toBe(1);
+  });
+});
+
 describe("generation ownership", () => {
   it("owns advisory readings with their generation and drops a superseded reading", async () => {
     const alpha = fakeProvider("alpha");
