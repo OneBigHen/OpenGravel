@@ -188,6 +188,66 @@ describe("a library ride as a catalog entry", () => {
     expect(parsed?.credit?.sourceName).toBe("MotoCurve");
   });
 
+  it("carries a trip's sections, stops and quoted facts to the ride page (L7)", () => {
+    const bdr = libraryRideAsCatalogEntry("az-arizona-bdr")!;
+    expect(bdr.routeLibrary).toMatchObject({
+      kind: "trip",
+      sections: [
+        "Section 1: Mexico border to Benson (128 mi)",
+        "Section 2: Benson to Globe (127 mi)",
+        "Section 3: Globe to Young (86 mi)",
+        "Section 4: Young to Winona (135 mi)",
+        "Section 5: Winona to Cameron (123 mi)",
+        "Section 6: Cameron to Utah border (151 mi)",
+      ],
+      place: null,
+      stops: { fuel: [], camping: [] },
+    });
+    expect(bdr.routeLibrary?.facts.permits.value).toContain("Navajo Nation permit");
+    expect(bdr.routeLibrary?.facts.season.value).toBe("May, June, September, October");
+    // A single track name is the file's name, not a section.
+    expect(libraryRideAsCatalogEntry("ca-fort-bragg-to-medford")!.routeLibrary?.sections).toBeNull();
+    // Real stops stay real stops, with their source address.
+    expect(libraryRideAsCatalogEntry("nc-cherohala-skyway")!.routeLibrary?.stops.fuel).toHaveLength(2);
+  });
+
+  it("gives a trail area a place to ride to, with its permit and season (L8)", () => {
+    const area = libraryRideAsCatalogEntry("mi-orv-route-slc")!;
+    expect(area.geometry).toEqual([]);
+    expect(area.routeLibrary).toMatchObject({
+      kind: "area",
+      sections: null,
+      place: { precision: "area" },
+      facts: {
+        legal: { value: "designated-ohv" },
+        season: { value: null, quote: null, source: null },
+      },
+    });
+    expect(area.routeLibrary?.place?.lat).toBeCloseTo(46.04, 1);
+    expect(area.routeLibrary?.place?.lon).toBeCloseTo(-88.33, 1);
+    expect(area.routeLibrary?.facts.permits.value).toContain("Michigan DNR ORV license");
+    const noPin = libraryRideAsCatalogEntry("ok-white-water-orv-area")!;
+    expect(noPin.routeLibrary?.place).toBeNull();
+  });
+
+  it("survives the catalog parser with every trip and area field, and rejects a bad one", () => {
+    const area = libraryRideAsCatalogEntry("mi-orv-route-slc")!;
+    const parsed = parseCatalogEntry(JSON.parse(JSON.stringify(area)));
+    expect(parsed?.routeLibrary?.kind).toBe("area");
+    expect(parsed?.routeLibrary?.facts.permits.value).toContain("Michigan DNR ORV license");
+    expect(parsed?.routeLibrary?.place?.precision).toBe("area");
+
+    const broken = JSON.parse(JSON.stringify(area)) as Record<string, unknown>;
+    const block = broken["routeLibrary"] as Record<string, unknown>;
+    block["kind"] = "monument";
+    expect(parseCatalogEntry(broken)).toBeNull();
+
+    const badStop = JSON.parse(JSON.stringify(area)) as Record<string, unknown>;
+    const badBlock = badStop["routeLibrary"] as Record<string, unknown>;
+    (badBlock["stops"] as Record<string, unknown>)["fuel"] = [{ name: "Somewhere", source: 7 }];
+    expect(parseCatalogEntry(badStop)).toBeNull();
+  });
+
   it("is null for an unknown ride and when no pack is configured", () => {
     expect(libraryRideAsCatalogEntry("no-such-ride")).toBeNull();
     delete process.env["OGV_ROUTE_LIBRARY_PACK"];

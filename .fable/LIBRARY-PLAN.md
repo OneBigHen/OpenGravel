@@ -358,11 +358,13 @@ sites), `s` index into the top-level `sources` name list, `c` card line, `sf` su
 `null`). The file's top level also carries `version`, `sources` and `stateCounts`.
 
 **Ride detail** (`/rides/<id>`): `id, name, kind, type, score, scoreReason, states, summary, miles, loop, start,
-bounds, line | segments, points, track { availability, year, old, rough, gpxAllowed, sourceDownloadUrl },
+place, bounds, line | segments, points, track { availability, year, old, rough, gpxAllowed, sourceDownloadUrl },
 facts { surface, legal, difficulty, permits, season } each { value | null, quote, source }, credit { author |
 null, sourceName, sourceUrl, creditLine }, alsoOn [credit...], partOf [id, name], includes [id, name],
 sourceRating | null, notes [{ author, text, date, url }], stops { fuel, camping, lodging, pois }, alternates,
-sections (trips), provenance { basis, scrapedAt, lastVerified }`.
+sections (trips), provenance { basis, scrapedAt, lastVerified }`. `place` is the index pin with its precision
+(`start` | `area` | `town`), so a trail area (L8) has a place to ride to without a line; `sections` holds only a
+trip's published multi-section track names, never a single file name (L7).
 
 **Numbers.**
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CatalogEntry } from "@/application/explore/catalog";
+import type { CatalogEntry, CatalogRouteLibrary } from "@/application/explore/catalog";
 import { US_STATES } from "@/application/geocoding/us-states";
 import { decodeLine, splitSegments } from "@/application/route-library/geometry";
 import type { RideDetail } from "@/application/route-library/types";
@@ -23,6 +23,31 @@ export function libraryProvenanceDetail(detail: Pick<RideDetail, "credit" | "tra
 }
 
 /**
+ * The ride's shape for the page's own blocks: a trip's sections and stops, an
+ * area's place and quoted facts. Everything is copied from the pack as it
+ * stands; a silence stays a silence.
+ *
+ * A pack built before this page's fields existed (a rollback to an older pack)
+ * still opens: the extras are simply absent, and the page is the ordinary
+ * library ride page.
+ */
+export function routeLibraryInfo(detail: RideDetail): CatalogRouteLibrary | null {
+  if (detail.facts === undefined || detail.stops === undefined || detail.kind === undefined) return null;
+  return {
+    kind: detail.kind,
+    place: detail.place ?? null,
+    sections: detail.sections ?? null,
+    stops: detail.stops,
+    facts: {
+      legal: detail.facts.legal,
+      permits: detail.facts.permits,
+      season: detail.facts.season,
+      surface: detail.facts.surface,
+    },
+  };
+}
+
+/**
  * A library ride shaped as a catalog entry, so the existing ride page can show
  * it. The line is a reference: a rough track, a trail bundle or a ride with no
  * line comes back with empty geometry rather than a guessed one.
@@ -31,6 +56,7 @@ export function entryFromPackRide(ride: PackRide): CatalogEntry {
   const { detail } = ride;
   const drawable = ride.line !== "" && !detail.track.rough && detail.kind !== "area";
   const geometry = drawable ? splitSegments(ride.line).flatMap(decodeLine) : [];
+  const routeLibrary = routeLibraryInfo(detail);
   return {
     id: detail.id,
     source: "catalog",
@@ -52,6 +78,7 @@ export function entryFromPackRide(ride: PackRide): CatalogEntry {
     provenanceDetail: libraryProvenanceDetail(detail),
     ...(detail.facts.surface.value === "paved" ? { surfaceSummary: "Paved" } : {}),
     referenceTrack: true,
+    ...(routeLibrary === null ? {} : { routeLibrary }),
   };
 }
 
