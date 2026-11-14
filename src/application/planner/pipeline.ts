@@ -433,7 +433,7 @@ export const BASIC_ROUTING_WARNING: RouteWarning = {
   id: "provider:basic-routing",
   code: "basic-routing",
   severity: "info",
-  message: "Basic routing: this area is outside OpenGravel's own road graph, so curvy, backroad and avoid preferences were not applied.",
+  message: "Basic route — OpenGravel's curvy, backroad and avoid choices weren't applied to this ride.",
 };
 
 

@@ -132,6 +132,16 @@ describe("RideSummary", () => {
     }
   });
 
+  it("tells the rider a basic route is basic, as a sentence above Start and in the meta line", () => {
+    const message = "Basic route — OpenGravel's curvy and gravel tuning covers PA, NJ and NY only.";
+    render(<RideSummary {...base} showPlanNotices card={{ ...cards[0]!, notices: [message], badges: ["Basic routing"] }} />);
+    // The phone directions view is the summary with no choices list under it,
+    // so the plan's own sentence has to be in the summary, above the buttons.
+    expect(screen.getByTestId("route-plan-notice").textContent).toBe(message);
+    expect(screen.getByTestId("route-summary").querySelector(".og-phone-summary__meta")).toHaveTextContent("Basic routing");
+  });
+
+
   it("hides the compare switch when there is only one ride", () => {
     render(<RideSummary {...base} cards={[cards[0]!]} />);
     expect(screen.queryByTestId("compare-rides")).toBeNull();
