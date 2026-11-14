@@ -45,7 +45,7 @@ import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
 import { formatFeet } from "@/application/planner/measurements";
 import { arrivalClock, arrivalLabel } from "@/application/planner/arrival";
-import { RouteDecisionCard, WhyThisRide } from "./RouteDecisionCard";
+import { RouteDecisionCard, RoutePlanNotices, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { RouteContext } from "./RouteContext";
 import { RideTruthLines } from "./RideTruthLines";
@@ -116,6 +116,12 @@ export interface RideSummaryProps {
   readonly showQuickStyle?: boolean;
   /** The chosen ride's deterministic explanation, offered as "Why this ride?". */
   readonly explanation?: RouteExplanation | null;
+  /**
+   * The plan's own sentences about the ride (a basic route). The choices list
+   * states them under the list; a phone's directions view has no list, so it
+   * asks the summary to say them, above Start.
+   */
+  readonly showPlanNotices?: boolean;
 }
 
 export function RideSummary({
@@ -138,6 +144,7 @@ export function RideSummary({
   quick = {},
   showQuickStyle = true,
   explanation = null,
+  showPlanNotices = false,
 }: RideSummaryProps) {
   const geometry = routeLine?.geometry ?? NO_LINE;
   const elevation = useElevationProfile(elevationSource, routeLine?.routeId ?? null, geometry);
@@ -242,6 +249,8 @@ export function RideSummary({
       </div>
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
       <RideTruthLines truth={truth} surfaceBar={bar === null ? null : <>{bar}{surfaceLegend}</>} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
+      {/* This view is the summary alone, so a basic route says so here. */}
+      {showPlanNotices ? <RoutePlanNotices card={card} /> : null}
       {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
     </div>}
     {/* Start, Save, Share: the whole answer to the ride, in one row. */}

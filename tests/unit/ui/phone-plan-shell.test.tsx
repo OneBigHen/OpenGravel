@@ -113,10 +113,12 @@ describe("RideSummary", () => {
     expect(screen.getByTestId("ride-truth").querySelectorAll(".og-truth__line")).toHaveLength(3);
   });
 
-  it("names a basic route in the summary's meta line", () => {
-    render(<RideSummary {...base} card={{ ...cards[0]!, badges: ["Basic routing"] }} />);
-    // The summary has no card badges of its own, so the routing badge has to
-    // reach its meta line or a phone rider never sees it.
+  it("tells the rider a basic route is basic, as a sentence above Start and in the meta line", () => {
+    const message = "Basic route — OpenGravel's curvy and gravel tuning covers PA, NJ and NY only.";
+    render(<RideSummary {...base} showPlanNotices card={{ ...cards[0]!, notices: [message], badges: ["Basic routing"] }} />);
+    // The phone directions view is the summary with no choices list under it,
+    // so the plan's own sentence has to be in the summary, above the buttons.
+    expect(screen.getByTestId("route-plan-notice").textContent).toBe(message);
     expect(screen.getByTestId("route-summary").querySelector(".og-phone-summary__meta")).toHaveTextContent("Basic routing");
   });
 
