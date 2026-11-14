@@ -24,7 +24,7 @@ describe("closeout layers sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
     expect(screen.getByTestId("map-lens-fun")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("map-lens-weather")).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId("map-lens-weather")).toHaveAccessibleName(/Partial/);
+    expect(screen.getByTestId("map-lens-weather")).toHaveAccessibleName(/1 of 3 on/);
     expect(screen.getByText("5 active")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("map-lens-weather"));
     expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "wind", "weather"]);
