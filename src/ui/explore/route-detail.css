@@ -133,8 +133,7 @@
 .og-route-detail__meta,
 .og-route-detail__provenance,
 .og-route-detail__summary,
-.og-route-detail__status,
-.og-route-detail__basis {
+.og-route-detail__status {
   margin: 0;
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
@@ -246,7 +245,6 @@
   height: 100%;
 }
 
-/* The numbers: a grid of cells separated by hairlines. */
 /* The truth under the four numbers: a hairline separates facts from judgement. */
 .og-route-detail__header .og-truth {
   flex: 1 0 100%;

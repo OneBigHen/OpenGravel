@@ -428,7 +428,6 @@
   color: var(--og-danger);
 }
 
-/* Map style: a single choice, ticked. */
 /* Extras under a layer that is on. */
 .og-layers__filters {
   display: flex;
@@ -455,7 +454,6 @@
   font-weight: 600;
   cursor: pointer;
 }
-
 
 .og-layers__option:disabled,
 .og-layers__subswitch:disabled {

@@ -35,10 +35,6 @@
   pointer-events: none;
 }
 
-.og-ride__top > * {
-  pointer-events: auto;
-}
-
 /* The maneuver: arrow, distance, street, and the surface coming up as the
    card's second row. 96px tall, growing only for a long road name. */
 .og-ride__maneuver {
@@ -201,10 +197,6 @@
   height: 24px;
 }
 
-.og-ride__maneuver-then .og-ride__maneuver-glyph--then path {
-  stroke-width: 3.6;
-}
-
 /* OG-19: the street name is the part that matters, so the "Then" line wraps
    to a second line instead of cutting the name with "…". */
 .og-ride__maneuver-then-action {
@@ -232,22 +224,10 @@
   font-weight: 700;
 }
 
-.og-ride__off-route-distance {
-  grid-column: 1 / -1;
-  padding-right: 48px;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-body);
-  font-variant-numeric: tabular-nums;
-}
-
 .og-ride__off-route-actions {
   display: flex;
   grid-column: 1 / -1;
   gap: var(--og-space-2);
-}
-
-.og-ride__off-route-actions .og-ride__off-route-action {
-  flex: 1 1 132px;
 }
 
 .og-ride__maneuver[data-kind="suspended"][data-compact="true"] {
@@ -271,19 +251,6 @@
   grid-row: 1;
   align-self: end;
   padding-right: 0;
-}
-
-.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-distance {
-  grid-column: 2;
-  grid-row: 2;
-  align-self: start;
-  padding-right: 0;
-  font-size: var(--og-text-meta);
-}
-
-.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-actions {
-  grid-column: 1 / -1;
-  grid-row: 3;
 }
 
 .og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) {
@@ -322,20 +289,6 @@
 
 .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) .og-ride__gps-badge {
   color: var(--og-on-primary);
-}
-
-.og-ride__gps-badge svg {
-  width: 26px;
-  height: 26px;
-}
-
-.og-ride__gps-badge path,
-.og-ride__strip-end path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /* The strip: speed · distance left · arrival, and End. */
@@ -426,11 +379,6 @@
 .og-ride__strip-end--exit {
   background: var(--og-surface-2);
   color: var(--og-ink);
-}
-
-.og-ride__strip-end svg {
-  width: 26px;
-  height: 26px;
 }
 
 .og-ride__strip-end:disabled {
@@ -539,19 +487,6 @@
   display: none;
 }
 
-.og-ride-metrics__toggle svg {
-  width: 22px;
-  height: 22px;
-}
-
-.og-ride-metrics__toggle path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .og-ride-metrics__toggle-label {
   font-size: var(--og-text-caption);
   font-weight: 700;
@@ -574,10 +509,6 @@
   align-items: flex-end;
   justify-content: space-between;
   pointer-events: none;
-}
-
-.og-ride__float > * {
-  pointer-events: auto;
 }
 
 .og-ride__speeds {
@@ -797,7 +728,6 @@
     display: none;
   }
 }
-
 
 .og-ride__top > * {
   pointer-events: auto;
@@ -1581,7 +1511,6 @@
   cursor: pointer;
 }
 
-
 .og-ride-interest__chip {
   display: flex;
   align-items: center;
@@ -1789,7 +1718,6 @@
   font-weight: 600;
   cursor: pointer;
 }
-
 
 .og-ride .og-places-control__option:disabled {
   cursor: default;

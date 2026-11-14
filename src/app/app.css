@@ -68,27 +68,6 @@ h3 {
   outline-offset: var(--og-focus-offset);
 }
 
-@media (min-width: 761px) and (max-width: 1180px) {
-  .og-first-run { left: 20px; right: auto; bottom: 20px; }
-}
-
-@media (max-width: 760px) {
-  .og-first-run {
-    top: calc(210px + var(--og-safe-top));
-    bottom: auto;
-    left: calc(12px + var(--og-safe-left));
-    right: auto;
-    grid-template-columns: 112px minmax(0, 1fr);
-    width: min(320px, calc(100% - 24px - var(--og-safe-left) - var(--og-safe-right)));
-    min-height: 142px;
-  }
-
-  .og-first-run__picture,
-  .og-first-run__picture img { min-height: 142px; }
-
-  .og-first-run__copy strong { font-size: var(--og-text-headline); }
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -254,8 +233,6 @@ h3 {
   box-shadow: var(--og-shadow-float);
 }
 
-.og-export-menu__explainer,
-.og-export-menu__reason,
 .og-export-menu__error {
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
@@ -563,11 +540,6 @@ a.og-secondary {
   .og-not-found__card {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     align-items: center;
-  }
-
-  .og-not-found__photo {
-    height: 100%;
-    aspect-ratio: auto;
   }
 
   .og-not-found__copy {

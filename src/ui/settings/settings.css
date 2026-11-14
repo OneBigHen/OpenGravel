@@ -257,7 +257,6 @@
   opacity: 0.48;
 }
 
-.og-settings__row-action--danger,
 .og-settings__text-button--danger {
   color: var(--og-danger);
 }
@@ -302,7 +301,6 @@
   white-space: nowrap;
   cursor: pointer;
 }
-
 
 /* Disclosures. */
 .og-settings__disclosure > summary {
@@ -476,7 +474,8 @@
   white-space: normal;
 }
 
-/* Download progress. */
+/* Offline downloads live in their own sheet. */
+
 @media (max-width: 760px) {
   .og-settings__header {
     margin-top: calc(var(--og-safe-top) + var(--og-space-4));
@@ -485,10 +484,6 @@
 
   .og-settings__field-row {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .og-settings__art {
-    aspect-ratio: 16 / 7;
   }
 }
 
