@@ -45,7 +45,7 @@ import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
 import { formatFeet } from "@/application/planner/measurements";
 import { arrivalClock, arrivalLabel } from "@/application/planner/arrival";
-import { RouteDecisionCard, RoutePlanNotices, WhyThisRide } from "./RouteDecisionCard";
+import { RouteDecisionCard, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { RouteContext } from "./RouteContext";
 import { RideTruthLines } from "./RideTruthLines";
@@ -242,10 +242,6 @@ export function RideSummary({
       </div>
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
       <RideTruthLines truth={truth} surfaceBar={bar === null ? null : <>{bar}{surfaceLegend}</>} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
-      {/* What the plan itself says about this ride (a basic route): the summary
-          is the one place every tier shows the chosen ride, so the sentence
-          belongs here rather than only under the desktop choices list. */}
-      <RoutePlanNotices card={card} />
       {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
     </div>}
     {/* Start, Save, Share: the whole answer to the ride, in one row. */}

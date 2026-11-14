@@ -76,13 +76,12 @@ function isUnknownLabel(label: string | null | undefined): boolean {
  * The sentences a ride's plan states about itself (a basic route, a final
  * approach), in the ride's own words.
  *
- * They are rendered wherever the chosen ride is the subject: the one summary
- * every tier shows (`RideSummary`) and the choices list beside it. A phone whose
- * ride comes from a place card's Directions shows the summary alone, so the
- * sentence has to live there or the rider is never told.
+ * Rendered where the chosen ride is: under the ride choices, and in the phone
+ * directions view, which shows the summary alone — so without it here the rider
+ * is never told their ride is a basic route.
  */
-export function RoutePlanNotices({ card }: { readonly card: RouteCardVm }) {
-  if (card.notices === undefined) return null;
+export function RoutePlanNotices({ card }: { readonly card?: RouteCardVm | undefined }) {
+  if (card?.notices === undefined) return null;
   return <>{card.notices.map(message => (
     <p className="og-route-choices__note" role="status" data-testid="route-plan-notice" key={message}>
       {message}
@@ -116,6 +115,7 @@ export function RouteChoices({
       <ul className="og-route-list" data-testid="route-list">
         {children}
       </ul>
+      <RoutePlanNotices card={cards.find(card => card.isSelected)} />
       {trafficNote === null ? null : (
         <p className="og-route-choices__note" data-testid="route-traffic-note">
           {trafficNote}

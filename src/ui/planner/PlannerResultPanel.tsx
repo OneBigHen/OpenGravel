@@ -9,7 +9,7 @@ import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type { PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
-import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
+import { RouteChoices, RouteDecisionCard, RoutePlanNotices } from "@/ui/planner/RouteDecisionCard";
 import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import { RouteOptions } from "./RouteOptions";
 import { rideStyleSummary } from "./RideStyleControls";
@@ -163,6 +163,7 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
   />;
   if (hikeView === null && showOptions && compact && selectedCard !== undefined) return <RouteOptions
     summary={summary}
+    notices={<RoutePlanNotices card={selectedCard} />}
     onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}>
       <AdvisorRideAsk />
       <RideActions {...actions} start={null} rideActions={undefined} />
