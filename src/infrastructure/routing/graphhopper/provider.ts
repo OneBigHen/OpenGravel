@@ -211,11 +211,35 @@ function detailFrom(error: unknown): string {
 /** The seeds a loop tries when the caller does not narrow them. */
 const DISCOVERY_SEED_COUNT = 3;
 
-function discoverySeeds(requestId: string, count: number = DISCOVERY_SEED_COUNT): readonly number[] {
-  // FNV-1a gives retries of one discovery the same three bounded engine seeds,
-  // while a later rider request can explore another set of loops.
+/**
+ * The seed key for one loop. It is made only from what the rider asked for:
+ * the start (to about 10 m), the ride time, the heading and the "try another"
+ * count. It deliberately ignores the request id, which is a fresh random
+ * number every time: hashing that gave the same Lancaster loop a different set
+ * of engine seeds on each ask (54 mi, then 85 mi; QA-13). Only the id's
+ * ":suffix" (balanced-curves, approach) is kept, so those searches still use
+ * their own seed family.
+ */
+function discoveryKey(request: ProviderRouteRequest): string {
+  const discovery = request.discovery;
+  const suffixAt = request.requestId.indexOf(":");
+  const suffix = suffixAt < 0 ? "" : request.requestId.slice(suffixAt);
+  return [
+    "loop",
+    request.origin.lat.toFixed(4),
+    request.origin.lon.toFixed(4),
+    discovery?.targetMinutes ?? "",
+    discovery?.headingDegrees ?? "",
+    discovery?.variation ?? 0,
+    suffix,
+  ].join("|");
+}
+
+function discoverySeeds(key: string, count: number = DISCOVERY_SEED_COUNT): readonly number[] {
+  // FNV-1a over the stable key: one loop request always gets the same three
+  // bounded engine seeds; "Try another loop" changes the key's variation.
   let hash = 0x811c9dc5;
-  for (const character of requestId) {
+  for (const character of key) {
     hash = Math.imul(hash ^ character.charCodeAt(0), 0x01000193);
   }
   const base = hash >>> 0;
@@ -395,7 +419,7 @@ export function createGraphHopperProvider(
       };
 
       const details = [...REQUESTED_DETAILS];
-      const seeds = request.discovery === undefined ? [undefined] : discoverySeeds(request.requestId, request.discovery.seedCount);
+      const seeds = request.discovery === undefined ? [undefined] : discoverySeeds(discoveryKey(request), request.discovery.seedCount);
       const answerFor = async (
         seed: number | undefined,
         distanceScale?: number,

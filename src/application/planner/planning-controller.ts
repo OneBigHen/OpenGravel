@@ -437,6 +437,7 @@ interface InternalState {
 
 /** One attempt: everything whose lifetime is the generation (fenced). */
 interface Run {
+  readonly loopVariation: number;
   readonly generation: number;
   readonly rideId: RideId;
   readonly rideRevision: number;
@@ -529,6 +530,12 @@ class PlanningSessionController implements PlanningController {
   private state: InternalState;
   private run: Run | null = null;
   private disposed = false;
+  /**
+   * How many times each ride revision has been asked for. The first ask is 0
+   * and every identical ask gets the same loop; asking again for the same
+   * revision (the "Try another loop" press) moves it on by one.
+   */
+  private readonly asks = new Map<string, number>();
 
   constructor(deps: PlanningControllerDeps, pipeline: CandidatePipeline) {
     this.providers = deps.providers;
@@ -617,8 +624,12 @@ class PlanningSessionController implements PlanningController {
       startedAt: this.now(),
       settledAt: null,
     };
+    const askKey = `${input.rideId}:${input.rideRevision}`;
+    const asked = this.asks.get(askKey) ?? 0;
+    this.asks.set(askKey, asked + 1);
     const closed = closedSignal();
     const run: Run = {
+      loopVariation: asked,
       generation,
       rideId: input.rideId,
       rideRevision: input.rideRevision,
@@ -855,6 +866,7 @@ class PlanningSessionController implements PlanningController {
           ? {}
           : { profileFor: this.requestContext.profileFor }),
         includeAlternatives: this.requestContext.includeAlternatives ?? true,
+        loopVariation: run.loopVariation,
       });
     } catch {
       // A throwing geometry resolver is an infrastructure problem, not an

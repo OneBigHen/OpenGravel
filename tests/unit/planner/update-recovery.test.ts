@@ -258,7 +258,7 @@ describe("selectUpdateRecovery — the failed edit, when it can be attributed", 
     });
 
     expect(selectUpdateRecovery(document, session("failed"))?.message).toBe(
-      "No legal route for this ride — try another point.",
+      "No loop found from this start with these settings. Move the start or change the road character, then try again.",
     );
   });
 

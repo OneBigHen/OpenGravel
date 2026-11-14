@@ -864,7 +864,28 @@ describe("buildPlannerViewModel — commitment label and recovery (04 §8, §29)
       }),
     );
 
-    expect(vm.errorMessage).toBe("No legal route for this ride — try another point.");
+    expect(vm.errorMessage).toBe(
+      "No loop found from this start with these settings. Move the start or change the road character, then try again.",
+    );
+  });
+
+  it("says which loop could not be found, and what to change (QA-13)", () => {
+    const vm = buildPlannerViewModel(
+      input({
+        document: documentWith({
+          ...READY_DOCUMENT.intent,
+          shape: "loop",
+          time: { kind: "budget", targetMinutes: 180, toleranceMinutes: 20 },
+        }),
+        session: session("failed", {
+          error: { code: "no-route", message: "x", recoverable: false },
+        }),
+      }),
+    );
+
+    expect(vm.errorMessage).toBe(
+      "No 3 h loop found from this start with these settings. Try a shorter ride time, a different road character, or move the start.",
+    );
   });
 });
 
