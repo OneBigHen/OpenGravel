@@ -251,12 +251,13 @@ test("QA-20 the attribution disc is not hidden behind the locate button on a col
   const gap = await page.evaluate(() => {
     const attr = document.querySelector(".og-map .maplibregl-ctrl-attrib-button")?.getBoundingClientRect();
     const buttons = [...document.querySelectorAll(".og-map__cluster button")].map((b) => b.getBoundingClientRect());
-    if (attr === undefined) return { found: false, clash: 0 };
+    if (attr === undefined) return { found: false, clash: 0, attr: [], buttons: [] };
     const clash = buttons.filter((b) => Math.min(attr.right, b.right) - Math.max(attr.left, b.left) > 1
       && Math.min(attr.bottom, b.bottom) - Math.max(attr.top, b.top) > 1).length;
-    return { found: true, clash };
+    return { found: true, clash, attr: [attr.left, attr.top, attr.width, attr.height], buttons: buttons.map((b) => [b.left, b.top, b.width, b.height]) };
   });
-  expect(gap.clash, "attribution disc overlaps a map button").toBe(0);
+  expect(gap.found, "attribution disc exists").toBe(true);
+  expect(gap.clash, `attribution disc overlaps a map button ${JSON.stringify(gap)}`).toBe(0);
 });
 
 test("QA-21 desktop: the destination shape does not say Make my loop, and the corners are clear", async ({ page }) => {
