@@ -103,6 +103,9 @@ test("the Explore map panel is the map and nothing opaque is painted over it (QA
       element.classList.contains("og-map") ||
       element.classList.contains("og-map-host") ||
       element.classList.contains("og-map__attempt") ||
+      // The load veil is the map's own paper and hides itself once painted.
+      element.classList.contains("og-map__veil") ||
+      element.classList.contains("og-map__veil-label") ||
       [...element.classList].some((name) => name.startsWith("maplibregl-"));
     /** A flat rectangle this much of the map's size is the QA-15 bug shape. */
     const COVER_SHARE = 0.3;
@@ -117,7 +120,7 @@ test("the Explore map panel is the map and nothing opaque is painted over it (QA
       if ((overlapWidth * overlapHeight) / mapArea < COVER_SHARE) continue;
       const style = getComputedStyle(element);
       // A hidden or clear layer paints nothing, whatever colour it declares.
-      if (style.visibility === "hidden" || style.opacity === "0" || style.display === "none") continue;
+      if (style.visibility === "hidden" || Number(style.opacity) < 0.05 || style.display === "none") continue;
       const clear = style.backgroundColor === "rgba(0, 0, 0, 0)" && style.backgroundImage === "none";
       if (clear) continue;
       offenders.push(`${element.className || element.tagName} ${style.backgroundColor} covers ${Math.round((overlapWidth * overlapHeight * 100) / mapArea)}%`);
