@@ -31,5 +31,6 @@
    under the climb rather than squeezing it or widening the sheet. The trailing 6px
    keep the chip's invisible tap halo inside the phone's column. */
 .og-phone-summary__facts .og-phone-summary__meta { display: flex; flex-wrap: wrap; align-items: center; row-gap: var(--og-space-1); min-width: 0; padding-right: 6px; }
-.og-phone-summary__meta-text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The climb is a headline fact: it wraps to a second line, it is never cut with an ellipsis (QA-09). */
+.og-phone-summary__meta-text { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .og-phone-summary__meta .og-route-daylight { flex: none; }

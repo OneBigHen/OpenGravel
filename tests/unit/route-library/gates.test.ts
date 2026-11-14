@@ -13,7 +13,7 @@ const SOURCE = path.join(ROOT, "tests/fixtures/route-library/source");
 const POLICY = path.join(ROOT, "scripts/route-library/sources-policy.json");
 const RECORD = "routes/PA/pa-pa-151-south-heights-hookstown";
 const RECORD_ID = "pa-pa-151-south-heights-hookstown";
-const GATES = ["id-collision", "duplicate-id", "validator-errors", "credit", "ride-points", "index-size", "state-line-size", "pack-size", "null-facts", "ride-count-drop"];
+const GATES = ["id-collision", "duplicate-id", "validator-errors", "credit", "ride-points", "index-size", "state-line-size", "pack-size", "null-facts", "ride-count-drop", "dedupe-groups"];
 
 const work = mkdtempSync(path.join(tmpdir(), "route-library-gates-"));
 afterAll(() => rmSync(work, { recursive: true, force: true }));

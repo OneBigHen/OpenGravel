@@ -2476,7 +2476,7 @@ export function createRideFocusStore(
           // RM-6: the bound line and its facts, so a missed turn routes only the way back.
           const pointed = pointer.read();
           const facts = pointed.status === "found" && pointed.pointer.sessionId === state.sessionId ? pointed.pointer : null;
-          const boundRoute = along === undefined || wholeRoute || facts === null || facts.instructions === undefined
+          const boundRoute = along === undefined || facts === null || facts.instructions === undefined
             ? undefined
             : {
                 line: get().routeLine,
