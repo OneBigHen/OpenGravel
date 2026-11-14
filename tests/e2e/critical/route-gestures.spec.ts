@@ -100,7 +100,8 @@ async function linePixel(page: Page): Promise<Point> {
 /** What the rider sees of the ride: its summary and what Undo would undo. */
 async function rideState(page: Page): Promise<{ summary: string; undo: string }> {
   return {
-    summary: (await page.getByTestId("route-summary").first().textContent().catch(() => null)) ?? "",
+    // The clock-driven "Arrive 5:30 AM" changes by itself each minute; distance and time do not.
+    summary: ((await page.getByTestId("route-summary").first().textContent().catch(() => null)) ?? "").replace(/Arrive \d+:\d+ [AP]M/g, ""),
     undo: (await page.getByTestId("undo").getAttribute("title")) ?? "",
   };
 }
