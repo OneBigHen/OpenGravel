@@ -55,7 +55,7 @@
 
 import { getActivityMode, subscribeActivityMode } from "@/application/map/activity-mode";
 import { solarPositionAt, type SolarPosition } from "@/application/map/solar-position";
-import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
+import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, USGS_TOPO_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
   LONG_PRESS_MS,
   TAP_MAX_MS,
@@ -71,7 +71,7 @@ import {
   type PointerTool,
 } from "@/application/map/interaction";
 import { assetUrl } from "@/application/map/asset-path";
-import type { MapLayerDrawStatus } from "@/application/map/map-host";
+import type { MapLayerDrawStatus, OverlayContext } from "@/application/map/map-host";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import {
   isDrawableArea,
@@ -141,6 +141,7 @@ import {
   nightScrimLayer,
   osmBasemapStyle,
   overlayLayers,
+  placeLayers,
   readMapPalette,
   routeLayers as styleRouteLayers,
   type MapStyleSpec,
@@ -937,13 +938,39 @@ export async function createMapLibreHost(
   let renderer: MapLibreModule | null = null;
   /** True while the renderer module is being fetched. */
   let booting = false;
+  /** Screens' own layers (`attachOverlay`): each setup and the cleanup of its last run. */
+  const overlays = new Map<(context: OverlayContext) => (() => void) | void, (() => void) | null>();
+  function runOverlay(setup: (context: OverlayContext) => (() => void) | void, current: HostAttempt): void {
+    try { overlays.get(setup)?.(); } catch { /* the old style is gone with its sources */ }
+    let cleanup: (() => void) | null = null;
+    try {
+      const result = setup({
+        map: current.map as unknown as OverlayContext["map"],
+        colours: { route: palette.routePlum, routeStrong: palette.routePlumStrong, paper: palette.paper, ink: palette.ink },
+      });
+      cleanup = typeof result === "function" ? result : null;
+    } catch {
+      recordError({ kind: "source", detail: "overlay" });
+    }
+    overlays.set(setup, cleanup);
+  }
+  function runOverlays(current: HostAttempt): void {
+    for (const setup of [...overlays.keys()]) runOverlay(setup, current);
+  }
 
   let palette = readMapPalette(container);
-  const placePillImages = createPlacePillImages(palette);
-  const puckImage = createPuckImage(palette);
+  /**
+   * The image set that carries theme colours (the place pills' paper fill, the
+   * rider's arrow, the wind bands). It is rebuilt whenever the palette changes,
+   * because a Day/Night switch repaints the *text* from the new palette while a
+   * stale pill image would keep the old theme's fill — which is how a day map
+   * showed black event boxes with dark text on them (QA-05).
+   */
+  let placePillImages = createPlacePillImages(palette);
+  let puckImage = createPuckImage(palette);
   const markerImages = [...createMarkerImages(), ...createSearchPinImages()];
   /** One arrow image per wind strength band (map-experience wave 3, item 13). */
-  const windArrowImages = createWindArrowImages(palette);
+  let windArrowImages = createWindArrowImages(palette);
   const searchLabelImages = new WeakMap<MapLibreMap, Set<string>>();
   /**
    * Which tone the route arrow image in the current renderer was drawn in.
@@ -1418,6 +1445,54 @@ export async function createMapLibreHost(
   }
 
   /**
+   * Re-draws the theme-coloured images and the two labels whose colours pair
+   * with them (QA-05).
+   *
+   * A Day/Night switch changes the palette and repaints the label *text* from it,
+   * but MapLibre keeps the image it already has under an id — so the place pills
+   * went on wearing the old theme's paper: at dawn that is a dark box with dark
+   * text on it. The set is rebuilt here and written onto the live map; a style
+   * reset drops the images anyway and `addOverlayLayers` re-adds this rebuilt set.
+   */
+  function refreshThemeColours(map: MapLibreMap): void {
+    palette = readMapPalette(container);
+    placePillImages = createPlacePillImages(palette);
+    puckImage = createPuckImage(palette);
+    windArrowImages = createWindArrowImages(palette);
+    const themed: readonly { readonly id: string; readonly data: PlacePillImage["data"]; readonly options: unknown }[] = [
+      ...placePillImages,
+      puckImage,
+      ...windArrowImages,
+    ];
+    for (const image of themed) {
+      if (!map.hasImage(image.id)) continue;
+      try {
+        if (map.updateImage !== undefined) {
+          map.updateImage(image.id, image.data);
+        } else if (map.removeImage !== undefined) {
+          map.removeImage(image.id);
+          map.addImage(image.id, image.data, image.options as PlacePillImage["options"]);
+        }
+      } catch {
+        recordError({ kind: "renderer", detail: `image:${image.id}` });
+      }
+    }
+    // The pill's text sits on that image, so the two must come from one palette
+    // even when the style itself is not reloaded (a downloaded basemap's look).
+    for (const layer of placeLayers(palette)) {
+      if (layer.id !== MAP_LAYER_IDS.placePill && layer.id !== MAP_LAYER_IDS.placeSelected) continue;
+      if (map.getLayer(layer.id) === undefined) continue;
+      for (const [name, value] of Object.entries(layer.paint ?? {})) {
+        try {
+          map.setPaintProperty?.(layer.id, name, value);
+        } catch {
+          recordError({ kind: "renderer", detail: layer.id });
+        }
+      }
+    }
+  }
+
+  /**
    * Adds the overlay layers above the basemap.
    *
    * One failing layer must not take the others with it (05 §22: "custom layer
@@ -1697,6 +1772,26 @@ export async function createMapLibreHost(
       map.setLayoutProperty?.(TRAFFIC_FLOW_SOURCE_ID, "visibility", "visible");
     } catch {
       recordError({ kind: "source", detail: TRAFFIC_FLOW_SOURCE_ID });
+    }
+  }
+
+  /** USGS topographic tiles, under the labels like the other rasters; hidden, not removed, when off. */
+  function syncUsgsTopo(map: MapLibreMap, tiles: string | null): void {
+    try {
+      if (tiles === null) {
+        if (map.getLayer(USGS_TOPO_SOURCE_ID) !== undefined) map.setLayoutProperty?.(USGS_TOPO_SOURCE_ID, "visibility", "none");
+        return;
+      }
+      if (map.getSource(USGS_TOPO_SOURCE_ID) === undefined) {
+        map.addSource(USGS_TOPO_SOURCE_ID, { type: "raster", tiles: [tiles], tileSize: 256, minzoom: 4, maxzoom: 16, attribution: "Map © USGS The National Map" });
+      }
+      if (map.getLayer(USGS_TOPO_SOURCE_ID) === undefined) {
+        const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
+        map.addLayer({ id: USGS_TOPO_SOURCE_ID, type: "raster", source: USGS_TOPO_SOURCE_ID, paint: { "raster-opacity": 0.92 } }, belowOverlay(map, firstLabel));
+      }
+      map.setLayoutProperty?.(USGS_TOPO_SOURCE_ID, "visibility", "visible");
+    } catch {
+      recordError({ kind: "source", detail: USGS_TOPO_SOURCE_ID });
     }
   }
 
@@ -2084,6 +2179,7 @@ export async function createMapLibreHost(
       current.map.getSource(sourceId)?.setData(sourceData(sourceId, scene));
     }
     syncTrafficFlow(current.map, scene.infoLayers?.trafficFlowTiles ?? null);
+    syncUsgsTopo(current.map, scene.infoLayers?.usgsTopoTiles ?? null);
     syncRadarTiles(current.map, scene.infoLayers?.radarTiles ?? null);
     syncLayerRasters(current.map, scene);
     syncWindDrift(current.map, scene);
@@ -2812,6 +2908,10 @@ export async function createMapLibreHost(
     if (current === null) return;
     // The arrows' drift loop belongs to this renderer: stop it before the map goes.
     stopWindDrift(null);
+    for (const [setup, cleanup] of overlays) {
+      try { cleanup?.(); } catch { /* the renderer is being discarded */ }
+      overlays.set(setup, null);
+    }
     clearWatchdog(current);
     if (current.paintFallback !== null) clearTimeout(current.paintFallback);
     current.paintFallback = null;
@@ -2883,6 +2983,7 @@ export async function createMapLibreHost(
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);
+    runOverlays(current);
     if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     if (latestFollow !== null) {
@@ -2974,6 +3075,7 @@ export async function createMapLibreHost(
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);
+    runOverlays(current);
     if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     placeAttribution();
@@ -3459,8 +3561,11 @@ export async function createMapLibreHost(
       // Night contrast is a whole dark style and the only thing `setStyle` is
       // worth for here; without the token, on a downloaded basemap, or when the
       // fetch fails, the same choice is the scrim over the map already drawn.
-      // The route, pins and labels take the new theme's map colours.
-      palette = readMapPalette(container);
+      // The route, pins and labels take the new theme's map colours, and the
+      // images that carry the old theme's colours are redrawn (QA-05).
+      const current = attempt?.map;
+      if (current === undefined) palette = readMapPalette(container);
+      else refreshThemeColours(current);
       if (!nightAvailable() || drawingOfflineBasemap) {
         const map = attempt?.map;
         if (map !== undefined) {
@@ -3519,6 +3624,16 @@ export async function createMapLibreHost(
       automaticRetries = MAX_AUTOMATIC_RETRIES;
       publishStatus({ state: "retrying", reason: null });
       startAttempt();
+    },
+
+    attachOverlay(setup: (context: OverlayContext) => (() => void) | void): () => void {
+      overlays.set(setup, null);
+      const current = attempt;
+      if (current !== null && current.styleReady) runOverlay(setup, current);
+      return () => {
+        try { overlays.get(setup)?.(); } catch { /* already gone */ }
+        overlays.delete(setup);
+      };
     },
 
     dispose(): void {

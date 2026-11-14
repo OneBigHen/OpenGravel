@@ -256,6 +256,13 @@ export interface ProviderRouteRequest {
      * always give the same engine seeds, so a repeated ask is a repeated loop.
      */
     readonly variation?: number;
+    /**
+     * This is the quick first answer, not the full plan: ask the engine once
+     * at the distance a first ask usually needs (no correction passes), and
+     * only re-ask for a dead-end spur while the answer is still quick. The full
+     * plan that follows keeps every correction pass and decides the final pick.
+     */
+    readonly firstAnswer?: boolean;
   };
 }
 

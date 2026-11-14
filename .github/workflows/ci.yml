@@ -52,11 +52,15 @@ jobs:
       - name: Build
         run: npm run build
 
-  e2e-critical:
-    name: critical browser tests (Chromium)
+  e2e-critical-shard:
+    name: critical browser tests shard ${{ matrix.shard }}/4
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
 
@@ -75,14 +79,24 @@ jobs:
         run: npm run build
 
       - name: Critical browser tests
-        run: npx playwright test --project=critical-chromium --retries=1
+        run: npx playwright test --project=critical-chromium --retries=1 --shard=${{ matrix.shard }}/4
 
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/
           retention-days: 14
+
+  # One result under the old name, so tools that wait for "critical browser tests (Chromium)" keep working.
+  e2e-critical:
+    name: critical browser tests (Chromium)
+    if: always() && github.event_name == 'pull_request'
+    needs: e2e-critical-shard
+    runs-on: ubuntu-latest
+    steps:
+      - name: All shards passed
+        run: test "${{ needs.e2e-critical-shard.result }}" = "success"

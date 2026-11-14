@@ -4,6 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /**
+ * Where the server looks for the national ride library's pack. Nothing is there
+ * until `explore-country.spec.ts` copies the fixture pack in (and takes it out
+ * again), so every other spec sees Explore exactly as it was without a library.
+ */
+const ROUTE_LIBRARY_E2E_PACK = join(tmpdir(), "og-route-library-e2e", "pack.sqlite");
+
+/**
  * The critical-path browser gate (16-TEST-AND-RELEASE-GATES §2, §6, §7).
  *
  * One project, one spec, one browser: the first vertical slice exercised the way
@@ -28,12 +35,15 @@ import { join } from "node:path";
  *
  * ## Browsers
  *
- * `@playwright/test` is pinned to 1.61.1, which resolves chromium-1228,
- * chromium-headless-shell-1228, webkit-2311 and ffmpeg-1011. All four are
- * already present in this host's `/root/.cache/ms-playwright`, so the gate runs
- * with `PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright` and never
- * downloads a browser. A revision mismatch is fixed by pinning the Playwright
- * version to the cached revision, never by fetching browsers on a CI-less host.
+ * `@playwright/test` is pinned to 1.64.1, which resolves chromium-1248,
+ * chromium-headless-shell-1248, webkit-2370 and ffmpeg-1013. The Chromium
+ * builds and ffmpeg are present in this host's `/root/.cache/ms-playwright`,
+ * so the default gate runs with
+ * `PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright` and never downloads a
+ * browser. WebKit 2370 is not cached here; `critical-webkit` needs it installed
+ * once (CI installs browsers). A revision mismatch is fixed by pinning the
+ * Playwright version to a cached revision, never by fetching browsers on a
+ * CI-less host.
  *
  * `critical-webkit` (16 §6 runs the critical workflows on Chromium *and*
  * WebKit) is registered only when `OGV_E2E_WEBKIT=1`, so the default gate stays
@@ -120,6 +130,7 @@ export default defineConfig({
       // those windows for this server only (`src/server/rate-limit.ts`).
       OGV_RATE_LIMIT_UNLIMITED: "1",
       OGV_CATALOG_FIXTURE: "1",
+      OGV_ROUTE_LIBRARY_PACK: ROUTE_LIBRARY_E2E_PACK,
       COMMUNITY_DB_PATH: ":memory:",
       OGV_SHARE_DB_PATH: join(mkdtempSync(join(tmpdir(), "og-share-e2e-")), "shares.sqlite"),
       OGV_ROUTE_PLAN_FIXTURE_DELAY_MS: FIXTURE_DELAY_MS,
