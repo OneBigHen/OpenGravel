@@ -104,7 +104,7 @@ export function statesInView(rows: readonly IndexRow[], bounds: ViewBounds): rea
  * most a few bubble widths from where it truly sits, and only the crowded ones move.
  * With `within` they also stay fully inside the map's frame.
  */
-export function spreadBubbles(points: { x: number; y: number }[], gap = 42, rounds = 14, within?: { width: number; height: number; margin: number }): void {
+export function spreadBubbles(points: { x: number; y: number }[], gap = 42, rounds = 14, within?: { minX: number; maxX: number; minY: number; maxY: number }): void {
   for (let round = 0; round < rounds; round += 1) {
     let moved = false;
     for (let i = 0; i < points.length; i += 1) {
@@ -128,8 +128,8 @@ export function spreadBubbles(points: { x: number; y: number }[], gap = 42, roun
     }
     if (within !== undefined) {
       for (const point of points) {
-        point.x = Math.min(Math.max(point.x, within.margin), within.width - within.margin);
-        point.y = Math.min(Math.max(point.y, within.margin), within.height - within.margin);
+        point.x = Math.min(Math.max(point.x, within.minX), within.maxX);
+        point.y = Math.min(Math.max(point.y, within.minY), within.maxY);
       }
     }
     if (!moved) return;

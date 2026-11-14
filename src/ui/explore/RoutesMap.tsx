@@ -163,7 +163,7 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
       placed.push({ element, x: point.x, y: point.y });
     }
     // The states crowd the east coast on a phone: nudge their bubbles apart so each count reads.
-    if (placed.length > 1 && placed[0]?.element.dataset["kind"] === "state") spreadBubbles(placed, 42, 14, { width: layer.clientWidth, height: layer.clientHeight, margin: 24 });
+    if (placed.length > 1 && placed[0]?.element.dataset["kind"] === "state") spreadBubbles(placed, 42, 14, { minX: 24, maxX: layer.clientWidth - 24, minY: 84, maxY: layer.clientHeight - 100 });
     for (const { element, x, y } of placed) {
       element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
       element.style.visibility = "visible";
