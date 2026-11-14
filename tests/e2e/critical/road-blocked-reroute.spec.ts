@@ -45,6 +45,7 @@ async function answerRerouteWith(page: Page, answer: "a new line" | "no way"): P
     const response = await route.fetch();
     const body = await response.json() as RoutePlanSuccessBody;
     const { request } = route.request().postDataJSON() as RoutePlanRequestBody;
+    if (body.bundle === undefined) throw new Error(`reroute answer: ${response.status()} ${JSON.stringify(body).slice(0, 600)} for ${JSON.stringify(request).slice(0, 500)}`);
     const from = request.origin;
     const to = request.destination;
     const bend: Coordinate = {
