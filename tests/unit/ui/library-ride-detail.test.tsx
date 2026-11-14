@@ -98,7 +98,8 @@ describe("a trail area is a place to ride to, with its permit and season (L8)", 
     expect(screen.getByText("Trail area")).toBeInTheDocument();
     expect(screen.queryByTestId("ride-to-trailhead")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Ride here" })).toBeInTheDocument();
-    // No pin: the honest source link is the only way on.
+    // No pin: the honest source link is the only way on, and a place is not saved as an empty ride.
     expect(screen.getByTestId("ride-source-link").getAttribute("href")).toContain("riderplanet-usa.com");
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });
 });

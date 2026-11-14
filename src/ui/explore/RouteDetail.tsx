@@ -689,7 +689,7 @@ export function RouteDetail({
           </button>
         )}
         <div className="og-route-detail__alternates">
-          {canSave && libraryPlace === null ? (
+          {canSave && libraryRide?.kind !== "area" ? (
             // Already saved is a state, not a dead end: the button keeps its
             // focus and says what it did rather than going grey under the thumb.
             <button
