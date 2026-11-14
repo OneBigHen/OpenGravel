@@ -247,6 +247,15 @@ the primary button.
   byline and the shared-ride page, and is written into GPX exports. A ride the rider made shows no
   line. Credit rides on the ride's provenance, so save, copy, fork and share never drop it.
 
+- 2026-11-13 Owner (picks by Opus and Fable, `.fable/LIBRARY-PLAN.md`): Explore covers the whole country. On a
+  phone it has a list view (solid cards) and a map view (glass chrome on the live map), switched by one floating
+  pill above the tab bar; tablet and desktop show both. The map shows a count per state, then count bubbles, then
+  rides as thin plum lines, dashed where the ride is dirt or trail, with neutral glass bubbles and no new colour.
+  Ride types read Twisty, Scenic, Dirt, Trails and Big trips. Our own quality is the words "Standout" and "Great
+  ride", never stars. A library ride's list thumbnail is its own line shape. A fact a source claims reads "the
+  source says"; unknown reads unknown. A ride with a stored line offers "Follow this track"; a ride with no line
+  offers the source link first.
+
 ## Open proposals
 
 (none)
