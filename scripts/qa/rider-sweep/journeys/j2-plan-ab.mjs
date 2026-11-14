@@ -4,7 +4,7 @@ export default async function () {
     const s = await session({ vp, theme, geo: PLACES.doylestown, journey: "j2-plan-ab" });
     const p = s.page;
     await open(s, "/", 4000);
-    const f = p.getByTestId("top-place-search-field");
+    const f = p.getByTestId("top-place-search");
     await timed(s, "search jim thorpe", async () => { await f.click(); await f.fill("Jim Thorpe PA"); await shot(s, "typed"); await p.waitForTimeout(2500); await shot(s, "suggestions"); await f.press("Enter"); await p.getByTestId("place-sheet").waitFor({ timeout: 20000 }); });
     await shot(s, "place-sheet");
     console.log((await visibleTestIds(p)).join(" "));
