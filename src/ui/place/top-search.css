@@ -295,27 +295,10 @@
   }
 }
 
-/* Small phones (QA-01): the weather pill used to push the menu button over the
-   search box. Its note ("Freeze Warning") and sky glyph step aside, and while
-   the rider types the whole pill does, so what they type is fully visible. The
-   pill keeps its alert colour and a tap still opens the detail. */
-@media (max-width: 380px) {
-  .og-top-search__bar {
-    gap: var(--og-space-2);
-  }
-
-  .og-conditions__note,
-  .og-conditions__glyph {
-    display: none;
-  }
-
-  .og-conditions__pill {
-    padding: 0 var(--og-space-3);
-  }
-
-  .og-top-search__bar:focus-within .og-conditions {
-    display: none;
-  }
+@media (max-width: 360px) { /* QA-01: the weather pill steps aside so it never pushes the menu over search */
+  .og-top-search__bar { gap: var(--og-space-2); }
+  .og-conditions__pill { padding: 0 var(--og-space-3); }
+  .og-conditions__note, .og-conditions__glyph, .og-top-search__bar:focus-within .og-conditions { display: none; }
 }
 
 /* Short phones (iPhone SE): the bar sits 8px from the top and is 48px tall, so
@@ -531,9 +514,8 @@
   }
 }
 
-/* Narrow phones (320px): the weather note must not squeeze the search field to
-   nothing. Temperature and sky stay; the note steps away unless it is an alert,
-   and then it is short. The field always keeps room to read "Search here". */
+/* Narrow phones (320px): the weather note must not squeeze the search field. The
+   note steps away unless it is an alert, then it is short; "Search here" stays readable. */
 @media (max-width: 360px) {
   .og-top-search .og-conditions__pill:not([data-tone="alert"]) .og-conditions__note { display: none; }
   .og-top-search .og-conditions__note { max-width: 56px; }

@@ -734,14 +734,3 @@
 .og-layers__about-line { margin: 0 0 var(--og-space-1); }
 .og-layers__data summary { cursor: pointer; color: var(--og-ink-2); }
 .og-layers__data p { margin: var(--og-space-1) 0 0; }
-
-/* A phone on its side (QA-08): the rail takes the right-hand 340px, the search
-   the top-left, so Layers sits under the search instead of floating over the
-   rail's tabs (it used to be placed by the desktop rule, 520px from the left). */
-@media (orientation: landscape) and (max-height: 500px) {
-  .og-planner__map-slot .og-layers {
-    top: calc(var(--og-safe-top) + 76px);
-    right: auto;
-    left: calc(var(--og-safe-left) + var(--og-space-4));
-  }
-}

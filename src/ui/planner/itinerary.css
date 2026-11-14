@@ -1111,14 +1111,3 @@
   .og-breadcrumb-summary__main .og-breadcrumb-summary__more-toggle { display: inline-flex; align-items: center; }
   .og-breadcrumb-summary:not([data-more]) .og-breadcrumb-summary__extra { display: none; }
 }
-
-/* A phone on its side (QA-08): the edit bar waits under the search and Layers
-   instead of sitting centred on top of the search. */
-@media (orientation: landscape) and (max-height: 500px) {
-  .og-planner .og-planner__map-slot > .og-editbar {
-    top: calc(var(--og-safe-top) + 132px);
-    left: calc(var(--og-safe-left) + var(--og-space-4));
-    justify-items: start;
-    transform: none;
-  }
-}

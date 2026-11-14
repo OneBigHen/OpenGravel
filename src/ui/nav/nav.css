@@ -605,13 +605,3 @@
   outline-offset: var(--og-focus-offset);
 }
 .og-hike-summary__buttons button:disabled { opacity: 0.5; cursor: default; }
-
-/* A phone on its side (QA-08): the tabs sit in the 340px rail's header and stay on
-   one line each ("My rides" used to wrap in two). */
-@media (orientation: landscape) and (max-height: 500px) {
-  .og-planner__nav a,
-  .og-planner__settings-link {
-    padding: 0 var(--og-space-2);
-    white-space: nowrap;
-  }
-}
