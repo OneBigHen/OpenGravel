@@ -248,8 +248,15 @@
 /* The smallest phones: the cards drop the credit (it is on the ride page) and the map keeps the room. */
 @media (max-width: 360px) {
   .og-routes__card-credit,
-  .og-routes__strip-credit {
+  .og-routes__strip-credit,
+  .og-routes__strip-title,
+  .og-routes__strip-shape,
+  .og-routes__strip-body > :nth-child(3) {
     display: none;
+  }
+
+  .og-routes__strip-link {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
