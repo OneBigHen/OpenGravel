@@ -4,6 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /**
+ * Where the server looks for the national ride library's pack. Nothing is there
+ * until `explore-country.spec.ts` copies the fixture pack in (and takes it out
+ * again), so every other spec sees Explore exactly as it was without a library.
+ */
+const ROUTE_LIBRARY_E2E_PACK = join(tmpdir(), "og-route-library-e2e", "pack.sqlite");
+
+/**
  * The critical-path browser gate (16-TEST-AND-RELEASE-GATES §2, §6, §7).
  *
  * One project, one spec, one browser: the first vertical slice exercised the way
@@ -123,6 +130,7 @@ export default defineConfig({
       // those windows for this server only (`src/server/rate-limit.ts`).
       OGV_RATE_LIMIT_UNLIMITED: "1",
       OGV_CATALOG_FIXTURE: "1",
+      OGV_ROUTE_LIBRARY_PACK: ROUTE_LIBRARY_E2E_PACK,
       COMMUNITY_DB_PATH: ":memory:",
       OGV_SHARE_DB_PATH: join(mkdtempSync(join(tmpdir(), "og-share-e2e-")), "shares.sqlite"),
       OGV_ROUTE_PLAN_FIXTURE_DELAY_MS: FIXTURE_DELAY_MS,

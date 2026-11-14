@@ -55,7 +55,7 @@
 
 import { getActivityMode, subscribeActivityMode } from "@/application/map/activity-mode";
 import { solarPositionAt, type SolarPosition } from "@/application/map/solar-position";
-import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
+import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, USGS_TOPO_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
   LONG_PRESS_MS,
   TAP_MAX_MS,
@@ -71,7 +71,7 @@ import {
   type PointerTool,
 } from "@/application/map/interaction";
 import { assetUrl } from "@/application/map/asset-path";
-import type { MapLayerDrawStatus } from "@/application/map/map-host";
+import type { MapLayerDrawStatus, OverlayContext } from "@/application/map/map-host";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import {
   isDrawableArea,
@@ -938,6 +938,25 @@ export async function createMapLibreHost(
   let renderer: MapLibreModule | null = null;
   /** True while the renderer module is being fetched. */
   let booting = false;
+  /** Screens' own layers (`attachOverlay`): each setup and the cleanup of its last run. */
+  const overlays = new Map<(context: OverlayContext) => (() => void) | void, (() => void) | null>();
+  function runOverlay(setup: (context: OverlayContext) => (() => void) | void, current: HostAttempt): void {
+    try { overlays.get(setup)?.(); } catch { /* the old style is gone with its sources */ }
+    let cleanup: (() => void) | null = null;
+    try {
+      const result = setup({
+        map: current.map as unknown as OverlayContext["map"],
+        colours: { route: palette.routePlum, routeStrong: palette.routePlumStrong, paper: palette.paper, ink: palette.ink },
+      });
+      cleanup = typeof result === "function" ? result : null;
+    } catch {
+      recordError({ kind: "source", detail: "overlay" });
+    }
+    overlays.set(setup, cleanup);
+  }
+  function runOverlays(current: HostAttempt): void {
+    for (const setup of [...overlays.keys()]) runOverlay(setup, current);
+  }
 
   let palette = readMapPalette(container);
   /**
@@ -1756,6 +1775,26 @@ export async function createMapLibreHost(
     }
   }
 
+  /** USGS topographic tiles, under the labels like the other rasters; hidden, not removed, when off. */
+  function syncUsgsTopo(map: MapLibreMap, tiles: string | null): void {
+    try {
+      if (tiles === null) {
+        if (map.getLayer(USGS_TOPO_SOURCE_ID) !== undefined) map.setLayoutProperty?.(USGS_TOPO_SOURCE_ID, "visibility", "none");
+        return;
+      }
+      if (map.getSource(USGS_TOPO_SOURCE_ID) === undefined) {
+        map.addSource(USGS_TOPO_SOURCE_ID, { type: "raster", tiles: [tiles], tileSize: 256, minzoom: 4, maxzoom: 16, attribution: "Map © USGS The National Map" });
+      }
+      if (map.getLayer(USGS_TOPO_SOURCE_ID) === undefined) {
+        const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
+        map.addLayer({ id: USGS_TOPO_SOURCE_ID, type: "raster", source: USGS_TOPO_SOURCE_ID, paint: { "raster-opacity": 0.92 } }, belowOverlay(map, firstLabel));
+      }
+      map.setLayoutProperty?.(USGS_TOPO_SOURCE_ID, "visibility", "visible");
+    } catch {
+      recordError({ kind: "source", detail: USGS_TOPO_SOURCE_ID });
+    }
+  }
+
   /**
    * One RainViewer radar frame as a raster under the labels (map-experience wave
    * 3). The timeline swaps the frame, so the tiles are replaced in place when the
@@ -2140,6 +2179,7 @@ export async function createMapLibreHost(
       current.map.getSource(sourceId)?.setData(sourceData(sourceId, scene));
     }
     syncTrafficFlow(current.map, scene.infoLayers?.trafficFlowTiles ?? null);
+    syncUsgsTopo(current.map, scene.infoLayers?.usgsTopoTiles ?? null);
     syncRadarTiles(current.map, scene.infoLayers?.radarTiles ?? null);
     syncLayerRasters(current.map, scene);
     syncWindDrift(current.map, scene);
@@ -2872,6 +2912,10 @@ export async function createMapLibreHost(
     if (current === null) return;
     // The arrows' drift loop belongs to this renderer: stop it before the map goes.
     stopWindDrift(null);
+    for (const [setup, cleanup] of overlays) {
+      try { cleanup?.(); } catch { /* the renderer is being discarded */ }
+      overlays.set(setup, null);
+    }
     clearWatchdog(current);
     if (current.paintFallback !== null) clearTimeout(current.paintFallback);
     current.paintFallback = null;
@@ -2943,6 +2987,7 @@ export async function createMapLibreHost(
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);
+    runOverlays(current);
     if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     if (latestFollow !== null) {
@@ -3034,6 +3079,7 @@ export async function createMapLibreHost(
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);
+    runOverlays(current);
     if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     placeAttribution();
@@ -3582,6 +3628,16 @@ export async function createMapLibreHost(
       automaticRetries = MAX_AUTOMATIC_RETRIES;
       publishStatus({ state: "retrying", reason: null });
       startAttempt();
+    },
+
+    attachOverlay(setup: (context: OverlayContext) => (() => void) | void): () => void {
+      overlays.set(setup, null);
+      const current = attempt;
+      if (current !== null && current.styleReady) runOverlay(setup, current);
+      return () => {
+        try { overlays.get(setup)?.(); } catch { /* already gone */ }
+        overlays.delete(setup);
+      };
     },
 
     dispose(): void {

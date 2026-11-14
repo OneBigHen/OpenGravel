@@ -31,6 +31,8 @@ export interface InfoLayersScene {
    * it. Carried in the scene so the host needs no knowledge of the app's routes.
    */
   readonly trafficFlowTiles: string | null;
+  /** The USGS topographic tile template, or absent/`null` to hide it. */
+  readonly usgsTopoTiles?: string | null;
   /**
    * One RainViewer radar frame as a raster tile template (`…/{z}/{x}/{y}`), or
    * `null` to hide the rain layer. The frame changes with the timeline, so this
