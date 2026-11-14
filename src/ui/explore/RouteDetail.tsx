@@ -299,10 +299,12 @@ function statOf(fact: RideFact): { label: string; value: string } {
     case "time": return { label: "Time", value: fact.text.replace(/ h/g, "h").replace(/ min/g, "m") };
     case "curvature": return { label: "Curves", value: fact.text.replace(/ of curves$/, "") };
     case "surface": {
-      const gravel = fact.text.match(/([\d.,]+\s*(?:mi|km|%))\s+(?:of\s+)?gravel/i);
-      return gravel === null
-        ? { label: "Surface", value: fact.text.split(",")[0]!.replace(/^Mostly /i, "") }
-        : { label: "Gravel", value: gravel[1]! };
+      // The catalog's surface summary names the unpaved class and its mileage:
+      // "Mostly paved, 1.6 mi dirt". Reading it as "paved" (the old gravel-only
+      // match) made the tile contradict the truth line right under it.
+      const unpaved = fact.text.match(/(?:^|[·,])\s*[\d.,]+\s*mi\s+(gravel|dirt|unpaved)\b/i);
+      if (unpaved !== null) return { label: "Surface", value: unpaved[1]!.toLowerCase() };
+      return { label: "Surface", value: fact.text.split(",")[0]!.replace(/^Mostly /i, "") };
     }
   }
 }
@@ -545,12 +547,16 @@ export function RouteDetail({
           <dl className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => {
               const stat = statOf(fact);
+              // One reading per number: when the short value is already the
+              // whole fact ("77 mi"), the spoken copy would say it twice. Only
+              // a value that drops words gets the full sentence alongside it.
+              const needsSpokenCopy = fact.text !== stat.value;
               return (
                 <div key={fact.key} className="og-route-detail__stat" data-stat={fact.key}>
                   <dt>{stat.label}</dt>
                   <dd {...(fact.note === undefined ? {} : { title: fact.note })}>
-                    <span className="og-route-detail__stat-value" aria-hidden="true">{stat.value}</span>
-                    <span className="og-route-detail__fact og-visually-hidden">{fact.text}</span>
+                    <span className="og-route-detail__stat-value" {...(needsSpokenCopy ? { "aria-hidden": "true" } : {})}>{stat.value}</span>
+                    {needsSpokenCopy ? <span className="og-route-detail__fact og-visually-hidden">{fact.text}</span> : null}
                   </dd>
                 </div>
               );
@@ -566,7 +572,7 @@ export function RouteDetail({
             {startDistance === null ? null : (
               <span data-testid="route-start-distance">{startDistance}</span>
             )}
-            {startDistance === null ? null : " · "}
+            {startDistance === null || provenanceSource === "" ? null : " · "}
             {provenanceSource}
           </p>
         ) : null}

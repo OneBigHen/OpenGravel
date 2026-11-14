@@ -77,6 +77,26 @@ describe("Photon reverse features", () => {
     expect(place?.coordinate).toEqual({ lat: 40.8757, lon: -75.7324 });
   });
 
+  it("names a pin from the nearest settlement, not a building's recorded town (QA-11)", () => {
+    // The end of the Palmerton→Bowmanstown track sits north of the river; the
+    // nearest feature is a house whose OSM city tag says Palmerton, so the
+    // finish repeated the start even though the point is beside Parryville.
+    const building = feature(
+      { osm_key: "building", osm_value: "house", city: "Palmerton", county: "Carbon", state: "Pennsylvania", countrycode: "US" },
+      -75.6663,
+      40.8126,
+    );
+    const parryville = feature(
+      { osm_key: "place", osm_value: "village", name: "Parryville", county: "Carbon", state: "Pennsylvania", countrycode: "US" },
+      -75.6600,
+      40.8180,
+    );
+    const place = placeFromReverseFeature(building, { lat: 40.81262, lon: -75.6663 }, parryville);
+    expect(place?.label).toBe("Parryville, PA");
+    // Without a settlement, the old nearest-feature town is still the answer.
+    expect(placeFromReverseFeature(building, { lat: 40.81262, lon: -75.6663 })?.label).toBe("Palmerton, PA");
+  });
+
   it("names a pin that sits on a named place by that place", () => {
     const place = placeFromReverseFeature(
       feature({ osm_key: "leisure", name: "Hawk Mountain Sanctuary", city: "Kempton", state: "Pennsylvania", countrycode: "US" }, -75.9913, 40.6348),
@@ -125,6 +145,21 @@ describe("createPhotonGeocoder", () => {
     const place = await geocoder.reverse({ lat: 40.8757, lon: -75.7324 });
     expect(String((fetcher.mock.calls[0] as unknown[])[0])).toMatch(/^https:\/\/photon\.test\/reverse\?/);
     expect(place?.label).toBe("Jim Thorpe, PA");
+  });
+
+  it("asks for the nearest settlement alongside the nearest feature (QA-11)", async () => {
+    const house = feature({ osm_key: "building", city: "Palmerton", state: "Pennsylvania", countrycode: "US" }, -75.6663, 40.8126);
+    const parryville = feature({ osm_key: "place", osm_value: "village", name: "Parryville", state: "Pennsylvania", countrycode: "US" }, -75.66, 40.818);
+    const fetcher = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).includes("osm_tag=place")
+        ? jsonResponse({ features: [parryville] })
+        : jsonResponse({ features: [house] }),
+    );
+    const geocoder = createPhotonGeocoder({ baseUrl: "https://photon.test/api/", fetcher });
+    const place = await geocoder.reverse({ lat: 40.81262, lon: -75.6663 });
+    expect(place?.label).toBe("Parryville, PA");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(String((fetcher.mock.calls[1] as unknown[])[0])).toContain("osm_tag=place");
   });
 
   it("turns network, HTTP and parse failures into one unavailable error", async () => {

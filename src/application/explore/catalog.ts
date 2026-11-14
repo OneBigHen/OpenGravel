@@ -23,6 +23,7 @@ import {
 } from "@/application/roads/route-road-summary";
 import { createRoadEntity } from "@/domain/roads/road-entity";
 import { haversine } from "@/domain/geometry/analysis";
+import { LOOP_CLOSE_METERS } from "@/domain/sketch/types";
 import { parseRideStory, parseStoryTeaser, type CatalogRideStory, type CatalogStoryTeaser } from "@/application/explore/ride-story";
 import type {
   LongTripCatalogFact,
@@ -783,9 +784,15 @@ export function createExploreDerivative(
   const shaping = sourceIntent?.shaping.length
     ? sourceIntent.shaping
     : routeAlongShapingPoints(entry.geometry);
+  // A published line that comes back to where it started is a loop, whatever
+  // the catalog called it. Saying "A → B" for it read as a different ride from
+  // the one on the map, and the trip card named a finish the rider would never
+  // arrive at: it is their own start.
+  const closes = start !== null && finish !== null && haversine(start.coordinate, finish.coordinate) <= LOOP_CLOSE_METERS;
   const intent = deepFreeze({
     ...base.intent,
     ...(sourceIntent === undefined ? {} : sourceIntent),
+    shape: sourceIntent?.shape ?? (closes ? ("loop" as const) : base.intent.shape),
     ...(bike === undefined ? {} : { bike }),
     start,
     finish,
