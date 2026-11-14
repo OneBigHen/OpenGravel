@@ -1030,7 +1030,8 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       },
       paint: {
         "text-color": ["match", ["get", "tone"], "quiet", palette.slate, palette.ink],
-        "text-opacity": ["match", ["get", "tone"], "quiet", 0.72, 1],
+        // The quiet pill is quieter by its colour and its faded dot, not by
+        // thinning the text: 72% of slate on paper fell under 4.5:1 (QA-05).
         "icon-opacity": ["match", ["get", "tone"], "quiet", 0.7, 1],
       },
     },

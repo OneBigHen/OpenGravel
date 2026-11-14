@@ -51,6 +51,7 @@ import { asPlaceId } from "@/application/places/types";
 import { DEFAULT_LIGHT } from "@/infrastructure/map/maplibre/visual-detail";
 import { sunToneAt } from "@/infrastructure/map/maplibre/sun-lighting";
 import { setActivityMode } from "@/ui/stores/activity-mode";
+import { contrastRatio } from "../helpers/contrast";
 
 /** Every knob the fake renderer needs, plus what it observed. */
 interface FakeRenderer {
@@ -75,6 +76,8 @@ interface FakeRenderer {
     glyphs: string | null;
     /** Image ids passed to MapLibre across style loads and retries. */
     imageAdds: string[];
+    /** Every image write, in order, with the pixels the host drew. */
+    imageWrites: { id: string; data: unknown }[];
     /** Terrain writes made by the host. */
     terrainCalls: unknown[];
     /** Camera animations requested by the host. */
@@ -132,6 +135,7 @@ const fake = vi.hoisted((): FakeRenderer => {
     queryFeatures: [],
     glyphs: null,
     imageAdds: [],
+    imageWrites: [],
     terrainCalls: [],
     easeCalls: [],
     styles: [],
@@ -259,9 +263,19 @@ const fake = vi.hoisted((): FakeRenderer => {
 
     setPaintProperty(id: string, name: string, value: unknown): void { state.paintCalls.push({ id, name, value }); }
 
-    addImage(name: string): void {
+    addImage(name: string, data: unknown): void {
       state.imageAdds.push(name);
+      state.imageWrites.push({ id: name, data });
       this.images.add(name);
+    }
+
+    updateImage(name: string, data: unknown): void {
+      if (!this.images.has(name)) throw new Error(`image ${name} has not been added`);
+      state.imageWrites.push({ id: name, data });
+    }
+
+    removeImage(name: string): void {
+      this.images.delete(name);
     }
 
     hasImage(name: string): boolean {
@@ -399,6 +413,15 @@ function currentMap(): FakeMapInstance {
   return map;
 }
 
+/** The colour the host last painted inside an image's body (its flat centre). */
+function pillFill(id: string): [number, number, number] {
+  const write = fake.state.imageWrites.filter((entry) => entry.id === id).at(-1);
+  const image = write?.data as { readonly width: number; readonly height: number; readonly data: Uint8Array } | undefined;
+  if (image === undefined) throw new Error(`${id} was never drawn`);
+  const at = (20 * image.width + 30) * 4;
+  return [image.data[at] as number, image.data[at + 1] as number, image.data[at + 2] as number];
+}
+
 /** A pointer event jsdom can dispatch; `pointerId` is set explicitly because the
  * `PointerEvent` constructor does not always carry it. */
 function pointerEvent(
@@ -438,6 +461,7 @@ afterEach(() => {
   fake.state.queryFeatures = [];
   fake.state.glyphs = null;
   fake.state.imageAdds = [];
+  fake.state.imageWrites.length = 0;
   fake.state.terrainCalls = [];
   fake.state.sourceLoaded = false;
   fake.state.easeCalls = [];
@@ -534,6 +558,30 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     expect(fake.state.imageAdds).toHaveLength(firstImageAdds * 2);
     expect(map.images.size).toBe(23);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
+    host.dispose();
+  });
+
+  it("redraws the place pills in the new theme's colours when Day and Night switch (QA-05)", async () => {
+    fake.state.glyphs = "https://tiles.example/fonts/{fontstack}/{range}.pbf";
+    const root = document.documentElement;
+    // Midnight: Night theme tokens on the page, the map opened at night.
+    root.style.setProperty("--og-map-paper", "#131a17");
+    root.style.setProperty("--og-map-ink", "#ecf1ee");
+    const host = await createMapLibreHost(container(), { ...OPTIONS, basemapLook: "night" });
+    const map = currentMap();
+    map.fire("load");
+
+    expect(pillFill("ogv-place-soon")).toEqual([19, 26, 23]);
+
+    // Menu > Day: the same page, the Day theme's tokens.
+    root.style.removeProperty("--og-map-paper");
+    root.style.removeProperty("--og-map-ink");
+    host.setBasemapLook?.("map");
+
+    // The pill's paper is the Day paper, so the Day ink text drawn on it reads.
+    expect(pillFill("ogv-place-soon")).toEqual([251, 249, 244]);
+    const fill = pillFill("ogv-place-soon");
+    expect(contrastRatio(`#${fill.map((value) => value.toString(16).padStart(2, "0")).join("")}`, DEFAULT_MAP_PALETTE.ink)).toBeGreaterThanOrEqual(4.5);
     host.dispose();
   });
 

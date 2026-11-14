@@ -141,6 +141,7 @@ import {
   nightScrimLayer,
   osmBasemapStyle,
   overlayLayers,
+  placeLayers,
   readMapPalette,
   routeLayers as styleRouteLayers,
   type MapStyleSpec,
@@ -958,11 +959,18 @@ export async function createMapLibreHost(
   }
 
   let palette = readMapPalette(container);
-  const placePillImages = createPlacePillImages(palette);
-  const puckImage = createPuckImage(palette);
+  /**
+   * The image set that carries theme colours (the place pills' paper fill, the
+   * rider's arrow, the wind bands). It is rebuilt whenever the palette changes,
+   * because a Day/Night switch repaints the *text* from the new palette while a
+   * stale pill image would keep the old theme's fill — which is how a day map
+   * showed black event boxes with dark text on them (QA-05).
+   */
+  let placePillImages = createPlacePillImages(palette);
+  let puckImage = createPuckImage(palette);
   const markerImages = [...createMarkerImages(), ...createSearchPinImages()];
   /** One arrow image per wind strength band (map-experience wave 3, item 13). */
-  const windArrowImages = createWindArrowImages(palette);
+  let windArrowImages = createWindArrowImages(palette);
   const searchLabelImages = new WeakMap<MapLibreMap, Set<string>>();
   /**
    * Which tone the route arrow image in the current renderer was drawn in.
@@ -1433,6 +1441,54 @@ export async function createMapLibreHost(
     } catch {
       // Cosmetic: a dimmer that cannot be added leaves the map as it was. The
       // chrome is dark either way, so nothing claims a night map that is not.
+    }
+  }
+
+  /**
+   * Re-draws the theme-coloured images and the two labels whose colours pair
+   * with them (QA-05).
+   *
+   * A Day/Night switch changes the palette and repaints the label *text* from it,
+   * but MapLibre keeps the image it already has under an id — so the place pills
+   * went on wearing the old theme's paper: at dawn that is a dark box with dark
+   * text on it. The set is rebuilt here and written onto the live map; a style
+   * reset drops the images anyway and `addOverlayLayers` re-adds this rebuilt set.
+   */
+  function refreshThemeColours(map: MapLibreMap): void {
+    palette = readMapPalette(container);
+    placePillImages = createPlacePillImages(palette);
+    puckImage = createPuckImage(palette);
+    windArrowImages = createWindArrowImages(palette);
+    const themed: readonly { readonly id: string; readonly data: PlacePillImage["data"]; readonly options: unknown }[] = [
+      ...placePillImages,
+      puckImage,
+      ...windArrowImages,
+    ];
+    for (const image of themed) {
+      if (!map.hasImage(image.id)) continue;
+      try {
+        if (map.updateImage !== undefined) {
+          map.updateImage(image.id, image.data);
+        } else if (map.removeImage !== undefined) {
+          map.removeImage(image.id);
+          map.addImage(image.id, image.data, image.options as PlacePillImage["options"]);
+        }
+      } catch {
+        recordError({ kind: "renderer", detail: `image:${image.id}` });
+      }
+    }
+    // The pill's text sits on that image, so the two must come from one palette
+    // even when the style itself is not reloaded (a downloaded basemap's look).
+    for (const layer of placeLayers(palette)) {
+      if (layer.id !== MAP_LAYER_IDS.placePill && layer.id !== MAP_LAYER_IDS.placeSelected) continue;
+      if (map.getLayer(layer.id) === undefined) continue;
+      for (const [name, value] of Object.entries(layer.paint ?? {})) {
+        try {
+          map.setPaintProperty?.(layer.id, name, value);
+        } catch {
+          recordError({ kind: "renderer", detail: layer.id });
+        }
+      }
     }
   }
 
@@ -3484,8 +3540,11 @@ export async function createMapLibreHost(
       // Night contrast is a whole dark style and the only thing `setStyle` is
       // worth for here; without the token, on a downloaded basemap, or when the
       // fetch fails, the same choice is the scrim over the map already drawn.
-      // The route, pins and labels take the new theme's map colours.
-      palette = readMapPalette(container);
+      // The route, pins and labels take the new theme's map colours, and the
+      // images that carry the old theme's colours are redrawn (QA-05).
+      const current = attempt?.map;
+      if (current === undefined) palette = readMapPalette(container);
+      else refreshThemeColours(current);
       if (!nightAvailable() || drawingOfflineBasemap) {
         const map = attempt?.map;
         if (map !== undefined) {
