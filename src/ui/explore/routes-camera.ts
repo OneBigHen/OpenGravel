@@ -63,7 +63,7 @@ export type Bubble = {
   readonly inset?: boolean;
 };
 
-const CLUSTER_PX = 46;
+const CLUSTER_PX = 40;
 
 /** A state's count bubble is a little bigger for more rides, but always small enough to leave room. */
 export function bubbleSize(count: number): number {
