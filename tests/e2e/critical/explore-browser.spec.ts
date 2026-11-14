@@ -94,35 +94,33 @@ test("the Explore map panel is the map and nothing opaque is painted over it (QA
     if (map === null || canvas === null || canvas === undefined) return null;
     const mapBox = map.getBoundingClientRect();
     const canvasBox = canvas.getBoundingClientRect();
-    /** The classes that may legitimately paint the map's own paper. */
+    const mapArea = mapBox.width * mapBox.height;
+    // The page and its wrappers paint *behind* the map: they are not a cover.
+    const behind = new Set<Element>();
+    for (let node: Element | null = map; node !== null; node = node.parentElement) behind.add(node);
     const allowed = (element: Element): boolean =>
       element === canvas ||
       element.classList.contains("og-map") ||
       element.classList.contains("og-map-host") ||
       element.classList.contains("og-map__attempt") ||
       [...element.classList].some((name) => name.startsWith("maplibregl-"));
-    const samplePoints: [number, number][] = [
-      [mapBox.x + mapBox.width / 2, mapBox.y + mapBox.height / 2],
-      [mapBox.x + mapBox.width / 2, mapBox.y + 16],
-      [mapBox.x + mapBox.width * 0.25, mapBox.y + mapBox.height * 0.6],
-    ];
+    /** A flat rectangle this much of the map's size is the QA-15 bug shape. */
+    const COVER_SHARE = 0.3;
     const offenders: string[] = [];
-    for (const [x, y] of samplePoints) {
-      // The top element at each point must be the map itself, not a cover.
-      const top = document.elementFromPoint(x, y);
-      if (top === null || !(top === canvas || map.contains(top))) {
-        offenders.push(`${Math.round(x)},${Math.round(y)}: ${top?.className ?? "nothing"} is over the map`);
-        continue;
-      }
-      for (const element of document.querySelectorAll("*")) {
-        const rect = element.getBoundingClientRect();
-        if (rect.width < 20 || rect.height < 10) continue;
-        if (!(x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)) continue;
-        if (allowed(element)) continue;
-        const style = getComputedStyle(element);
-        const opaque = style.backgroundColor !== "rgba(0, 0, 0, 0)" && !style.backgroundColor.startsWith("rgba(0, 0, 0, 0)");
-        if (opaque) offenders.push(`${Math.round(x)},${Math.round(y)}: ${element.className || element.tagName} ${style.backgroundColor}`);
-      }
+    for (const element of document.querySelectorAll("*")) {
+      if (behind.has(element) || allowed(element)) continue;
+      const rect = element.getBoundingClientRect();
+      if (rect.width < 40 || rect.height < 25) continue;
+      const overlapWidth = Math.min(rect.right, mapBox.right) - Math.max(rect.left, mapBox.left);
+      const overlapHeight = Math.min(rect.bottom, mapBox.bottom) - Math.max(rect.top, mapBox.top);
+      if (overlapWidth <= 0 || overlapHeight <= 0) continue;
+      if ((overlapWidth * overlapHeight) / mapArea < COVER_SHARE) continue;
+      const style = getComputedStyle(element);
+      // A hidden or clear layer paints nothing, whatever colour it declares.
+      if (style.visibility === "hidden" || style.opacity === "0" || style.display === "none") continue;
+      const clear = style.backgroundColor === "rgba(0, 0, 0, 0)" && style.backgroundImage === "none";
+      if (clear) continue;
+      offenders.push(`${element.className || element.tagName} ${style.backgroundColor} covers ${Math.round((overlapWidth * overlapHeight * 100) / mapArea)}%`);
     }
     return {
       offenders,
