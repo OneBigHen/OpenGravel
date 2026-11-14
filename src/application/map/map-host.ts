@@ -142,7 +142,53 @@ export interface MapLayerDrawStatus {
   readonly state: "loading" | "ready" | "unavailable" | "flat-offline";
 }
 
+/**
+ * The slice of the renderer a screen may draw with when it brings its own layers
+ * (Explore's whole-country ride library). Structural on purpose: UI code never
+ * imports the renderer, and a host that cannot offer this simply omits
+ * `attachOverlay`.
+ */
+export interface OverlayMap {
+  addSource(id: string, source: Record<string, unknown>): void;
+  getSource(id: string): { setData(data: unknown): void } | undefined;
+  addLayer(layer: Record<string, unknown>, beforeId?: string): void;
+  getLayer(id: string): unknown;
+  removeLayer(id: string): void;
+  removeSource(id: string): void;
+  setFilter(layerId: string, filter: unknown): void;
+  queryRenderedFeatures(
+    box: readonly [readonly [number, number], readonly [number, number]],
+    options?: { readonly layers?: readonly string[] },
+  ): readonly { readonly properties?: Record<string, unknown> | null }[];
+  getZoom(): number;
+  getBounds(): { toArray(): readonly (readonly [number, number])[] };
+  getCenter(): { readonly lng: number; readonly lat: number };
+  project(coordinate: readonly [number, number]): { readonly x: number; readonly y: number };
+  easeTo(options: Readonly<Record<string, unknown>>): void;
+  on(event: string, listener: (payload: unknown) => void): void;
+  off(event: string, listener: (payload: unknown) => void): void;
+}
+
+/** What an overlay is given each time the renderer (or its style) is new. */
+export interface OverlayContext {
+  readonly map: OverlayMap;
+  /** The live map colours, already read from the design tokens (Day or Night). */
+  readonly colours: {
+    readonly route: string;
+    readonly routeStrong: string;
+    readonly paper: string;
+    readonly ink: string;
+  };
+}
+
 export interface MapHost {
+  /**
+   * Lets a screen draw its own sources and layers on the renderer. `setup` runs
+   * on the live map now and again on every replacement (a Night switch or a
+   * recovery builds a new style), and may return its own cleanup. Returns the
+   * function that detaches it. Optional: a test double has no renderer.
+   */
+  attachOverlay?(setup: (context: OverlayContext) => (() => void) | void): () => void;
   /** Declarative sync of the whole scene. Never recreates the map (05 §2). */
   applyScene(scene: MapScene): void;
   /**

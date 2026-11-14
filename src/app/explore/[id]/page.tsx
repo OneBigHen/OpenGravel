@@ -5,6 +5,7 @@ import { liveCatalogEntries } from "@/server/community-routes/live-catalog";
 import { routeMetadata } from "@/server/explore/route-metadata";
 import { libraryRideAsCatalogEntry } from "@/server/route-library/as-catalog-entry";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 /** Dynamic for the same reason as Explore: the basemap is read per request. */
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export async function generateMetadata({
   const entries = liveCatalogEntries();
   // A national-library ride is not in the live catalog; it unfurls the same way.
   const libraryRide = entries.some((entry) => entry.id === routeId) ? null : libraryRideAsCatalogEntry(routeId);
-  return routeMetadata(routeId, libraryRide === null ? entries : [libraryRide], process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
+  return routeMetadata(libraryRide === null ? routeId : libraryRide.id, libraryRide === null ? entries : [libraryRide], process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
 }
 
 export default async function ExploreRoutePage({
@@ -29,6 +30,12 @@ export default async function ExploreRoutePage({
   readonly params: Promise<{ readonly id: string }>;
 }) {
   const { id } = await params;
+  // An old link to a ride that was merged into another site's card opens that card at its own address.
+  const requested = decodeURIComponent(id);
+  if (!liveCatalogEntries().some((entry) => entry.id === requested)) {
+    const merged = libraryRideAsCatalogEntry(requested);
+    if (merged !== null && merged.id !== requested) redirect(`/explore/${encodeURIComponent(merged.id)}`);
+  }
   // The route page draws its route on the live map, like Explore itself.
   const basemap = resolveBasemapMode(process.env.NEXT_PUBLIC_OGV_BASEMAP, {
     ...(process.env.NODE_ENV === undefined ? {} : { nodeEnv: process.env.NODE_ENV }),

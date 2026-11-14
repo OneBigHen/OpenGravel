@@ -30,18 +30,17 @@ const provider = (candidates: readonly ProviderCandidate[]) => ({ id: "test", ca
 const deps = { env: {}, roadAuthority: null };
 
 describe("geometry owns Best Ride before diversity and role assignment", () => {
-  it("Balanced retains its material tight-curve selection instead of buying broad sweeps", async () => {
-    const ridge = route(66, true);
-    const ridgeRoads = { ...ridge.roadSummary!, bendMeters: 0 };
-    // Geometry fun likes this line, but the established Balanced evaluator
-    // sees no additional tight-bend mileage and therefore keeps its incumbent.
-    const result = await planRide({ identity, request: request("balanced") }, {
-      ...deps, provider: { ...provider([]), candidates: vi.fn(async (r: ProviderRouteRequest) => ({ candidates:
-        r.options.riderModeFactor === undefined ? [fast] : [{ ...ridge, roadSummary: ridgeRoads }],
-      })) },
-    });
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.bundle.candidates.find(c => c.id === result.bundle.selectedRouteId)?.durationSeconds).toBe(fast.durationSeconds);
+  it("Balanced spends the one scorer's bend miles inside the ride budget, never past it", async () => {
+    // The wave: fastest (factor 0), the rider's own request, strong (factor 3).
+    const answer = (inBudget: ProviderCandidate) => vi.fn(async (r: ProviderRouteRequest) => ({ candidates:
+      r.options.riderModeFactor === 0 ? [fast] : r.options.riderModeFactor === undefined ? [route(61, false)] : [inBudget],
+    }));
+    const twisty = await planRide({ identity, request: request("balanced") }, { ...deps, provider: { ...provider([]), candidates: answer(sweep) } });
+    expect(twisty.ok).toBe(true);
+    if (twisty.ok) expect(twisty.bundle.candidates.find(c => c.id === twisty.bundle.selectedRouteId)?.durationSeconds).toBe(sweep.durationSeconds);
+    const tooFar = await planRide({ identity, request: request("balanced") }, { ...deps, provider: { ...provider([]), candidates: answer(overBudget) } });
+    expect(tooFar.ok).toBe(true);
+    if (tooFar.ok) expect(tooFar.bundle.candidates.find(c => c.id === tooFar.bundle.selectedRouteId)?.durationSeconds).not.toBe(overBudget.durationSeconds);
   });
   it.each(["curvy"] as const)("%s selects a legal sweeping line inside the real ETA budget", async style => {
     expect(candidateGeometryFun(sweep)!.headingDegreesPerKm).toBeGreaterThan(candidateGeometryFun(fast)!.headingDegreesPerKm);

@@ -1691,32 +1691,48 @@ describe("MapLibreHost — the pointer stream belongs to a drawing tool (05 §4)
     host.dispose();
   });
 
-  it("drags the selected route line with a mouse into a reroute point, then pans again", async () => {
-    const { host, map, intents } = await loaded();
-    host.applyScene(scene());
-    fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.routeSelected }, properties: { id: ROUTE_ID } }];
-    const press = (type: string, x: number, y: number): PointerEvent => {
-      const event = pointerEvent(type, { x, y });
-      Object.defineProperty(event, "pointerType", { value: "mouse" });
-      return event;
-    };
-    map.getCanvasContainer().dispatchEvent(press("pointerdown", 10, 10));
-    map.getCanvasContainer().dispatchEvent(press("pointermove", 90, 90));
-    map.getCanvasContainer().dispatchEvent(press("pointerup", 90, 90));
-    expect(intents[0]).toMatchObject({ type: "pointer-down", ref: { kind: "route", routeId: ROUTE_ID } });
-    expect(intents.at(-1)).toMatchObject({ type: "gesture-commit", tool: "point-drag" });
+  it("pans when a mouse press on the selected route line moves at once; only a hold grabs the line (QA-19)", async () => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      host.applyScene(scene());
+      fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.routeSelected }, properties: { id: ROUTE_ID } }];
+      const press = (type: string, x: number, y: number): PointerEvent => {
+        const event = pointerEvent(type, { x, y });
+        Object.defineProperty(event, "pointerType", { value: "mouse" });
+        return event;
+      };
+      const canvas = map.getCanvasContainer();
+      // A press that moves before the hold is a pan: nothing is grabbed or committed.
+      canvas.dispatchEvent(press("pointerdown", 10, 10));
+      canvas.dispatchEvent(press("pointermove", 90, 90));
+      vi.advanceTimersByTime(600);
+      canvas.dispatchEvent(press("pointerup", 90, 90));
+      expect(intents.filter((i) => i.type === "pointer-down" || i.type === "gesture-commit")).toHaveLength(0);
 
-    // The drag was scoped to that one gesture: a press on open map pans again.
-    fake.state.queryFeatures = [];
-    const before = intents.length;
-    map.getCanvasContainer().dispatchEvent(press("pointerdown", 300, 300));
-    map.getCanvasContainer().dispatchEvent(press("pointermove", 400, 400));
-    map.getCanvasContainer().dispatchEvent(press("pointerup", 400, 400));
-    expect(intents.slice(before).filter((intent) => intent.type === "pointer-down")).toHaveLength(0);
-    host.dispose();
+      // A deliberate hold grabs the line; dragging then commits one reroute point.
+      canvas.dispatchEvent(press("pointerdown", 10, 10));
+      vi.advanceTimersByTime(500);
+      canvas.dispatchEvent(press("pointermove", 90, 90));
+      canvas.dispatchEvent(press("pointerup", 90, 90));
+      expect(intents.find((i) => i.type === "pointer-down")).toMatchObject({ type: "pointer-down", ref: { kind: "route", routeId: ROUTE_ID } });
+      expect(intents.filter((i) => i.type === "gesture-commit")).toHaveLength(1);
+      expect(intents.at(-1)).toMatchObject({ type: "gesture-commit", tool: "point-drag" });
+
+      // The grab was scoped to that one gesture: a press on open map pans again.
+      fake.state.queryFeatures = [];
+      const before = intents.length;
+      canvas.dispatchEvent(press("pointerdown", 300, 300));
+      canvas.dispatchEvent(press("pointermove", 400, 400));
+      canvas.dispatchEvent(press("pointerup", 400, 400));
+      expect(intents.slice(before).filter((i) => i.type === "pointer-down")).toHaveLength(0);
+      host.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it("offers the selected road on touch hold, and pans normally afterwards", async () => {
+  it("pans on a touch swipe across the line, holds grab it, and an unmoved hold offers the road without replanning", async () => {
     vi.useFakeTimers();
     try {
       const { host, map, intents } = await loaded();
@@ -1727,30 +1743,35 @@ describe("MapLibreHost — the pointer stream belongs to a drawing tool (05 §4)
         Object.defineProperty(event, "pointerType", { value: "touch" });
         return event;
       };
+      const canvas = map.getCanvasContainer();
       // A quick swipe across the line is a pan, never a reroute.
-      map.getCanvasContainer().dispatchEvent(touch("pointerdown", 10, 10));
-      map.getCanvasContainer().dispatchEvent(touch("pointermove", 80, 80));
+      canvas.dispatchEvent(touch("pointerdown", 10, 10));
+      canvas.dispatchEvent(touch("pointermove", 80, 80));
       vi.advanceTimersByTime(600);
-      map.getCanvasContainer().dispatchEvent(touch("pointerup", 80, 80));
-      expect(intents.filter((intent) => intent.type === "pointer-down")).toHaveLength(0);
+      canvas.dispatchEvent(touch("pointerup", 80, 80));
+      expect(intents.filter((i) => i.type === "pointer-down" || i.type === "gesture-commit")).toHaveLength(0);
 
-      // A hold offers the road instead of a point menu or route drag.
-      map.getCanvasContainer().dispatchEvent(touch("pointerdown", 10, 10));
+      // A hold released in place offers the road, with no point menu, drag or commit.
+      canvas.dispatchEvent(touch("pointerdown", 10, 10));
       vi.advanceTimersByTime(500);
-      expect(intents.at(-1)).toMatchObject({ type: "object-click", ref: { kind: "route", routeId: ROUTE_ID } });
-      expect(intents.filter((intent) => intent.type === "map-long-press")).toHaveLength(0);
-      const afterHold = intents.length;
-      map.getCanvasContainer().dispatchEvent(touch("pointermove", 90, 90));
-      map.getCanvasContainer().dispatchEvent(touch("pointerup", 90, 90));
-      expect(intents).toHaveLength(afterHold);
+      canvas.dispatchEvent(touch("pointerup", 10, 10));
+      expect(intents.at(-1)).toMatchObject({ type: "object-click", source: "long-press", ref: { kind: "route", routeId: ROUTE_ID } });
+      expect(intents.filter((i) => i.type === "map-long-press" || i.type === "gesture-commit")).toHaveLength(0);
+
+      // A hold then a drag reshapes: one commit.
+      canvas.dispatchEvent(touch("pointerdown", 10, 10));
+      vi.advanceTimersByTime(500);
+      canvas.dispatchEvent(touch("pointermove", 90, 90));
+      canvas.dispatchEvent(touch("pointerup", 90, 90));
+      expect(intents.filter((i) => i.type === "gesture-commit")).toHaveLength(1);
 
       // The neutral tool still pans after the finger lifts.
       fake.state.queryFeatures = [];
       const before = intents.length;
-      map.getCanvasContainer().dispatchEvent(touch("pointerdown", 300, 300));
-      map.getCanvasContainer().dispatchEvent(touch("pointermove", 400, 400));
-      map.getCanvasContainer().dispatchEvent(touch("pointerup", 400, 400));
-      expect(intents.slice(before).filter((intent) => intent.type === "pointer-down")).toHaveLength(0);
+      canvas.dispatchEvent(touch("pointerdown", 300, 300));
+      canvas.dispatchEvent(touch("pointermove", 400, 400));
+      canvas.dispatchEvent(touch("pointerup", 400, 400));
+      expect(intents.slice(before).filter((i) => i.type === "pointer-down")).toHaveLength(0);
       host.dispose();
     } finally {
       vi.useRealTimers();
@@ -2206,8 +2227,8 @@ it("gives a stationary mouse hold on the selected route to the existing road off
     const canvas = map.getCanvasContainer();
     canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, pointerType: "mouse" }));
     vi.advanceTimersByTime(450);
-    expect(intents.at(-1)).toMatchObject({ type: "object-click", source: "long-press", ref: { kind: "route", routeId: ROUTE_ID } });
     canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40, pointerType: "mouse" }));
+    expect(intents.at(-1)).toMatchObject({ type: "object-click", source: "long-press", ref: { kind: "route", routeId: ROUTE_ID } });
     expect(intents.filter((intent) => intent.type === "object-click")).toHaveLength(1);
     expect(intents.filter((intent) => intent.type === "gesture-commit" || intent.type === "map-long-press")).toHaveLength(0);
     host.dispose();

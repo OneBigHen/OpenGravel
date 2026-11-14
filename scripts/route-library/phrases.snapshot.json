@@ -1,0 +1,122 @@
+{
+ "facts": {
+  "surface": [
+   {
+    "phrase": "paved",
+    "count": 8,
+    "value": "paved",
+    "tableRow": true
+   },
+   {
+    "phrase": "back roads with sand sections",
+    "count": 1,
+    "value": null,
+    "tableRow": true
+   },
+   {
+    "phrase": "mixed-use dirt/gravel road, 72-inch ORV route — motorcycles legal per DNR legend",
+    "count": 1,
+    "value": "unpaved",
+    "tableRow": true
+   },
+   {
+    "phrase": "open sandy/rocky area along the Arkansas River",
+    "count": 1,
+    "value": "unpaved",
+    "tableRow": true
+   },
+   {
+    "phrase": "paved public roads",
+    "count": 1,
+    "value": "paved",
+    "tableRow": true
+   },
+   {
+    "phrase": "paved, final 3.8 mi gravel",
+    "count": 1,
+    "value": "mixed",
+    "tableRow": true
+   },
+   {
+    "phrase": "pavement, gravel and dirt two-track",
+    "count": 1,
+    "value": "mixed",
+    "tableRow": true
+   }
+  ],
+  "legal": [
+   {
+    "phrase": "public-roads",
+    "count": 12,
+    "value": "public-roads",
+    "tableRow": true
+   },
+   {
+    "phrase": "designated-ohv",
+    "count": 2,
+    "value": "designated-ohv",
+    "tableRow": true
+   }
+  ],
+  "difficulty": [
+   {
+    "phrase": "unknown",
+    "count": 11,
+    "value": null,
+    "tableRow": true
+   },
+   {
+    "phrase": "difficult",
+    "count": 2,
+    "value": "difficult",
+    "tableRow": true
+   },
+   {
+    "phrase": "easy",
+    "count": 1,
+    "value": "easy",
+    "tableRow": true
+   }
+  ],
+  "permits": [
+   {
+    "phrase": "none stated",
+    "count": 12,
+    "value": null,
+    "tableRow": true
+   },
+   {
+    "phrase": "AZ State Land Trust Recreation Permit $15 individual; CO Bar Ranch permit free (Section 5); Navajo Nation permit $25/person (Sections 5 & 6); no OHV permit needed for licensed/plated street-legal motorcycle",
+    "count": 1,
+    "value": "AZ State Land Trust Recreation Permit $15 individual; CO Bar Ranch permit free (Section 5); Navajo Nation permit $25/person (Sections 5 & 6); no OHV permit needed for licensed/plated street-legal motorcycle",
+    "tableRow": true
+   },
+   {
+    "phrase": "Michigan DNR ORV license ($26.25/yr) and ORV trail permit required on designated trails unless street-licensed — see michigan.gov/dnr/things-to-do/orv-riding/permits-and-requirements",
+    "count": 1,
+    "value": "Michigan DNR ORV license ($26.25/yr) and ORV trail permit required on designated trails unless street-licensed — see michigan.gov/dnr/things-to-do/orv-riding/permits-and-requirements",
+    "tableRow": true
+   }
+  ],
+  "season": [
+   {
+    "phrase": "unknown",
+    "count": 12,
+    "value": null,
+    "tableRow": true
+   },
+   {
+    "phrase": "May, June, September, October",
+    "count": 1,
+    "value": "May, June, September, October",
+    "tableRow": true
+   },
+   {
+    "phrase": "Open all year, but the high section can close for snow and ice in winter.",
+    "count": 1,
+    "value": "Open all year, but the high section can close for snow and ice in winter.",
+    "tableRow": true
+   }
+  ]
+ }
+}

@@ -11,7 +11,8 @@ export async function GET(_request: Request, context: { readonly params: Promise
   if (result.status === 404) {
     // Not a curated or shared ride: it may be one of the national library's.
     const libraryRide = libraryRideAsCatalogEntry(id);
-    if (libraryRide !== null) result = handleCatalogDetail(id, [libraryRide]);
+    // A merged-away id answers with the card it became (its `id` is the new one).
+    if (libraryRide !== null) result = handleCatalogDetail(libraryRide.id, [libraryRide]);
   }
   return Response.json(result.body, { status: result.status, headers: result.headers });
 }

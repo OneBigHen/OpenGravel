@@ -405,6 +405,31 @@ describe("PlanningSession snapshot", () => {
  * Generation ownership (21 §7, 02 §9)
  * ---------------------------------------------------------------------- */
 
+describe("asking for the same loop again (QA-13)", () => {
+  it("sends the same loop request each time, and only 'Try another loop' moves it on", async () => {
+    const alpha = fakeProvider("alpha");
+    const loop = plannedIntent({
+      shape: "loop",
+      finish: null,
+      time: { kind: "budget", targetMinutes: 120, toleranceMinutes: 15 },
+    });
+    const controller = buildController({ providers: [alpha.provider], now: FIXED_CLOCK });
+    const secondController = buildController({ providers: [alpha.provider], now: FIXED_CLOCK });
+    void begin(controller, 1, loop);
+    await flush();
+    void begin(secondController, 1, loop);
+    await flush();
+    void begin(controller, 1, loop);
+    await flush();
+    const discoveries = alpha.calls.map((call) => call.request.discovery);
+    expect(discoveries[0]).toBeDefined();
+    // A fresh session asking for the same loop sends the very same ask.
+    expect(discoveries[1]).toEqual(discoveries[0]);
+    // Pressing "Try another loop" on the same ride is the one thing that changes it.
+    expect(discoveries[2]?.variation).toBe(1);
+  });
+});
+
 describe("generation ownership", () => {
   it("owns advisory readings with their generation and drops a superseded reading", async () => {
     const alpha = fakeProvider("alpha");
@@ -1568,6 +1593,91 @@ describe("stub pipeline", () => {
     const dirt = bundle.candidates.find((candidate) => candidate.fingerprint === "fp-dirt");
     expect(bundle.roles["best-ride"]).toBe(dirt?.id);
     expect(bundle.selectedRouteId).toBe(dirt?.id);
+  });
+
+  describe("first route early, quiet upgrade", () => {
+    const quickAnswer = (): ProviderCandidate[] => [rawCandidate("first", { providerMetadata: { fingerprint: "fp-quick", bestRide: true } })];
+    const fullAnswer = (): ProviderCandidate[] => [
+      rawCandidate("full", { providerMetadata: { fingerprint: "fp-quick" } }),
+      rawCandidate("full", { profile: "motorcycle_adventure", providerMetadata: { fingerprint: "fp-better", bestRide: true } }),
+    ];
+
+    it("shows the first route while the full plan is still being worked out", async () => {
+      const first = fakeProvider("first");
+      const full = fakeProvider("full");
+      const controller = buildController({ providers: [first.provider, full.provider], now: FIXED_CLOCK });
+      void begin(controller, 1);
+      await flush();
+      first.settle(0, quickAnswer());
+      await flush();
+      const snapshot = controller.snapshot();
+      expect(snapshot.phase).toBe("alternatives-loading");
+      expect(snapshot.committedBundle?.candidates).toHaveLength(1);
+      expect(snapshot.committedBundle?.candidates[0]?.eligibility).toEqual({ eligible: true, failures: [] });
+      expect(snapshot.selectedRouteId).toBe(snapshot.committedBundle?.candidates[0]?.id);
+      expect(snapshot.upgrade ?? null).toBeNull();
+    });
+
+    it("replaces the first route with a better one and remembers the first for Undo", async () => {
+      const first = fakeProvider("first");
+      const full = fakeProvider("full");
+      const controller = buildController({ providers: [first.provider, full.provider], now: FIXED_CLOCK });
+      void begin(controller, 1);
+      await flush();
+      first.settle(0, quickAnswer());
+      await flush();
+      const firstId = required(controller.snapshot().selectedRouteId ?? undefined);
+      full.settle(0, fullAnswer());
+      await flush();
+      const snapshot = controller.snapshot();
+      const better = snapshot.committedBundle?.candidates.find((candidate) => candidate.fingerprint === "fp-better");
+      expect(snapshot.selectedRouteId).toBe(better?.id);
+      expect(snapshot.upgrade).toEqual({ fromRouteId: firstId, toRouteId: better?.id });
+      expect(snapshot.committedBundle?.candidates.some((candidate) => candidate.id === firstId)).toBe(true);
+
+      controller.selectRoute(firstId);
+      const undone = controller.snapshot();
+      expect(undone.selectedRouteId).toBe(firstId);
+      expect(undone.upgrade).toBeNull();
+      expect(undone.selectionSource).toBe("rider");
+    });
+
+    it("does not replace a route the rider has already chosen or started to ride", async () => {
+      const first = fakeProvider("first");
+      const full = fakeProvider("full");
+      const controller = buildController({ providers: [first.provider, full.provider], now: FIXED_CLOCK });
+      void begin(controller, 1);
+      await flush();
+      first.settle(0, quickAnswer());
+      await flush();
+      // Starting to ride holds the shown route exactly like a tap on it.
+      controller.selectRoute(required(controller.snapshot().selectedRouteId ?? undefined));
+      const held = controller.snapshot().selectedRouteId;
+      full.settle(0, fullAnswer());
+      await flush();
+      expect(controller.snapshot().selectedRouteId).toBe(held);
+      expect(controller.snapshot().upgrade ?? null).toBeNull();
+    });
+
+    it("drops the upgrade when the ride is edited before it arrives", async () => {
+      const first = fakeProvider("first");
+      const full = fakeProvider("full");
+      const controller = buildController({ providers: [first.provider, full.provider], now: FIXED_CLOCK });
+      void begin(controller, 1);
+      await flush();
+      first.settle(0, quickAnswer());
+      await flush();
+      const shown = controller.snapshot().selectedRouteId;
+      void begin(controller, 2);
+      await flush();
+      full.settle(0, fullAnswer());
+      await flush();
+      const snapshot = controller.snapshot();
+      expect(snapshot.identity.rideRevision).toBe(2);
+      expect(snapshot.upgrade ?? null).toBeNull();
+      expect(snapshot.committedBundle).toBeNull();
+      expect(snapshot.lastGoodBundle?.selectedRouteId).toBe(shown);
+    });
   });
 
   it("stores candidate geometry and marks eligibility and score as placeholders", async () => {

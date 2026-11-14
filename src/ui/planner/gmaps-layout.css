@@ -226,6 +226,7 @@
 
 .og-phone-summary__eta {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--og-space-4);
   min-width: 0;
@@ -234,14 +235,14 @@
 
 .og-phone-summary .og-phone-summary__time {
   flex: none;
-  max-width: 38%;
   color: var(--og-primary-text);
+  white-space: nowrap;
   font-size: var(--og-text-title);
   line-height: 1.1;
 }
 
 .og-phone-summary__facts {
-  flex: 1 1 auto;
+  flex: 1 1 9rem;
   min-width: 0;
 }
 
@@ -760,5 +761,15 @@
   }
   .og-planner[data-trip="true"]:has(.og-trip[data-compact="true"]) .og-planner__map-slot .og-map__cluster {
     top: calc(var(--og-safe-top) + 132px);
+  }
+}
+
+/* Phone on its side (QA-08): place actions wrap, tabs stay one line, Layers and the edit bar sit under the search. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-planner .og-place-sheet .og-place-sheet__actions { flex-wrap: wrap; overflow-x: visible; }
+  .og-planner__nav a, .og-planner__settings-link { padding: 0 var(--og-space-2); white-space: nowrap; }
+  .og-planner__map-slot .og-layers { top: calc(var(--og-safe-top) + 76px); right: auto; left: calc(var(--og-safe-left) + var(--og-space-4)); }
+  .og-planner .og-planner__map-slot > .og-editbar {
+    top: calc(var(--og-safe-top) + 132px); left: calc(var(--og-safe-left) + var(--og-space-4)); justify-items: start; transform: none;
   }
 }

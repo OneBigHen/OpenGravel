@@ -27,3 +27,5 @@ export { usePlaceFlow } from "@/ui/place/usePlaceFlow";
 export { useBreadcrumbScene, usePlannerBreadcrumbView } from "@/ui/planner/hooks/usePlannerBreadcrumbView";
 
 export { usePlannerHikeActivity, usePlannedHikeSummary } from "./hooks/usePlannerHikeActivity";
+
+export { useRouteUpgradeToast } from "./hooks/useRouteUpgradeToast";

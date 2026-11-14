@@ -41,6 +41,7 @@ import { distanceToStartKm } from "@/application/explore/query";
 import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
+import { AlsoOnLine } from "@/ui/credit/AlsoOnLine";
 import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
@@ -90,6 +91,11 @@ function deviceTimeZone(): string {
 
 function serverTimeZone(): string {
   return "UTC";
+}
+
+/** A library ride the source never placed: no line and no area, so a live map would only show the app's default view. */
+function lineHasNoPoints(entry: CatalogEntry): boolean {
+  return entry.geometry.length === 0 && (entry.previewGeometry ?? []).length === 0;
 }
 
 function UnknownMetric({ label }: { readonly label: string }) {
@@ -543,6 +549,7 @@ export function RouteDetail({
           <h1>{entry.name}</h1>
         </div>
         <RideCreditLine credit={entry.credit} />
+        <AlsoOnLine primary={entry.credit} alsoOn={entry.alsoOn} />
         {rideFacts.length === 0 ? null : (
           <dl className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => {
@@ -592,7 +599,7 @@ export function RouteDetail({
           <span className="og-route-detail__map-title" aria-hidden="true">{entry.name}</span>
       <section className="og-route-detail__map" aria-label="Map preview">
         {/* The route where it is: a live map to pan, else a map image. */}
-        {map !== undefined ? (
+        {map !== undefined && !(entry.referenceTrack === true && entry.bounds === null && lineHasNoPoints(entry)) ? (
           <ExploreMap {...map} entries={[entry]} highlightedId={entry.id} onOpen={() => undefined} tools="recentre" />
         ) : staticMapUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
@@ -604,7 +611,7 @@ export function RouteDetail({
         ) : (
           <div className="og-map-preview-unavailable" role="img" aria-label={`${entry.name} map preview`}>
             <span className="og-map-preview-unavailable__glyph" aria-hidden="true">⌖</span>
-            <span>Map preview unavailable</span>
+            <span>{entry.referenceTrack === true ? "No map position for this ride" : "Map preview unavailable"}</span>
           </div>
         )}
       </section>
@@ -615,16 +622,26 @@ export function RouteDetail({
           start. Saving and sharing sit beside it as the quiet choices, together
           on their own row so the commitment is the only thing that stands out. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        <button
-          type="button"
-          className="og-primary"
-          data-testid="ride-this"
-          aria-busy={busy === "use"}
-          disabled={busy !== null || !fullGeometry}
-          onClick={() => void runAction("use", () => onUse(entry))}
-        >
-          {busy === "use" ? "Getting this ride ready…" : "Ride this"}
-        </button>
+        {entry.referenceTrack === true && entry.geometry.length < 2 ? (
+          // A library ride with no line of ours: the source's own page is the way on.
+          entry.credit?.sourceUrl === undefined ? null : (
+            <a className="og-primary" data-testid="ride-source-link" href={entry.credit.sourceUrl} target="_blank" rel="noopener noreferrer">
+              See it on {entry.credit.sourceName}
+              <span className="sr-only"> (opens the original in a new tab)</span>
+            </a>
+          )
+        ) : (
+          <button
+            type="button"
+            className="og-primary"
+            data-testid="ride-this"
+            aria-busy={busy === "use"}
+            disabled={busy !== null || !fullGeometry}
+            onClick={() => void runAction("use", () => onUse(entry))}
+          >
+            {busy === "use" ? "Getting this ride ready…" : entry.referenceTrack === true ? "Follow this track" : "Ride this"}
+          </button>
+        )}
         <div className="og-route-detail__alternates">
           {canSave ? (
             // Already saved is a state, not a dead end: the button keeps its
