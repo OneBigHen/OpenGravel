@@ -112,7 +112,7 @@ for (const size of SIZES) {
     await page.getByTestId("map-lens-fun").click();
     const header = (await panel.locator(".og-layers__active").textContent()) ?? "";
     const active = Number(/(\d+) active/.exec(header)?.[1]);
-    const switchedOn = await panel.locator('[role="switch"][aria-checked="true"]').count();
+    const switchedOn = await panel.locator('[data-testid^="map-layer-"][aria-checked="true"]').count();
     expect(active, "the count in the header is the number of layers switched on below").toBe(switchedOn);
     // A quick set never says only "Partial": it says how many of its layers are on.
     const lens = (await page.getByTestId("map-lens-fun").textContent()) ?? "";
