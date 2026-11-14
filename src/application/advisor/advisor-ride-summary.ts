@@ -6,6 +6,7 @@ import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import type { RideDocument } from "@/domain/ride/types";
 import type { RouteBundle } from "@/domain/route/types";
 import { utf8Size } from "./advisor-conversation";
+import { formatWholeMinutes } from "@/domain/format/duration";
 
 export const MAX_ADVISOR_SUMMARY_BYTES = 1500;
 export interface AdvisorRideSummary {
@@ -127,10 +128,7 @@ export function isAdvisorRideSummary(value: unknown): value is AdvisorRideSummar
 
 /** "1 h 50 min", "45 min". */
 function durationWords(minutes: number): string {
-  const total = Math.max(1, Math.round(minutes));
-  const hours = Math.floor(total / 60);
-  const rest = total % 60;
-  return hours === 0 ? `${rest} min` : rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+  return formatWholeMinutes(Math.max(1, minutes));
 }
 
 /** "98% paved, 2% unknown (estimated)": the non-zero parts of the summary's own surface line. */

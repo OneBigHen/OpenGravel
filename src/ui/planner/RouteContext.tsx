@@ -10,14 +10,13 @@ import { useActivityMode } from "@/ui/stores/activity-mode";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { ConditionsPill } from "@/ui/place/ConditionsPill";
 import { useRouteWeather } from "@/ui/weather/useRouteWeather";
+import { arrivalWithLight } from "@/application/planner/arrival";
+import { formatDuration } from "@/application/planner/measurements";
 import { usePlannerDaylight } from "./hooks/usePlannerDaylight";
 import type { PlannerActiveRoute } from "./hooks/usePlannerActiveRoute";
 
 const clock = (instant: string | number): string => new Date(instant).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-function duration(seconds: number): string {
-  const minutes = Math.round(seconds / 60);
-  return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} m`;
-}
+const duration = formatDuration;
 
 /** The line the daylight chip reads: its geometry in travel order and its ride time. */
 export type DaylightRoute = Pick<PlannerActiveRoute, "geometry" | "durationSeconds">;
@@ -57,24 +56,25 @@ function RouteDaylightChip({ route, intent }: { readonly route: DaylightRoute; r
     const darkSeconds = totalMeters > 0 ? route.durationSeconds * routeLineMeters(split.afterSunset) / totalMeters : 0;
     return { split, sunset: split.sunsetIso ?? sunset, difference, beforeDawn, arrivesBeforeDawn, sunrise: endSunrise, darkSeconds };
   }, [route, departure.departureAt, arrival]);
-  const lightLabel = daylight === null ? null : daylight.arrivesBeforeDawn ? "arrive before sunrise" : daylight.difference === 0 ? "arrive around sunset" : `${duration(Math.abs(daylight.difference) * 60)} ${daylight.difference < 0 ? "before" : "after"} dark`;
+  const lightLabel = daylight === null ? null : daylight.arrivesBeforeDawn ? "before sunrise" : daylight.difference === 0 ? "around sunset" : `${duration(Math.abs(daylight.difference) * 60)} ${daylight.difference < 0 ? "before" : "after"} dark`;
   if (daylight === null || lightLabel === null) return null;
   // Short on the chip; the whole sentence, arrival included, is its name.
   const chip = daylight.arrivesBeforeDawn ? "before sunrise" : daylight.difference === 0 ? "around sunset" : daylight.difference < 0 ? "before dark" : daylight.difference < 60 ? lightLabel : "after dark";
   const warn = daylight.arrivesBeforeDawn || daylight.difference >= 0;
-  const spoken = arrival === null || !Number.isFinite(arrival) ? lightLabel : `Arrive ${clock(arrival)}, ${lightLabel}. Ride conditions`;
+  const arrivalText = arrival === null || !Number.isFinite(arrival) ? null : arrivalWithLight(clock(arrival), intent.shape === "loop", lightLabel);
+  const spoken = arrivalText === null ? lightLabel : `${arrivalText}. Ride conditions`;
   return <>
     <button type="button" className="og-route-daylight" data-testid="route-context" data-tone={warn ? "warn" : "calm"}
       aria-label={spoken} aria-haspopup="dialog" onClick={() => setOpen(true)}>{chip}</button>
-    {open && typeof document !== "undefined" ? createPortal(<ConditionsSheet route={route} departureAt={departure.departureAt} daylight={daylight} lightLabel={lightLabel} onClose={() => setOpen(false)} />, document.body) : null}
+    {open && typeof document !== "undefined" ? createPortal(<ConditionsSheet route={route} departureAt={departure.departureAt} daylight={daylight} arrivalText={arrivalText} onClose={() => setOpen(false)} />, document.body) : null}
   </>;
 }
 
-function ConditionsSheet({ route, departureAt, daylight, lightLabel, onClose }: {
+function ConditionsSheet({ route, departureAt, daylight, arrivalText, onClose }: {
   readonly route: DaylightRoute;
   readonly departureAt: string | null;
   readonly daylight: { readonly split: ReturnType<typeof splitRouteByDaylight>; readonly sunset: string; readonly difference: number; readonly beforeDawn: boolean; readonly arrivesBeforeDawn: boolean; readonly sunrise: string | null; readonly darkSeconds: number } | null;
-  readonly lightLabel: string | null;
+  readonly arrivalText: string | null;
   readonly onClose: () => void;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -85,7 +85,7 @@ function ConditionsSheet({ route, departureAt, daylight, lightLabel, onClose }: 
     <section ref={ref} role="dialog" aria-modal="true" aria-labelledby="route-conditions-title" className="og-route-conditions" data-testid="route-conditions">
       <header className="og-route-conditions__header"><div><p>YOUR RIDE</p><h2 id="route-conditions-title">Ride conditions</h2></div><button type="button" onClick={onClose} aria-label="Close ride conditions">×</button></header>
       <div className="og-route-conditions__body">
-        <section className="og-route-conditions__section"><h3>Daylight</h3>{daylight === null ? <p>Daylight along this route is unavailable.</p> : <><strong>{daylight.arrivesBeforeDawn ? "In the dark the whole way" : daylight.beforeDawn ? "The ride begins before sunrise" : daylight.split.outcome === "after-dark" ? "In the dark the whole way" : `Sunset ${clock(daylight.sunset)}`}</strong><p>{daylight.arrivesBeforeDawn && daylight.sunrise !== null ? `Sunrise ${clock(daylight.sunrise)}` : daylight.beforeDawn && daylight.sunrise !== null ? `Sunrise ${clock(daylight.sunrise)}` : daylight.split.outcome === "crosses-sunset" ? `Last ${duration(daylight.darkSeconds)} after dark` : daylight.split.outcome === "after-dark" ? `Sunset ${clock(daylight.sunset)}` : lightLabel === null ? null : `Arrive ${lightLabel}`}</p></>}</section>
+        <section className="og-route-conditions__section"><h3>Daylight</h3>{daylight === null ? <p>Daylight along this route is unavailable.</p> : <><strong>{daylight.arrivesBeforeDawn ? "In the dark the whole way" : daylight.beforeDawn ? "The ride begins before sunrise" : daylight.split.outcome === "after-dark" ? "In the dark the whole way" : `Sunset ${clock(daylight.sunset)}`}</strong><p>{daylight.arrivesBeforeDawn && daylight.sunrise !== null ? `Sunrise ${clock(daylight.sunrise)}` : daylight.beforeDawn && daylight.sunrise !== null ? `Sunrise ${clock(daylight.sunrise)}` : daylight.split.outcome === "crosses-sunset" ? `Last ${duration(daylight.darkSeconds)} after dark` : daylight.split.outcome === "after-dark" ? `Sunset ${clock(daylight.sunset)}` : null}</p>{arrivalText === null ? null : <p data-testid="route-conditions-arrival">{arrivalText}</p>}</>}</section>
         <section className="og-route-conditions__section"><h3>Weather along the route</h3>{weather.status === "ready" ? <><strong>{weather.report.headline}</strong><div className="og-route-conditions__samples" aria-label="Forecast samples along the route">{weather.report.samples.map((sample, index) => <div key={index}><span>{index === 0 ? "Start" : `mi ${sample.mile}`}</span><b>{sample.tempF === null ? "–" : `${sample.tempF}°`}</b><span>{sample.rainChancePct === null ? "Rain –" : `Rain ${sample.rainChancePct}%`}</span><span>{sample.windMph === null ? "Wind –" : `Wind ${sample.windMph} mph`}</span></div>)}</div><p className="og-route-conditions__source">Forecast at estimated arrival times · National Weather Service</p></> : <p>{weather.status === "loading" ? "Checking the forecast along your route…" : "Weather along the route is unavailable right now."}</p>}</section>
         {start === undefined ? null : <section className="og-route-conditions__section og-route-conditions__here"><h3>Conditions at the start</h3><ConditionsPill at={start} embedded /></section>}
       </div>

@@ -80,64 +80,64 @@ export const MAP_LAYER_CATEGORIES: readonly { readonly id: MapLayerCategory; rea
 ];
 
 export const MAP_LAYERS: readonly MapLayerDefinition[] = [
-  { id: "trails", name: "Trails", category: "roads", kind: "features", legend: "Paths and hiking route relations", source: "OpenStreetMap basemap, Overpass and OSM API", caveat: "Community-mapped routes are incomplete; access and conditions are not verified. Relation casings require an online connection.", minZoom: 11, color: "#a34d38", glyph: "∿" },
-  { id: "trailheads", name: "Trailheads", category: "stops", kind: "features", legend: "Mapped trailheads", source: "OpenStreetMap via Overpass", caveat: "Community data; access and facilities are not verified. Online only.", minZoom: 11, color: "#52704b", glyph: "▲" },
-  { id: "water-sources", name: "Water sources", category: "stops", kind: "features", legend: "Springs and drinking water", source: "OpenStreetMap via Overpass", caveat: "Water availability and potability are not verified. Online only.", minZoom: 11, color: "#397c96", glyph: "●" },
-  { id: "shelters", name: "Shelters and campsites", category: "stops", kind: "features", legend: "Mapped shelters and campsites", source: "OpenStreetMap via Overpass", caveat: "Availability and access are not verified. Online only.", minZoom: 11, color: "#796446", glyph: "⌂" },
-  { id: "summits", name: "Summits", category: "stops", kind: "features", legend: "Mapped peaks", source: "OpenStreetMap via Overpass", caveat: "Community data may be incomplete. Online only.", minZoom: 11, color: "#7b4fa0", glyph: "▲" },
-  { id: "hunting-season", name: "PA State Game Lands", category: "access", kind: "features", legend: "Season dates: check PGC", source: "Pennsylvania Game Commission · State Game Land Boundaries", caveat: "Boundary publication dates are shown with each feature; boundaries are generalized. Season dates are not included: check the Pennsylvania Game Commission. Online only.", minZoom: 9, color: "#b45309", glyph: "!" },
-  { id: "trail-closures", name: "Trail closures", category: "access", kind: "features", legend: "Not available yet", source: "TODO: trail closure sources", caveat: "No closure feed connected. Check the land manager before visiting.", minZoom: 9, color: "#a83e32", glyph: "!" },
+  { id: "trails", name: "Trails", category: "roads", kind: "features", legend: "Paths and hiking route relations", source: "OpenStreetMap", caveat: "Volunteer-mapped, so some trails are missing and conditions are not checked.", minZoom: 11, color: "#a34d38", glyph: "∿" },
+  { id: "trailheads", name: "Trailheads", category: "stops", kind: "features", legend: "Mapped trailheads", source: "OpenStreetMap", caveat: "Volunteer-mapped; parking and facilities are not checked.", minZoom: 11, color: "#52704b", glyph: "▲" },
+  { id: "water-sources", name: "Water sources", category: "stops", kind: "features", legend: "Springs and drinking water", source: "OpenStreetMap", caveat: "Volunteer-mapped; whether the water is running or safe to drink is not checked.", minZoom: 11, color: "#397c96", glyph: "●" },
+  { id: "shelters", name: "Shelters and campsites", category: "stops", kind: "features", legend: "Mapped shelters and campsites", source: "OpenStreetMap", caveat: "Volunteer-mapped; whether a spot is open or allowed is not checked.", minZoom: 11, color: "#796446", glyph: "⌂" },
+  { id: "summits", name: "Summits", category: "stops", kind: "features", legend: "Mapped peaks", source: "OpenStreetMap", caveat: "Volunteer-mapped, so some peaks may be missing.", minZoom: 11, color: "#7b4fa0", glyph: "▲" },
+  { id: "hunting-season", name: "PA State Game Lands", category: "access", kind: "features", legend: "Season dates: check PGC", source: "Pennsylvania Game Commission", caveat: "Boundaries are simplified and season dates are not shown, so check the Pennsylvania Game Commission before you go.", minZoom: 9, color: "#b45309", glyph: "!" },
+  { id: "trail-closures", name: "Trail closures", category: "access", kind: "features", legend: "Closures reported by land managers", source: "Not connected yet", caveat: "Not connected to a data source yet. Check with the land manager before you go.", minZoom: 9, color: "#a83e32", glyph: "!" },
   {
     id: "mvum", name: "Forest Service roads", category: "access", kind: "features",
     legend: "Green open to motorcycles, red closed",
-    source: "USFS MVUM · canonical routing authority",
-    caveat: "Published motorcycle designations and seasonal windows, evaluated by UTC date. Missing roads and unpublished dates stay unknown. Check current local MVUM and restrictions; designation does not prove passability. Requires the routing authority connector. Online only.",
+    source: "US Forest Service motor vehicle use maps",
+    caveat: "Roads missing from the map and dates not published stay unknown. A road being listed does not mean it is passable today, so check local Forest Service notices.",
     minZoom: 10, color: "#243a35", colorToken: "--og-deep-spruce", glyph: "⟋",
   },
   {
     id: "work-zones", name: "Road work", category: "conditions", kind: "features",
     legend: "Work zones and lane closures from the state",
-    source: "USDOT WZDx registry / state DOT · canonical routing authority",
-    caveat: "Uses the same normalized snapshots as routing. Feed gaps, unknown dates and stale reports remain visible; no report is not proof of a clear road. Requires the routing authority connector. Online only.",
+    source: "State transportation departments (USDOT work zone data)",
+    caveat: "Reports can be late or missing, which leaves a road unknown, not clear.",
     minZoom: 8, color: "#d65a36", colorToken: "--og-ember", glyph: "⚒",
   },
   {
     id: "active-fire", name: "Wildfires", category: "conditions", kind: "features",
     legend: "Fires seen by satellite in the last two days",
-    source: "NASA FIRMS VIIRS SNPP NRT",
-    caveat: "Hotspots are not road closures. Nominal 375 m VIIRS footprint; clouds and satellite timing leave gaps. Acquisition time and confidence on each detection. Online only.",
+    source: "NASA satellite fire detections",
+    caveat: "Hotspots are not road closures. Clouds and satellite timing can leave gaps.",
     minZoom: 5, color: "#bf4829", colorToken: "--og-ember-strong", glyph: "!",
   },
   {
     id: "weather-radar", name: "Rain radar", category: "conditions", kind: "raster",
     legend: "Rain now, the last two hours, and a 30-minute nowcast",
-    source: "RainViewer (NOAA NEXRAD and other national radar feeds)",
-    caveat: "Animated frames: two hours back plus a 30-minute nowcast, scrubbed with the timeline in the map. Stale frames are labelled. Radar gaps, beam blockage and a missing frame do not mean clear weather. Online only.",
+    source: "RainViewer, using NOAA and other national radar",
+    caveat: "Stale frames are labelled. Radar can miss showers in gaps or behind hills, so no rain shown does not guarantee clear weather.",
     minZoom: 4, color: "#397c96", colorToken: "--og-signal-blue", glyph: "☂",
   },
   {
     id: "wind", name: "Wind", category: "conditions", kind: "features",
     legend: "Arrows point downwind; size and colour mean speed",
     source: WIND_ATTRIBUTION,
-    caveat: "US only. A coarse forecast grid — one arrow per ~10 km, never more than 25 — read from the same NWS cache as the weather pill, showing the forecast for the hour at each cell. No arrow means no reading, not calm; gusts are printed only when NWS publishes them. Shown from zoom 8 to 12, where the grid is meaningful. Online only.",
+    caveat: "Covers the US only. A missing arrow means no reading, not calm air.",
     minZoom: 8, maxZoom: 12, color: "#397c96", glyph: "➤",
   },
   {
     id: "hillshade", name: "Hill shading", category: "view", kind: "view",
-    legend: "Shaded hills so valleys and ridges pop", source: "AWS Terrain Tiles (Mapzen Terrarium)",
-    caveat: "DEM resolution roughly 30–90 m, varying by source region. Online only; source survey date unknown. Shares the existing terrain DEM without tilting the map.",
+    legend: "Shaded hills so valleys and ridges pop", source: "Mapzen Terrarium terrain tiles",
+    caveat: "Elevation resolution is roughly 100 to 300 ft, so small features do not show.",
     minZoom: 6, color: "#65745d", colorToken: "--og-trail-moss", glyph: "⛰",
   },
   {
     id: "contours", name: "Contour lines", category: "view", kind: "features",
-    legend: "Elevation lines; closer lines mean steeper ground", source: "AWS Terrain Tiles (Mapzen Terrarium)",
-    caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
+    legend: "Elevation lines; closer lines mean steeper ground", source: "Mapzen Terrarium terrain tiles",
+    caveat: "Elevation resolution is roughly 100 to 300 ft. Lines are drawn for the area on screen, and the spacing is shown on each line. Steep ground is not the same as a steep road.",
     minZoom: 6, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
   },
   {
     id: "slope", name: "Steep ground", category: "view", kind: "features",
-    legend: "Amber is steep, red is very steep", source: "AWS Terrain Tiles (Mapzen Terrarium)",
-    caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
+    legend: "Amber is steep, red is very steep", source: "Mapzen Terrarium terrain tiles",
+    caveat: "Elevation resolution is roughly 100 to 300 ft. It shows the ground, not the road. A road can be gentler than the hill beside it.",
     minZoom: 6, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
   },
 
@@ -147,8 +147,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "view",
     kind: "view",
     legend: "Tilt the map to see the ridges you will climb",
-    source: "AWS Terrain Tiles (Mapzen Terrarium)",
-    caveat: "Elevation at roughly 30 m resolution; drag with two fingers or right-click to tilt and turn.",
+    source: "Mapzen Terrarium terrain tiles",
+    caveat: "Elevation resolution is roughly 100 feet. Drag with two fingers or right-click to tilt and turn.",
     minZoom: 0,
     color: "#65745d",
     glyph: "⛰",
@@ -159,8 +159,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "conditions",
     kind: "raster",
     legend: "Green moving, amber slow, red stopped",
-    source: "TomTom Traffic Flow",
-    caveat: "Live speeds relative to free flow on major roads; minor roads are often not covered.",
+    source: "TomTom",
+    caveat: "Live speeds on major roads. Smaller roads are often not covered.",
     minZoom: 6,
     color: "#3e6b55",
     glyph: "≋",
@@ -171,8 +171,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "conditions",
     kind: "features",
     legend: "Reported right now",
-    source: "TomTom Traffic Incidents",
-    caveat: "Provider reports only; a road with no report is not proof that it is clear.",
+    source: "TomTom",
+    caveat: "Only what has been reported. A road with no report is not guaranteed clear.",
     minZoom: 8,
     color: "#a83e32",
     glyph: "!",
@@ -183,8 +183,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "conditions",
     kind: "features",
     legend: "Tap one to see the road now",
-    source: "State DOT and 511 camera feeds",
-    caveat: "Coverage and playback differ by state. Cameras load only for the visible region; video opens only on demand.",
+    source: "State transportation departments (511)",
+    caveat: "Coverage differs by state, and a camera shows only the spot it points at.",
     // Hundreds of highway cameras buried the ride at overview zooms (owner review 2026-10-04).
     minZoom: 11,
     color: "#6b4f8a",
@@ -197,7 +197,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Storm, flood and wind warnings at the map center",
     source: "National Weather Service",
-    caveat: "US only. This layer checks the map center, not every visible point; pan or recenter to check another area. Alert polygons follow NWS cadence and precision.",
+    caveat: "Covers the US only. It checks the map center, not every visible point, so move the map to check somewhere else.",
     minZoom: 4,
     color: "#1e5aa8",
     glyph: "☂",
@@ -208,8 +208,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "roads",
     kind: "features",
     legend: "Hotter, thicker line = more bends",
-    source: "OpenGravel road-shape analysis",
-    caveat: "Scored from road geometry by bend density; approximate, not ground-truthed.",
+    source: "OpenGravel road shape analysis",
+    caveat: "Scored from the shape of the road, so it is approximate and not ridden-checked.",
     minZoom: 8,
     color: "#d65a36",
     glyph: "∿",
@@ -220,8 +220,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "roads",
     kind: "features",
     legend: "Dashed brown; thicker = better dirt",
-    source: "OpenGravel Gravel Atlas (OpenStreetMap surface tags)",
-    caveat: "Dirt and gravel the router knows about, scored by length of dirt and bends. Roads closed, private or seasonally shut are left out; a road not drawn is unknown, not paved. Surface is not proof of current passability.",
+    source: "OpenGravel Gravel Atlas, built on OpenStreetMap surface tags",
+    caveat: "Closed, private and seasonal roads are left out. A road not drawn is unknown, not paved, and dirt does not mean passable today.",
     minZoom: 8,
     color: "#776353",
     glyph: "⋯",
@@ -233,7 +233,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Thin plum lines: real rides picked by people who ride here. Tap one.",
     source: "From PA Adventure Bike Rides",
-    caveat: "The group's own published rides, drawn as a simplified outline when zoomed out. Surface and distance are the group's own summary, copied and not verified, and the source files state no licence. Tap a line to read it; nothing opens it until you tap \"Ride this\".",
+    caveat: "These rides come from the group that published them, drawn as a simplified outline when zoomed out. Their surface and distance summary is copied, not checked. Tap a line to read it; nothing opens until you tap \"Ride this\".",
     minZoom: 6,
     maxZoom: 10,
     color: "#8f6fa6",
@@ -245,8 +245,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     category: "roads",
     kind: "features",
     legend: "Good roads from your saved rides",
-    source: "Your saved rides + OpenGravel road catalogues",
-    caveat: "Estimated from local recordings and partial mapped-road coverage; it is not a complete riding history.",
+    source: "Your saved rides and OpenGravel road data",
+    caveat: "An estimate from rides on this device, not a full riding history.",
     minZoom: 8,
     color: "#3d8495",
     glyph: "↗",
@@ -258,7 +258,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Gas stations",
     source: "TomTom Search",
-    caveat: "Provider POI data; hours, prices and ethanol-free pumps are not verified. Call ahead in remote areas.",
+    caveat: "Hours and prices are not checked. Call ahead in remote areas.",
     minZoom: 10,
     color: "#0f766e",
     glyph: "⛽",
@@ -270,7 +270,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Restaurants, diners and fast food",
     source: "TomTom Search",
-    caveat: "Provider POI data; hours are not shown and listings can be stale.",
+    caveat: "Hours are not shown and listings can be out of date.",
     minZoom: 11,
     color: "#b45309",
     glyph: "🍴",
@@ -282,7 +282,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Cafés",
     source: "TomTom Search",
-    caveat: "Provider POI data; hours are not shown and listings can be stale.",
+    caveat: "Hours are not shown and listings can be out of date.",
     minZoom: 11,
     color: "#7c4a2d",
     glyph: "☕",
@@ -294,7 +294,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Scenic overlooks",
     source: "TomTom Search",
-    caveat: "Provider POI category; access, parking and current availability are not checked.",
+    caveat: "Parking and access are not checked.",
     minZoom: 9,
     color: "#7b4fa0",
     glyph: "◭",
@@ -306,7 +306,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Campgrounds",
     source: "TomTom Search",
-    caveat: "Provider POI data; fees, seasons, site types and current availability are not verified.",
+    caveat: "Fees, seasons and availability are not checked.",
     minZoom: 9,
     color: "#4d7c0f",
     glyph: "⛺",
@@ -318,7 +318,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Hotels, motels and guest houses",
     source: "TomTom Search",
-    caveat: "Provider POI data; rates and current availability are not shown.",
+    caveat: "Rates and availability are not shown.",
     minZoom: 10,
     color: "#9d174d",
     glyph: "⌂",
@@ -330,7 +330,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Motorcycle dealers and repair",
     source: "TomTom Search",
-    caveat: "Provider POI data; services and hours are not verified, and not every listed shop works on motorcycles.",
+    caveat: "Services and hours are not checked, and not every listed shop works on motorcycles.",
     minZoom: 9,
     color: "#334155",
     glyph: "🔧",
@@ -342,12 +342,74 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     kind: "features",
     legend: "Parks, forests and game lands open to visit",
     source: "USGS PAD-US (OpenStreetMap fallback)",
-    caveat: "Includes private protected land. Protection and general public access do not grant motorized access. Boundaries are generalized; survey dates vary. If PAD-US fails, OSM centres are explicitly labeled as fallback. Online only.",
+    caveat: "Includes private protected land. Public land does not grant motorized access, and boundaries are simplified.",
     minZoom: 9,
     color: "#9da98f", colorToken: "--og-topo-sage",
     glyph: "▲",
   },
 ];
+
+/**
+ * The one rider sentence for each layer in its info sheet: what it is and what
+ * it is for. Where the data comes from, and its limits, live under "About this
+ * data" (`source` and `caveat`), also in plain words.
+ */
+const LAYER_ABOUT: Readonly<Record<MapLayerId, string>> = {
+  "trails": "Paths and hiking trails you can follow.",
+  "trailheads": "Where trails start.",
+  "water-sources": "Springs and drinking water along the way.",
+  "shelters": "Shelters and campsites you can stop at.",
+  "summits": "Named peaks and high points.",
+  "hunting-season": "State game lands, where hunting seasons can affect when you should ride.",
+  "trail-closures": "Trail closures.",
+  "mvum": "National Forest roads where motorcycles are allowed (green) or not (red).",
+  "work-zones": "Road work and lane closures, so you can avoid slow or blocked roads.",
+  "active-fire": "Wildfires spotted by satellite in the last two days.",
+  "weather-radar": "Where it is raining now, the last two hours, and the next 30 minutes.",
+  "wind": "Which way the wind is blowing and how hard.",
+  "hillshade": "Shaded hills so ridges and valleys stand out.",
+  "contours": "Elevation lines in feet: the closer together, the steeper the ground.",
+  "slope": "Steep ground in amber and very steep in red.",
+  "terrain-3d": "Tilt the map to see the ridges you will climb.",
+  "traffic-flow": "How fast traffic is moving: green is moving, amber is slow, red is stopped.",
+  "live-traffic": "Crashes and closures reported right now.",
+  "traffic-cameras": "Live views of the road from highway cameras. Tap one to look.",
+  "weather": "Storm, flood and wind warnings for the middle of the map.",
+  "great-roads": "Roads with the most bends; hotter, thicker lines are twistier.",
+  "gravel": "Dirt and gravel roads, thicker where the dirt is better.",
+  "rider-picked": "Rides picked by people who ride here. Tap a line to read it.",
+  "road-history": "Good roads from your saved rides.",
+  "fuel": "Gas stations.",
+  "food": "Restaurants, diners and fast food.",
+  "coffee": "Coffee shops.",
+  "camping": "Campgrounds.",
+  "lodging": "Hotels, motels and guest houses.",
+  "repair": "Motorcycle dealers and repair shops.",
+  "viewpoints": "Scenic overlooks worth a stop.",
+  "public-land": "Parks, forests and game lands you can visit.",
+};
+
+export function layerAbout(id: MapLayerId): string {
+  return LAYER_ABOUT[id];
+}
+
+/** Layers with no working data source yet: kept in the catalog, never offered to a rider. */
+const UNAVAILABLE_LAYERS: ReadonlySet<MapLayerId> = new Set<MapLayerId>(["trail-closures"]);
+
+export function isLayerAvailable(id: MapLayerId): boolean {
+  return !UNAVAILABLE_LAYERS.has(id);
+}
+
+/** The layers a rider can actually turn on. */
+export const RIDER_MAP_LAYERS: readonly MapLayerDefinition[] = MAP_LAYERS.filter((layer) => isLayerAvailable(layer.id));
+
+/**
+ * Every string a rider can read about a layer, for the copy test: name, legend,
+ * the one-sentence about, and the data-source detail.
+ */
+export function layerRiderCopy(layer: MapLayerDefinition): readonly string[] {
+  return [layer.name, layer.legend, layerAbout(layer.id), layer.source, layer.caveat];
+}
 
 /**
  * One-tap sets of layers that answer one rider question together. A lens is

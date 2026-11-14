@@ -80,7 +80,7 @@ describe("the credit line", () => {
   });
 
   it("says plainly when the author is not named, and shows nothing for a rider's own ride", () => {
-    expect(creditText({ author: null, sourceName: "Roost GPX locker" })).toBe("Route from Roost GPX locker · author not named");
+    expect(creditText({ author: null, sourceName: "Roost GPX locker" })).toBe("Route from Roost GPX locker · author unknown");
     const { container } = render(<RideCreditLine credit={undefined} />);
     expect(container.textContent).toBe("");
   });
@@ -155,7 +155,7 @@ describe("GPX export names the author", () => {
   it("says the author is not named instead of inventing one", () => {
     const xml = buildPlannedTrackGpx({ ...input, credit: { author: null, sourceName: "Roost GPX locker", sourceUrl: "https://roostlocker.com/" } });
     expect(xml).not.toContain("<author>");
-    expect(xml).toContain("author not named");
+    expect(xml).toContain("author unknown");
   });
 
   it("adds nothing for a rider's own ride", () => {
