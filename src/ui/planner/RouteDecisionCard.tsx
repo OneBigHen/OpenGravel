@@ -73,6 +73,24 @@ function isUnknownLabel(label: string | null | undefined): boolean {
 }
 
 /**
+ * The sentences a ride's plan states about itself (a basic route, a final
+ * approach), in the ride's own words.
+ *
+ * They are rendered wherever the chosen ride is the subject: the one summary
+ * every tier shows (`RideSummary`) and the choices list beside it. A phone whose
+ * ride comes from a place card's Directions shows the summary alone, so the
+ * sentence has to live there or the rider is never told.
+ */
+export function RoutePlanNotices({ card }: { readonly card: RouteCardVm }) {
+  if (card.notices === undefined) return null;
+  return <>{card.notices.map(message => (
+    <p className="og-route-choices__note" role="status" data-testid="route-plan-notice" key={message}>
+      {message}
+    </p>
+  ))}</>;
+}
+
+/**
  * The route list. Surface uncertainty is on each card's own badge; the only
  * list-wide note is why traffic is shown for the selected ride alone.
  */
@@ -98,11 +116,6 @@ export function RouteChoices({
       <ul className="og-route-list" data-testid="route-list">
         {children}
       </ul>
-      {cards.find(card => card.isSelected)?.notices?.map(message => (
-        <p className="og-route-choices__note" role="status" data-testid="route-plan-notice" key={message}>
-          {message}
-        </p>
-      ))}
       {trafficNote === null ? null : (
         <p className="og-route-choices__note" data-testid="route-traffic-note">
           {trafficNote}

@@ -113,6 +113,15 @@ describe("RideSummary", () => {
     expect(screen.getByTestId("ride-truth").querySelectorAll(".og-truth__line")).toHaveLength(3);
   });
 
+  it("tells the rider a basic route is basic, as a sentence and in the meta line", () => {
+    const message = "Basic route — OpenGravel's curvy and gravel tuning covers PA, NJ and NY only.";
+    render(<RideSummary {...base} card={{ ...cards[0]!, notices: [message], badges: ["Basic routing"] }} />);
+    // The summary is the answer on a phone even when the ride came from a place
+    // card's Directions, so the sentence has to be here, not only under the list.
+    expect(screen.getByTestId("route-plan-notice").textContent).toBe(message);
+    expect(screen.getByTestId("route-summary")).toHaveTextContent("Basic routing");
+  });
+
   it("hides the compare switch when there is only one ride", () => {
     render(<RideSummary {...base} cards={[cards[0]!]} />);
     expect(screen.queryByTestId("compare-rides")).toBeNull();

@@ -27,6 +27,7 @@ import dynamic from "next/dynamic";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
+import { BASIC_ROUTING_BADGE } from "@/application/planner/planner-view-model";
 import { rideTruth, type RideTruth } from "@/application/planner/ride-truth";
 import { compareChoiceNames } from "@/application/planner/route-choice-words";
 import { surfaceFacts } from "@/application/planner/surface-facts";
@@ -44,7 +45,7 @@ import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
 import { formatFeet } from "@/application/planner/measurements";
 import { arrivalClock, arrivalLabel } from "@/application/planner/arrival";
-import { RouteDecisionCard, WhyThisRide } from "./RouteDecisionCard";
+import { RouteDecisionCard, RoutePlanNotices, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { RouteContext } from "./RouteContext";
 import { RideTruthLines } from "./RideTruthLines";
@@ -142,7 +143,12 @@ export function RideSummary({
   const elevation = useElevationProfile(elevationSource, routeLine?.routeId ?? null, geometry);
   const names = useMemo(() => compareChoiceNames(cards), [cards]);
   const strip = card.surfaceStrip;
-  const meta = [card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label];
+  // The routing badge leads: it says how the line was made, which the road
+  // character beside it cannot.
+  const meta = [
+    ...(card.badges.includes(BASIC_ROUTING_BADGE) ? [BASIC_ROUTING_BADGE] : []),
+    card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label,
+  ];
   if (elevation?.status === "ready") meta.push(`Climb ${formatFeet(elevation.profile.climbMeters)}`);
   const showStretch = quick.onShowExtent === undefined ? undefined : (stretch: { readonly fromMeters: number; readonly toMeters: number }) => {
     const extent = stretchExtent(geometry, stretch.fromMeters, stretch.toMeters);
@@ -236,6 +242,10 @@ export function RideSummary({
       </div>
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
       <RideTruthLines truth={truth} surfaceBar={bar === null ? null : <>{bar}{surfaceLegend}</>} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
+      {/* What the plan itself says about this ride (a basic route): the summary
+          is the one place every tier shows the chosen ride, so the sentence
+          belongs here rather than only under the desktop choices list. */}
+      <RoutePlanNotices card={card} />
       {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
     </div>}
     {/* Start, Save, Share: the whole answer to the ride, in one row. */}
