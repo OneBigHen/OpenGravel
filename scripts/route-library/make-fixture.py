@@ -19,7 +19,7 @@ PICKS = [
     "AL/al-the-heart-run",                         # rough track: 7 points over 90 miles
     "PA/pa-pa-151-south-heights-hookstown",
     "PA/pa-pa-231-prosperity-avella",
-    "PA/pa-pa-864-picture-rocks-montoursville",
+    "NY/ny-us-6-bear-mountain-bridge-road-peekskill",   # rider notes (captured comments)
 ]
 MAX_POINTS = 280
 

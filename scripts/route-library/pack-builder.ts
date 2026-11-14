@@ -73,9 +73,37 @@ function catalogIds(catalogPath: string | undefined): ReadonlySet<string> {
   return new Set(list.map((entry) => (typeof entry === "object" && entry !== null ? (entry as { id?: unknown }).id : undefined)).filter((id): id is string => typeof id === "string"));
 }
 
-function readSegments(gpxPath: string, bundle: boolean): readonly (readonly Coordinate[])[] {
+/**
+ * Last resort for a huge bundle the app's importer refuses (more than 50
+ * tracks, or one very long text field): read just the track points.
+ */
+function scanSegments(xml: string): readonly (readonly Coordinate[])[] {
+  const pointsOf = (block: string, tag: "trkpt" | "rtept"): Coordinate[] => {
+    const points: Coordinate[] = [];
+    for (const match of block.matchAll(new RegExp(`<${tag}\\b([^>]*)>`, "g"))) {
+      const lat = Number(/\blat="([^"]+)"/.exec(match[1] ?? "")?.[1]);
+      const lon = Number(/\blon="([^"]+)"/.exec(match[1] ?? "")?.[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) points.push({ lat, lon });
+    }
+    return points;
+  };
+  const tracks = [...xml.matchAll(/<trkseg\b[^>]*>([\s\S]*?)<\/trkseg>/g)].map((match) => pointsOf(match[1] ?? "", "trkpt")).filter((segment) => segment.length >= 2);
+  if (tracks.length > 0) return tracks;
+  return [...xml.matchAll(/<rte\b[^>]*>([\s\S]*?)<\/rte>/g)].map((match) => pointsOf(match[1] ?? "", "rtept")).filter((segment) => segment.length >= 2);
+}
+
+function readSegments(gpxPath: string, bundle: boolean, onFallback: () => void): readonly (readonly Coordinate[])[] {
   const xml = readFileSync(gpxPath, "utf8");
-  const parsed = parseGpx(xml, { filename: path.basename(gpxPath), byteLength: Buffer.byteLength(xml) });
+  let parsed: ReturnType<typeof parseGpx>;
+  try {
+    parsed = parseGpx(xml, { filename: path.basename(gpxPath), byteLength: Buffer.byteLength(xml) });
+  } catch (error) {
+    const refused = error instanceof RangeError || (error instanceof Error && error.name === "ImportSecurityError");
+    if (!refused) throw error;
+    onFallback();
+    const scanned = scanSegments(xml);
+    return bundle ? scanned : [scanned.flat()];
+  }
   const tracks = parsed.tracks.filter((track) => track.sourceKind === "track");
   const chosen = tracks.length > 0 ? tracks : parsed.tracks.filter((track) => track.sourceKind === "route");
   const segments = chosen.flatMap((track) => track.segments);
@@ -117,6 +145,7 @@ export function buildPack(options: BuildOptions): BuildResult {
   const skipped: Skipped[] = [];
   const hidden: string[] = [];
   const unreadable: { id: string; why: string }[] = [];
+  const fallbackRead: string[] = [];
   const rows: { row: IndexRow; sourceName: string }[] = [];
   const mapLines = new Map<string, { id: string; line: string }[]>();
   const seen = new Set<string>();
@@ -173,7 +202,7 @@ export function buildPack(options: BuildOptions): BuildResult {
       if (rule.mode === "host" && record.gpx.availability === "hosted" && record.gpx.local_file !== undefined) {
         const gpxPath = path.join(folder, record.gpx.local_file);
         try {
-          built = buildGeometry(readSegments(gpxPath, record.gpx.is_bundle === true), { bundle: record.gpx.is_bundle === true });
+          built = buildGeometry(readSegments(gpxPath, record.gpx.is_bundle === true, () => fallbackRead.push(record.id)), { bundle: record.gpx.is_bundle === true });
           if (built === null) unreadable.push({ id: record.id, why: "track has no line of two points" });
         } catch (error) {
           unreadable.push({ id: record.id, why: error instanceof Error ? error.message : "unreadable track" });
@@ -221,13 +250,13 @@ export function buildPack(options: BuildOptions): BuildResult {
 
   const stateFiles = new Map<string, unknown>();
   for (const [state, list] of [...mapLines.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    stateFiles.set(state, { state, lines: list.sort((a, b) => (a.id < b.id ? -1 : 1)).map((entry) => [entry.id, entry.line]) });
+    stateFiles.set(state, { state, precision: 5, lines: list.sort((a, b) => (a.id < b.id ? -1 : 1)).map((entry) => [entry.id, entry.line]) });
   }
   hash.update(JSON.stringify({ rows: indexRows, sources, stateFiles: [...stateFiles.entries()] }));
   const version = hash.digest("hex").slice(0, 12);
 
   const insertAsset = db.prepare("INSERT INTO asset (key, body, content_type) VALUES (?, ?, ?)");
-  const indexBody = gzipJson({ version, sources, stateCounts: sortedStateCounts, rows: indexRows });
+  const indexBody = gzipJson({ version, precision: 5, sources, stateCounts: sortedStateCounts, rows: indexRows });
   insertAsset.run("index", indexBody, "application/json");
   const stateSizes: { state: string; bytes: number }[] = [];
   for (const [state, value] of stateFiles) {
@@ -293,6 +322,7 @@ export function buildPack(options: BuildOptions): BuildResult {
     `- Result: ${failures.length === 0 ? "PASS" : "FAIL"}`,
     `- Rides packed: ${indexRows.length} (located on the map: ${located}, with a line: ${withLine}, list-only: ${indexRows.length - located})`,
     `- Records skipped by the gate: ${skipped.length}; hidden by policy: ${hidden.length}; tracks that could not be read: ${unreadable.length}`,
+    `- Tracks the app importer refused (too many tracks or long text) that were read by the point scanner instead: ${fallbackRead.length}`,
     `- Credit lines taken from the source: ${indexRows.length - derivedCredit}; written from author and site name: ${derivedCredit}; missing: 0`,
     `- Length mismatches flagged (measured vs source's stated miles, over 40%): ${mismatches}`,
     `- Duplicate groups: 0 (dedupe is package L2; \`alias\` is empty)`,

@@ -3,6 +3,7 @@ import { haversine } from "@/domain/geometry/analysis";
 import { LOOP_CLOSE_METERS } from "@/domain/sketch/types";
 import type { Coordinate } from "@/domain/ride/types";
 
+import { CARD_LINE_POINTS, encodeCardLine } from "./card-line";
 import type { LibraryBounds } from "./types";
 
 /** Every stored line is `polyline5`: about 1.1 m, which a 5 m simplified line cannot use up. */
@@ -11,7 +12,6 @@ export const SIMPLIFY_METERS = 5;
 /** The app's public-ride cap (plan section 5.1 stage 3). */
 export const MAX_RIDE_POINTS = 20_000;
 export const MAP_LINE_POINTS = 64;
-export const CARD_LINE_POINTS = 24;
 /** Bundles: how many of the longest segments reach the map, and how many points each gets. */
 const BUNDLE_MAP_SEGMENTS = 24;
 const BUNDLE_MAP_SEGMENT_POINTS = 16;
@@ -148,7 +148,7 @@ export interface BuiltGeometry {
   readonly longestJumpMiles: number;
   /** About 64 points per segment group for the state files. */
   readonly mapLine: string;
-  /** 24 points for the index card. */
+  /** The index card shape (see `card-line.ts`). */
   readonly cardLine: string;
 }
 
@@ -218,6 +218,6 @@ export function buildGeometry(rawSegments: readonly (readonly Coordinate[])[], o
     rough,
     longestJumpMiles,
     mapLine: mapSegments.map(encodeLine).join(";"),
-    cardLine: encodeLine(reduceToCount(longest, CARD_LINE_POINTS)),
+    cardLine: encodeCardLine(reduceToCount(longest, CARD_LINE_POINTS)),
   };
 }

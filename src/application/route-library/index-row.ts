@@ -7,6 +7,12 @@ function round(value: number, places: number): number {
   return Math.round(value * scale) / scale;
 }
 
+/** Outward rounding, so the stored box always contains the real one. */
+function outward(value: number, places: number, direction: "down" | "up"): number {
+  const scale = 10 ** places;
+  return (direction === "down" ? Math.floor(value * scale) : Math.ceil(value * scale)) / scale;
+}
+
 /** Flag bits for one ride (plan section 6). */
 export function flagsFor(derived: RideDerived): number {
   const { detail, line } = derived;
@@ -35,7 +41,7 @@ export function buildIndexRow(derived: RideDerived, sourceIndex: number): IndexR
     st: detail.states,
     p: pin === null ? null : [round(pin.lat, 4), round(pin.lon, 4)],
     pp: pin === null ? null : pin.precision,
-    bb: bounds === null ? null : [round(bounds.west, 4), round(bounds.south, 4), round(bounds.east, 4), round(bounds.north, 4)],
+    bb: bounds === null ? null : [outward(bounds.west, 3, "down"), outward(bounds.south, 3, "down"), outward(bounds.east, 3, "up"), outward(bounds.north, 3, "up")],
     f: flagsFor(derived),
     s: sourceIndex,
     c: derived.cardLine === null || derived.cardLine === "" ? null : derived.cardLine,
