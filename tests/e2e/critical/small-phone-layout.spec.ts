@@ -126,6 +126,9 @@ async function layoutProblems(page: Page): Promise<LayoutProblem[]> {
 async function expectClean(page: Page, where: string): Promise<void> {
   // Let sheets and toasts finish moving before measuring.
   await page.waitForTimeout(800);
+  // A search box that still has the keyboard shows its recent places over the map; that is the list, not a clash.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.waitForTimeout(200);
   expect(await layoutProblems(page), where).toEqual([]);
 }
 
@@ -248,7 +251,7 @@ test("QA-21 desktop: the destination shape does not say Make my loop, and the co
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await page.getByRole("button", { name: "To a destination" }).click();
+  await page.getByText("To a destination", { exact: true }).click();
   await expect(page.getByTestId("compose-create")).not.toHaveText("Make my loop");
   const corners = await page.evaluate(() => {
     const box = (s: string): DOMRect | null => document.querySelector(s)?.getBoundingClientRect() ?? null;
