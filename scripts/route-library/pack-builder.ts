@@ -49,7 +49,8 @@ export interface BuildOptions {
   readonly budgets?: Partial<Record<keyof typeof BUDGETS, number>> | undefined;
   /**
    * Where the phrase snapshot is written (plan 5.2, the `null` fact check).
-   * Omitted: no snapshot is written, so a unit test cannot change the repo.
+   * Omitted: `phrases.snapshot.json` inside `outDir`, next to the pack and its report. A build never edits a
+   * tracked source file by default; the repo's copy is regenerated only when this names it (`--snapshot`).
    */
   readonly snapshotPath?: string | undefined;
   readonly log?: ((line: string) => void) | undefined;
@@ -369,10 +370,9 @@ export function buildPack(options: BuildOptions): BuildResult {
   if (indexBody.length > budgets.indexGzipBytes) indexProblems.push(`index is ${indexBody.length} bytes gzipped (cap ${budgets.indexGzipBytes})`);
 
   const snapshot = phraseSnapshot(phraseTallies);
-  if (options.snapshotPath !== undefined) {
-    mkdirSync(path.dirname(options.snapshotPath), { recursive: true });
-    writeFileSync(options.snapshotPath, `${JSON.stringify({ facts: snapshot }, null, 1)}\n`);
-  }
+  const snapshotPath = options.snapshotPath ?? path.join(options.outDir, "phrases.snapshot.json");
+  mkdirSync(path.dirname(snapshotPath), { recursive: true });
+  writeFileSync(snapshotPath, `${JSON.stringify({ facts: snapshot }, null, 1)}\n`);
 
   const located = indexRows.filter((row) => row.p !== null).length;
   const withLine = indexRows.filter((row) => (row.f & 1) !== 0).length;
@@ -516,7 +516,11 @@ export function buildPack(options: BuildOptions): BuildResult {
     "",
     "## Phrase snapshot",
     "",
-    `Every distinct phrasing this build saw, with its count and mapped value: \`${options.snapshotPath ?? "(not written)"}\`.`,
+    `Every distinct phrasing this build saw, with its count and mapped value: \`${snapshotPath}\`.`,
+    "",
+    "A build writes this file next to the pack, never over the repository's copy; pass `--snapshot <file>`",
+    "to write it somewhere else, and use the `route-library:snapshot` npm script to regenerate the",
+    "committed file from the fixture library.",
     "",
     ...FACT_NAMES.map((fact) => `- ${fact}: ${snapshot[fact].length} distinct phrasing(s); ${snapshot[fact].filter((row) => row.value === null).length} map to no value`),
     "",

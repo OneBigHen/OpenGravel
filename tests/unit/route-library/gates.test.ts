@@ -175,6 +175,18 @@ describe("the phrase snapshot", () => {
     expect(result.report).toContain(`\`${snapshotPath}\``);
   });
 
+  it("goes into the output folder by default, next to the report, and never edits the repo's copy", () => {
+    const repoSnapshot = path.join(ROOT, "scripts/route-library/phrases.snapshot.json");
+    const before = readFileSync(repoSnapshot, "utf8");
+    const out = path.join(work, "snapshot-default");
+    const result = buildPack({ libraryDir: SOURCE, outDir: out, policyPath: POLICY, packName: "pack.sqlite" });
+    const written = readFileSync(path.join(out, "phrases.snapshot.json"), "utf8");
+    expect(written).toEqual(before);
+    expect(readFileSync(repoSnapshot, "utf8")).toEqual(before);
+    expect(result.report).toContain(`\`${path.join(out, "phrases.snapshot.json")}\``);
+    expect(result.report).toContain("never over the repository's copy");
+  });
+
   it("matches the committed snapshot, so the repo file is always a real build's output", () => {
     const snapshotPath = path.join(work, "committed-snapshot.json");
     build("snapshot-committed", { snapshotPath });
