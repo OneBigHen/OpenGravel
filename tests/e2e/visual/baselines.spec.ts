@@ -213,7 +213,14 @@ async function drawAt(browser: Browser, device: Device, theme: (typeof THEMES)[n
     await page.clock.setFixedTime(when);
     await STATES[state]!(page, device);
     await quiet(page);
-    return await page.screenshot({ animations: "disabled", caret: "hide" });
+    // The nearby-place chips (Food, Coffee ...) and the weather pill follow the hour ON PURPOSE (breakfast
+    // first in the morning, a moon at night); the pinned clock in the real gallery is what keeps them
+    // still. Everything else on the screen must not care what time it is.
+    return await page.screenshot({
+      animations: "disabled",
+      caret: "hide",
+      mask: [page.locator(".og-search-chips, .og-top-search__bar, [data-testid='phone-weather'], .og-phone-summary__arrive, .og-phone-summary__meta")],
+    });
   } finally {
     await context.close();
   }
