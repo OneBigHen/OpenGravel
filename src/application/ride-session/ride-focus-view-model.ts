@@ -61,7 +61,7 @@ import type {
   SessionInstruction,
 } from "@/domain/ride-session/types";
 import type { RecordingSummary } from "@/domain/recording/types";
-import type { RecordingTelemetry } from "@/domain/recording/telemetry";
+import { movingAverageSpeedMps, type RecordingTelemetry } from "@/domain/recording/telemetry";
 import type { LeanMetricSnapshot } from "@/domain/motion/lean";
 import type { RecordingControllerSnapshot } from "./recording-controller";
 import { chainage, ringSpanAlong } from "./rejoin-splice";
@@ -776,6 +776,7 @@ function recordingOf(
   bufferedPointCount: number,
   libraryCommitted: boolean,
   sourceDeleted: boolean,
+  telemetry: RecordingTelemetry | null,
 ): RideFocusRecordingHud | null {
   if (navigation.recordingId === null) return null;
   // RM-02: once the ride ended with the recording in My rides, the terminal
@@ -808,13 +809,21 @@ function recordingOf(
       canRetrySave,
     };
   }
-  // Duration and average speed stay aligned to the last accepted fix. Advancing
-  // the moving timer from the UI clock would keep counting through a stale-GPS
-  // gap, eventually making moving time exceed the trace's total elapsed time.
-  const movingSeconds = summary.movingSeconds;
-  const averageMps = movingSeconds === 0 ? null : summary.distanceMeters / movingSeconds;
+  // Distance, moving time and average all come from the filtered telemetry
+  // when the session has it: the raw trace includes a GPS jump as distance, and
+  // a simulated 51-mile teleport once read "Average 249 mph" in the ride menu.
+  // The telemetry drops impossible jumps and poor fixes, so the three numbers
+  // agree with each other and with what the strip shows.
+  const filtered = telemetry !== null && (telemetry.movingMs > 0 || telemetry.acceptedDistanceMeters > 0)
+    ? telemetry
+    : null;
+  const movingSeconds = filtered === null ? summary.movingSeconds : Math.floor(filtered.movingMs / 1_000);
+  const distanceMeters = filtered === null ? summary.distanceMeters : filtered.acceptedDistanceMeters;
+  const averageMps = filtered === null
+    ? movingSeconds === 0 ? null : distanceMeters / movingSeconds
+    : movingAverageSpeedMps(filtered);
   return {
-    distanceText: formatDistance(summary.distanceMeters),
+    distanceText: formatDistance(distanceMeters),
     movingTimeText: timerText(movingSeconds),
     elapsedTimeText: timerText(summary.elapsedSeconds),
     elapsedTimeSpoken: durationWords(summary.elapsedSeconds),
@@ -1275,6 +1284,7 @@ export function buildRideFocusViewModel(
       input.bufferedRecordingPointCount ?? 0,
       input.recordingLibraryCommitted ?? false,
       input.recordingSourceDeleted ?? false,
+      input.recordingTelemetry ?? null,
     ),
     warnings: warningsOf(environment, input.routeWarnings ?? [], position, navigation.activity === "completed"),
     controls: controlsOf(

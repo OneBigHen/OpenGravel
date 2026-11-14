@@ -430,14 +430,20 @@ describe("RidesLibrary", () => {
     expect(library.deleteRide).not.toHaveBeenCalled();
   });
 
-  it("keeps the empty library to one line and one button", async () => {
+  it("keeps the empty library to one main action", async () => {
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} />);
 
     const heading = await screen.findByRole("heading", { name: "No saved rides yet" });
     const emptyState = heading.closest("section");
     expect(emptyState).not.toBeNull();
+    // One primary action (import a GPX), "Plan a ride" quieter, the rest behind a link.
+    expect(within(emptyState!).getByRole("button", { name: "Import a GPX" })).toBeInTheDocument();
     expect(within(emptyState!).getByRole("link", { name: "Plan a ride" })).toHaveAttribute("href", "/");
-    expect(within(emptyState!).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(emptyState!).queryByRole("link", { name: /Find a ride/ })).not.toBeInTheDocument();
+    fireEvent.click(within(emptyState!).getByRole("button", { name: "More ways to add a ride" }));
+    expect(within(emptyState!).getByRole("link", { name: "Find a ride in Explore" })).toHaveAttribute("href", "/explore");
+    // The page header does not repeat the import button while the empty state has it.
+    expect(screen.getAllByRole("button", { name: /Import (a )?GPX/ })).toHaveLength(1);
     expect(screen.queryByRole("searchbox", { name: "Search rides" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Planned" })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
@@ -446,11 +452,11 @@ describe("RidesLibrary", () => {
     expect(screen.queryByRole("heading", { name: "Upload your GPX ride" })).not.toBeInTheDocument();
   });
 
-  it("opens the file picker from the header and keeps the older import behind More import options", async () => {
+  it("opens the file picker from the empty state and keeps the older import behind More import options", async () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click");
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} importService={importService()} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Import GPX" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Import a GPX" }));
     expect(click).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Import GPX, KML, or KMZ")).toBeInTheDocument();
 
@@ -474,6 +480,31 @@ describe("RidesLibrary", () => {
 
     expect(await screen.findByRole("heading", { name: "Choose tracks" })).toBeInTheDocument();
     expect(imports.previewFile).toHaveBeenCalledWith(file, expect.anything());
+  });
+
+  it("offers Ride to the start only on a ride that starts more than 2 miles from the rider", async () => {
+    const granted = { state: "granted" } as PermissionStatus;
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn().mockResolvedValue(granted) },
+      geolocation: { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { longitude: -75.4, latitude: 40.6 } } as GeolocationPosition) },
+    });
+    const far = ride({
+      rideId: "ride_far" as RideSummary["rideId"],
+      title: "Far GPX",
+      mapPreview: { line: [{ lon: -75.4, lat: 41.18 }, { lon: -75.3, lat: 41.2 }], pins: [] },
+    });
+    const near = ride({
+      rideId: "ride_near" as RideSummary["rideId"],
+      title: "Near GPX",
+      mapPreview: { line: [{ lon: -75.4, lat: 40.601 }, { lon: -75.3, lat: 40.62 }], pins: [] },
+    });
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([far, near]) })} />);
+
+    const button = await screen.findByTestId("ride-to-start-ride_far");
+    expect(button.textContent).toMatch(/^Ride to the start · (39|40|41) mi$/);
+    expect(screen.queryByTestId("ride-to-start-ride_near")).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it("renames a ride from the overflow menu", async () => {

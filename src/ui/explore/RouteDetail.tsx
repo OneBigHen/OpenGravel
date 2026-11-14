@@ -2,6 +2,7 @@
 
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
+import { approachLabel } from "@/application/ride-session/approach-request";
 import { peekListPosition } from "@/ui/explore/list-position";
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -58,6 +59,8 @@ export interface RouteDetailProps {
   readonly entry: CatalogEntry;
   readonly variants?: readonly CatalogVariantSummary[];
   readonly onUse: (entry: CatalogEntry) => Promise<void> | void;
+  /** Open the ride and plan the way from the rider to its start first. */
+  readonly onRideToStart?: (entry: CatalogEntry) => Promise<void> | void;
   /** Keep this ride in the rider's own library without leaving the page. */
   readonly onSave?: (entry: CatalogEntry) => Promise<void> | void;
   /** Injected for later provider waves; absent means the honest zero-provider state. */
@@ -296,10 +299,12 @@ function statOf(fact: RideFact): { label: string; value: string } {
     case "time": return { label: "Time", value: fact.text.replace(/ h/g, "h").replace(/ min/g, "m") };
     case "curvature": return { label: "Curves", value: fact.text.replace(/ of curves$/, "") };
     case "surface": {
-      const gravel = fact.text.match(/([\d.,]+\s*(?:mi|km|%))\s+(?:of\s+)?gravel/i);
-      return gravel === null
-        ? { label: "Surface", value: fact.text.split(",")[0]!.replace(/^Mostly /i, "") }
-        : { label: "Gravel", value: gravel[1]! };
+      // The catalog's surface summary names the unpaved class and its mileage:
+      // "Mostly paved, 1.6 mi dirt". Reading it as "paved" (the old gravel-only
+      // match) made the tile contradict the truth line right under it.
+      const unpaved = fact.text.match(/(?:^|[·,])\s*[\d.,]+\s*mi\s+(gravel|dirt|unpaved)\b/i);
+      if (unpaved !== null) return { label: "Surface", value: unpaved[1]!.toLowerCase() };
+      return { label: "Surface", value: fact.text.split(",")[0]!.replace(/^Mostly /i, "") };
     }
   }
 }
@@ -308,6 +313,7 @@ export function RouteDetail({
   entry,
   variants = [],
   onUse,
+  onRideToStart,
   onSave,
   preparation: providedPreparation,
   preparationProviders,
@@ -449,6 +455,7 @@ export function RouteDetail({
   // and where the route came from. Everything else waits below (§7 copy).
   // A credited route names its author and source in the credit line instead.
   const provenanceSource = entry.credit === undefined ? provenanceSourceName(entry.provenance) : "";
+  const toStartLabel = riderOrigin === undefined ? null : approachLabel(distanceToStartKm(riderOrigin, entry) * 1000);
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
 
   // The instrument panel uses the same evidence-backed facts as the route
@@ -540,12 +547,16 @@ export function RouteDetail({
           <dl className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => {
               const stat = statOf(fact);
+              // One reading per number: when the short value is already the
+              // whole fact ("77 mi"), the spoken copy would say it twice. Only
+              // a value that drops words gets the full sentence alongside it.
+              const needsSpokenCopy = fact.text !== stat.value;
               return (
                 <div key={fact.key} className="og-route-detail__stat" data-stat={fact.key}>
                   <dt>{stat.label}</dt>
                   <dd {...(fact.note === undefined ? {} : { title: fact.note })}>
-                    <span className="og-route-detail__stat-value" aria-hidden="true">{stat.value}</span>
-                    <span className="og-route-detail__fact og-visually-hidden">{fact.text}</span>
+                    <span className="og-route-detail__stat-value" {...(needsSpokenCopy ? { "aria-hidden": "true" } : {})}>{stat.value}</span>
+                    {needsSpokenCopy ? <span className="og-route-detail__fact og-visually-hidden">{fact.text}</span> : null}
                   </dd>
                 </div>
               );
@@ -561,7 +572,7 @@ export function RouteDetail({
             {startDistance === null ? null : (
               <span data-testid="route-start-distance">{startDistance}</span>
             )}
-            {startDistance === null ? null : " · "}
+            {startDistance === null || provenanceSource === "" ? null : " · "}
             {provenanceSource}
           </p>
         ) : null}
@@ -633,6 +644,18 @@ export function RouteDetail({
           ) : null}
         </div>
       </section>
+
+      {onRideToStart !== undefined && toStartLabel !== null ? (
+        <button
+          type="button"
+          className="og-secondary og-route-detail__to-start"
+          data-testid="ride-to-start"
+          disabled={busy !== null || !fullGeometry}
+          onClick={() => void runAction("approach", () => onRideToStart(entry))}
+        >
+          {busy === "approach" ? "Finding the way to the start…" : toStartLabel}
+        </button>
+      ) : null}
 
       {status !== null ? <p className="og-route-detail__status" role="status">{status}</p> : null}
 

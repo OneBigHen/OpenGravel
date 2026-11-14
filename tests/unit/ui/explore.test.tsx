@@ -145,11 +145,15 @@ describe("Explore UI", () => {
     const entries = Array.from({ length: 30 }, (_, index) => ({ ...entry, id: `route-${index}`, name: `Route ${index}`, region: "Pennsylvania" }));
     entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });
     render(<ExplorePanel entries={entries} initialQuery={{ sort: "recommended" }} />);
+    // The first 20 are drawn; the rest wait behind "Show more rides".
+    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(20);
+    fireEvent.click(screen.getByTestId("explore-show-more"));
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
     expect(screen.queryByRole("link", { name: /Western ride/ })).toBeNull();
-    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
+    // A new filter starts the list over at the first 20.
+    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(20);
     expect(window.location.search).toContain("area=eastern-pa");
   });
 
@@ -524,6 +528,45 @@ describe("Explore UI", () => {
     vi.unstubAllGlobals();
   });
 
+  it("draws the first 20 rides and adds more on request, not all of the catalogue at once", () => {
+    const many = Array.from({ length: 105 }, (_, index) => ({ ...entry, id: `many-${index}`, name: `Ride ${index}` }));
+    render(<ExplorePanel entries={many} />);
+    const list = screen.getByRole("list", { name: "Explore routes" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(20);
+    fireEvent.click(screen.getByTestId("explore-show-more"));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(40);
+    for (let tap = 0; tap < 4; tap += 1) fireEvent.click(screen.getByTestId("explore-show-more"));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(105);
+    expect(screen.queryByTestId("explore-show-more")).toBeNull();
+  });
+
+  it("never renders an empty facts line on a card", () => {
+    const bare = { ...entry, id: "bare", name: "Bare Ride", distanceKm: null };
+    delete (bare as { estimatedTimeMinutes?: number }).estimatedTimeMinutes;
+    render(<ExplorePanel entries={[bare, { ...entry, id: "full", name: "Full Ride", estimatedTimeMinutes: 90, curvatureSummary: "2.1 mi of curves", surfaceSummary: "Mostly paved · 1.6 mi dirt" }]} />);
+    const bareCard = screen.getByText("Bare Ride").closest("li")!;
+    expect(within(bareCard).queryByTestId("ride-card-facts")).toBeNull();
+    const fullCard = screen.getByText("Full Ride").closest("li")!;
+    expect(within(fullCard).getByTestId("ride-card-facts").textContent).toContain("2.1 mi of curves");
+    expect(within(fullCard).getByTestId("ride-card-facts").textContent).toContain("Mostly paved, 1.6 mi dirt");
+  });
+
+  it("gives a weekend pick the same facts as its list card", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { longitude: 0, latitude: 0 } } as GeolocationPosition) },
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({})));
+    const ride = { ...entry, id: "same", name: "Same Facts Ride", distanceKm: 96, estimatedTimeMinutes: 180, geometry: [{ lon: 0, lat: 0.01 }, { lon: 0.05, lat: 0.02 }], surfaceSummary: "Mostly paved · 1.6 mi dirt", curvatureSummary: "2.1 mi of curves" };
+    render(<ExplorePanel entries={[ride]} />);
+    const strip = await screen.findByTestId("weekend-picks");
+    const top = within(within(strip).getByTestId("weekend-pick")).getByTestId("ride-card-facts").textContent;
+    const list = within(screen.getByRole("list", { name: "Explore routes" })).getByTestId("ride-card-facts").textContent;
+    expect(top).toBe(list);
+    vi.unstubAllGlobals();
+  });
+
   it("names the source in rider words, and keeps the long provenance off the card", () => {
     // A badge reading `Curated` once sat next to copy saying the route was not
     // curated, and then the badge named the store the rides are kept in. It now
@@ -708,6 +751,40 @@ describe("Explore UI", () => {
     expect(screen.getByText("Where this route came from").closest(".og-route-detail__credits")).not.toBeNull();
   });
 
+  it("does not end the header on a separator with nothing after it (QA-22)", async () => {
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition },
+    });
+    // A credited ride names its author in the credit line instead of the source,
+    // so the meta line has only the start distance.
+    render(<RouteDetail
+      entry={{ ...entry, credit: { author: "Bobby", sourceName: "PA Adventure Bike Rides" } }}
+      onUse={vi.fn()}
+    />);
+
+    const meta = await screen.findByTestId("route-meta");
+    await waitFor(() => expect(meta).toHaveTextContent(/^Starts 7 mi from you$/));
+    expect(meta.textContent).not.toMatch(/[·,]\s*$/);
+  });
+
+  it("says a dirt ride is dirt, and reads each number once (QA-07, QA-22)", () => {
+    render(<RouteDetail entry={{ ...entry, surfaceSummary: "Mostly paved · 1.6 mi dirt", curvatureSummary: "2.1 mi of curves" }} onUse={vi.fn()} />);
+
+    const facts = screen.getByTestId("route-facts");
+    // The tile used to say "paved" while the truth line right under it said
+    // "1.6 mi dirt": the surface match only knew gravel.
+    const surface = facts.querySelector('[data-stat="surface"]');
+    expect(surface?.querySelector(".og-route-detail__stat-value")?.textContent).toBe("dirt");
+    // A screen reader heard "77 mi 77 mi": the visible value and its spoken
+    // copy were the same string twice.
+    const distance = facts.querySelector('[data-stat="distance"]');
+    expect(distance?.querySelectorAll(".og-route-detail__fact")).toHaveLength(0);
+    expect(distance?.textContent?.match(/17 mi/g)).toHaveLength(1);
+  });
+
   it("says how far the start is from a rider who already allowed location, and asks nobody else", async () => {
     const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
     vi.stubGlobal("navigator", {
@@ -787,13 +864,16 @@ describe("Explore UI", () => {
     // own span so the stylesheet draws the separators. No tile ledger, and no
     // "Est." stamp: the catalog's own time is the route's time.
     const facts = screen.getByTestId("route-facts");
+    // Distance reads once (its short value is the whole fact); the other three
+    // carry their full wording in the spoken copy.
+    expect(facts.querySelector('[data-stat="distance"]')?.textContent).toBe("Distance17 mi");
     expect([...facts.querySelectorAll(".og-route-detail__fact")].map((fact) => fact.textContent))
-      .toEqual(["17 mi", "~30 min", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
+      .toEqual(["~35 min", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
     // The pace behind the estimate is not words on the line (a footnote inside
     // the time fact is what left a lone "·" on a line of its own at 320 px);
     // it is the figure's title.
     expect(facts).not.toHaveTextContent(/mph/);
-    expect(screen.getByTitle("Estimated at 28 mph")).toHaveTextContent("~30 min");
+    expect(screen.getByTitle("Estimated at 28 mph")).toHaveTextContent("~35 min");
     expect(facts.closest(".og-route-detail__header")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Ride this" }));

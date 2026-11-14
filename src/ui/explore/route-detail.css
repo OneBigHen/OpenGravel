@@ -1450,3 +1450,5 @@
 .og-route-detail__map-title {
   display: none;
 }
+
+.og-route-detail__to-start { width: 100%; }

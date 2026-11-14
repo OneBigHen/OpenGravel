@@ -216,6 +216,7 @@
 
   .og-phone-style__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--og-space-3);
     min-width: 0;
@@ -230,12 +231,11 @@
 
   .og-phone-style__track {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 200px;
+    flex-wrap: wrap;
     gap: 2px;
     min-width: 0;
     padding: 2px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
     border-radius: var(--og-radius-control);
     background: var(--og-surface-2);
     scrollbar-width: none;
@@ -381,9 +381,9 @@
   .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary .og-truth { margin-top: var(--og-space-1); }
 
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]) {
-    /* Small phones (568px tall): 40% would clip Compare rides, so never below 252px.
-       Peek has the same cap and less in it, so it is never taller than half. */
-    max-height: min(var(--og-sheet-half), max(40dvh, 252px));
+    /* Small phones (568px tall): 40% clips Compare rides once the daylight chip
+       wraps under the climb, so the cap never shrinks it below half the screen. */
+    max-height: min(var(--og-sheet-half), max(40dvh, 276px));
   }
 
   /* Half never cuts a row in half: Options and Edit route (also behind the
@@ -429,4 +429,24 @@
   .og-planner .og-planner__sheet .og-phone-summary[data-comparing="true"] .og-phone-choice {
     min-height: 56px;
   }
+}
+
+/* OG-04: a failed plan is one row — icon, the whole message, one Retry. */
+.og-planner__error-row {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  color: var(--og-danger);
+}
+
+.og-planner__error-row .og-planner__error {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.og-planner__error-icon { flex: none; }
+
+.og-planner__error-row .og-planner__error-retry {
+  flex: none;
+  min-height: 44px;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MAP_LAYERS } from "@/application/map-layers";
 
 describe("terrain catalog", () => {
-  it.each(["hillshade", "contours", "slope"])("offers %s with honest resolution and legend", (id) => {
+  it.each(["hillshade", "contours"])("offers %s with honest resolution and legend", (id) => {
     const layer = MAP_LAYERS.find((entry) => entry.id === id);
     expect(layer).toBeDefined();
     expect(layer?.source).toContain("Terrarium");

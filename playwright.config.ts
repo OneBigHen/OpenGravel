@@ -28,12 +28,15 @@ import { join } from "node:path";
  *
  * ## Browsers
  *
- * `@playwright/test` is pinned to 1.61.1, which resolves chromium-1228,
- * chromium-headless-shell-1228, webkit-2311 and ffmpeg-1011. All four are
- * already present in this host's `/root/.cache/ms-playwright`, so the gate runs
- * with `PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright` and never
- * downloads a browser. A revision mismatch is fixed by pinning the Playwright
- * version to the cached revision, never by fetching browsers on a CI-less host.
+ * `@playwright/test` is pinned to 1.64.1, which resolves chromium-1248,
+ * chromium-headless-shell-1248, webkit-2370 and ffmpeg-1013. The Chromium
+ * builds and ffmpeg are present in this host's `/root/.cache/ms-playwright`,
+ * so the default gate runs with
+ * `PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright` and never downloads a
+ * browser. WebKit 2370 is not cached here; `critical-webkit` needs it installed
+ * once (CI installs browsers). A revision mismatch is fixed by pinning the
+ * Playwright version to a cached revision, never by fetching browsers on a
+ * CI-less host.
  *
  * `critical-webkit` (16 §6 runs the critical workflows on Chromium *and*
  * WebKit) is registered only when `OGV_E2E_WEBKIT=1`, so the default gate stays

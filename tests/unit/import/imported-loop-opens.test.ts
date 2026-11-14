@@ -89,8 +89,10 @@ describe("an imported loop track", () => {
     const line = await geometryStore.get(prepared.geometryRef);
     expect(line?.payload.kind === "line" ? line.payload.coordinates : []).toHaveLength(8);
     // An import with no timestamps has no stated time: a rounded estimate, never zero.
+    // A short ride rounds to the minute, a longer one to five minutes (QA-24).
     expect(prepared.durationSeconds).toBeGreaterThan(0);
-    expect(prepared.durationSeconds % 900).toBe(0);
+    expect(prepared.durationSeconds % 60).toBe(0);
+    if (prepared.durationSeconds >= 30 * 60) expect(prepared.durationSeconds % 300).toBe(0);
     // Nothing measured its surface here: it stays unknown.
     expect(preparedRouteAnswer(prepared).candidates[0]?.evidence).toEqual({});
 

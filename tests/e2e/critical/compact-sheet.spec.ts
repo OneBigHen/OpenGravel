@@ -335,7 +335,7 @@ test("the armed-placement instruction is a note, never a control", async ({
   await page.getByTestId("trip-edit").click();
   await page.getByTestId("start-chip").click();
   const hint = page.getByTestId("map-hint");
-  await expect(hint).toHaveText("Tap the map to set your start.");
+  await expect(hint).toHaveText("Tap the map to move your start.");
   await expect(hint).toHaveAttribute("role", "note");
   expect(await hint.evaluate((element) => element.tagName)).not.toBe("BUTTON");
   // An instruction takes no pointer events, so a tap that lands on it still

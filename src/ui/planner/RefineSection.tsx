@@ -14,6 +14,8 @@ import { useActivityMode } from "@/ui/stores/activity-mode";
 
 export interface RefineSectionProps {
   readonly forceOpen: boolean;
+  /** Opens expanded (the Edit ride view lists the stops its count names). */
+  readonly startOpen?: boolean;
   /** Short count of what is already applied, e.g. "2 stops · 1 avoid area". */
   readonly summary: string | null;
   /**
@@ -24,8 +26,8 @@ export interface RefineSectionProps {
   readonly children: ReactNode;
 }
 
-export function RefineSection({ forceOpen, summary, onExpandedChange, children }: RefineSectionProps) {
-  const [open, setOpen] = useState(false);
+export function RefineSection({ forceOpen, startOpen = false, summary, onExpandedChange, children }: RefineSectionProps) {
+  const [open, setOpen] = useState(startOpen);
   const bodyId = useId();
   const expanded = open || forceOpen;
   const hiking = useActivityMode() === "hike";

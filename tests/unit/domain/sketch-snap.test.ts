@@ -9,6 +9,7 @@ import {
   createLineIndex,
   cumulativeMeters,
   isSpurAt,
+  spurCount,
   locateInOrder,
   pointAlong,
   resampleSketchCorridor,
@@ -234,6 +235,26 @@ describe("leg review", () => {
     expect(isSpurAt(straight(4_000), 40)).toBe(false);
   });
 
+  it("finds a short driveway spur a few dozen meters deep (owner, 2026-11-13)", () => {
+    // Ride east, turn 40 m up a driveway, come back, carry on east.
+    const route = [...straight(2_000, 10), at(2_000, 20), at(2_000, 40), at(2_000, 20), ...straight(4_000, 10).slice(201)];
+    const tip = 202; // at(2_000, 40)
+    expect(route[tip]).toEqual(at(2_000, 40));
+    expect(isSpurAt(route, tip)).toBe(true);
+  });
+
+  it("does not call a corner or a hairpin a spur", () => {
+    const corner = [...straight(2_000, 10), ...Array.from({ length: 200 }, (_v, i) => at(2_000, (i + 1) * 10))];
+    expect(isSpurAt(corner, 200)).toBe(false);
+    // A switchback whose two legs run 60 m apart.
+    const hairpin = [
+      ...Array.from({ length: 100 }, (_v, i) => at(i * 10, 0)),
+      at(1_000, 30),
+      ...Array.from({ length: 100 }, (_v, i) => at(990 - i * 10, 60)),
+    ];
+    expect(isSpurAt(hairpin, 100)).toBe(false);
+  });
+
   it("calls a leg that rides miles for a short drawn span a detour", () => {
     const leg = [at(1_000, 0), at(1_000, 3_000), at(2_000, 3_000), at(2_000, 0)];
     expect(reviewSketchLeg(leg, drawn, 1_000, 2_000).kind).toBe("detour");
@@ -270,5 +291,13 @@ describe("sketchCorridorBand and sliceLineByAlong", () => {
     const cumulative = cumulativeMeters(line);
     expect(haversine(slice[0]!, pointAlong(line, cumulative, 2_000))).toBeLessThan(0.01);
     expect(haversine(slice.at(-1)!, pointAlong(line, cumulative, 3_000))).toBeLessThan(0.01);
+  });
+});
+
+describe("spurCount", () => {
+  it("counts each ride-in-and-back once and nothing on a plain line", () => {
+    const route = [...straight(2_000, 10), at(2_000, 20), at(2_000, 40), at(2_000, 20), ...straight(4_000, 10).slice(201)];
+    expect(spurCount(route)).toBe(1);
+    expect(spurCount(straight(4_000, 10))).toBe(0);
   });
 });

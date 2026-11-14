@@ -31,7 +31,11 @@ describe("provider registry", () => {
     expect(states.find((state) => state.id === "nws")?.cacheTtls["map-alerts"]).toBeGreaterThan(0);
     expect(states.find((state) => state.id === "nws")?.freshness).toBe("unknown");
     expect(states.filter((state) => state.required).map((state) => state.id)).toEqual(["graphhopper"]);
-    expect(states.find((state) => state.id === "valhalla")).toMatchObject({ configured: false, status: "disabled" });
+    // Basic routes: keyless FOSSGIS by default, Stadia once a key is set; configured is not reachable.
+    expect(states.find((state) => state.id === "valhalla")).toMatchObject({ configured: true, status: "unknown", activeSources: ["fossgis"], configurationKeys: ["STADIA_API_KEY"] });
+    const keyed = await providerStates({ OGV_OFFLINE_REGION_ROOT: join(await directory(), "missing"), STADIA_API_KEY: "secret-value" });
+    expect(keyed.find((state) => state.id === "valhalla")?.activeSources).toEqual(["stadia"]);
+    expect(JSON.stringify(keyed)).not.toContain("secret-value");
     for (const id of ["nws", "wikimedia", "photon"]) expect(states.find((state) => state.id === id)).toMatchObject({ configured: true, status: "unknown", lastSuccess: null });
   });
 
