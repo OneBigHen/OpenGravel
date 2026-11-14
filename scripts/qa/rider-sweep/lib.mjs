@@ -28,7 +28,7 @@ export async function session({ vp = "phone", theme = "light", geo = null, journ
   });
   const dir = path.join(OUT, journey, `${vp}-${theme}${tag ? "-" + tag : ""}`);
   fs.mkdirSync(dir, { recursive: true });
-  const page = await ctx.newPage();
+  const page = await ctx.newPage(); page.setDefaultTimeout(15000);
   const s = { browser, ctx, page, dir, n: 0, log: [], consoleErrors: [], failed: [], reqs: [], t0: Date.now() };
   page.on("console", (m) => { if (m.type() === "error") s.consoleErrors.push({ t: Date.now() - s.t0, text: m.text().slice(0, 300) }); });
   page.on("pageerror", (e) => s.consoleErrors.push({ t: Date.now() - s.t0, text: "PAGEERROR " + String(e).slice(0, 300) }));
