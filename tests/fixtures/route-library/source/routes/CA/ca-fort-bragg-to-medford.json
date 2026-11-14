@@ -1,0 +1,71 @@
+{
+ "id": "ca-fort-bragg-to-medford",
+ "name": "Fort Bragg to Medford",
+ "states": [
+  "CA",
+  "OR"
+ ],
+ "lane": "paved-twisty",
+ "lanes_secondary": [
+  "scenic"
+ ],
+ "source": {
+  "url": "https://www.bestbikingroads.com/motorcycle-roads/united-states/california/ride/fort-bragg-to-medford",
+  "name": "BestBikingRoads",
+  "fetched_via": "direct-download"
+ },
+ "author_credit": {
+  "author": "arr850arr",
+  "author_url": "https://www.bestbikingroads.com/touring-biker-community/member/936972100.html",
+  "credit_line": "Track by arr850arr via BestBikingRoads"
+ },
+ "terms": {
+  "quote": "Best Biking Roads - All the Best Motorcycle Rides : Please Credit us and help support our project",
+  "terms_url": "https://www.bestbikingroads.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T14:30:00Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BestBikingRoads — https://www.bestbikingroads.com/contact_us.php",
+  "permission_notes": "BBR GPX is free, no login; no reuse statement on the page — ask before shipping."
+ },
+ "gpx": {
+  "availability": "hosted",
+  "download_url": "https://www.bestbikingroads.com/downloadfile.php?code2=e7856c9",
+  "local_file": "ca-fort-bragg-to-medford.gpx",
+  "points": 279,
+  "distance_km": 433.82,
+  "elevation_gain_m": null,
+  "bounds": {
+   "west": -124.2157,
+   "south": 39.4794,
+   "east": -123.3427,
+   "north": 42.4224
+  },
+  "sha256": "367ed7f396d33a24edbad28424f13605a5ac903f6d961c803583ad726533d28c",
+  "track_names": [
+   "FortBraggt"
+  ],
+  "requires_login": false,
+  "track_vintage": "2017"
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "difficulty": "unknown",
+  "permits": "none stated",
+  "seasonality": "unknown",
+  "surface_claim_source": "BestBikingRoads route page"
+ },
+ "summary": "Fort Bragg to Medford: 475.1 km measured. BBR track added September 15, 2017; verify road conditions before riding.",
+ "value_score": 3,
+ "value_reason": "Named ride/loop (BBR 3/5): Fort Bragg to Medford. 475.1 km measured.",
+ "scraped_at": "2026-11-13T14:30:00Z",
+ "last_verified": "2026-11-13T14:30:00Z",
+ "scraper": {
+  "adapter": "bestbikingroads",
+  "query": "BestBikingRoads California index + county/region bundle pages + related-links recursion — full enumeration (433 routes)",
+  "notes": "terms_source: GPX metadata credit line in the downloaded file itself (BBR-shaped file, creator MapSource 6.16.3); point-wise state shares: {'CA': 87.0, 'OR': 13.0} [fixture: GPX trimmed to 279 points]"
+ }
+}

@@ -381,9 +381,9 @@
   .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary .og-truth { margin-top: var(--og-space-1); }
 
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]) {
-    /* Small phones (568px tall): 40% would clip Compare rides, so never below 252px.
-       Peek has the same cap and less in it, so it is never taller than half. */
-    max-height: min(var(--og-sheet-half), max(40dvh, 252px));
+    /* Small phones (568px tall): 40% clips Compare rides once the daylight chip
+       wraps under the climb, so the cap never shrinks it below half the screen. */
+    max-height: min(var(--og-sheet-half), max(40dvh, 276px));
   }
 
   /* Half never cuts a row in half: Options and Edit route (also behind the
