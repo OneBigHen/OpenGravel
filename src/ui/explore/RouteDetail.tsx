@@ -603,7 +603,7 @@ export function RouteDetail({
         ) : (
           <div className="og-map-preview-unavailable" role="img" aria-label={`${entry.name} map preview`}>
             <span className="og-map-preview-unavailable__glyph" aria-hidden="true">⌖</span>
-            <span>{entry.referenceTrack === true ? "The source does not say where this ride is on a map" : "Map preview unavailable"}</span>
+            <span>{entry.referenceTrack === true ? "No map position for this ride" : "Map preview unavailable"}</span>
           </div>
         )}
       </section>
