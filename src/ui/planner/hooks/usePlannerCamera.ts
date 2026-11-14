@@ -127,7 +127,7 @@ export function usePlannerCamera(input: {
   // roads) must not move the map the rider is already looking at: the first
   // fit stands while the new lines sit inside it. A rider's own choice, or a
   // line that leaves the view, still re-frames.
-  const [fitHold, setFitHold] = useState<{ readonly generation: number; readonly key: string; readonly extent: MapExtent } | null>(null);
+  const [fitHold, setFitHold] = useState<{ readonly generation: number; readonly key: string; readonly extent: MapExtent; readonly firstRouteId: string | null } | null>(null);
   const attemptGeneration = session.identity.planningGeneration;
   const autoFitKey =
     rawFitKey !== null &&
@@ -135,14 +135,20 @@ export function usePlannerCamera(input: {
     fitHold !== null &&
     fitHold.generation === attemptGeneration &&
     fitHold.key !== rawFitKey &&
-    session.selectionSource === "automatic" &&
+    // The rider's own pick re-frames, except Undo back to the first route.
+    (session.selectionSource === "automatic" || session.selectedRouteId === fitHold.firstRouteId) &&
     extentWithin(routesExtent, fitHold.extent)
       ? fitHold.key
       : rawFitKey;
   if (autoFitKey === null) {
     if (fitHold !== null) setFitHold(null);
   } else if (routesExtent !== null && (fitHold === null || fitHold.key !== autoFitKey || fitHold.generation !== attemptGeneration)) {
-    setFitHold({ generation: attemptGeneration, key: autoFitKey, extent: routesExtent });
+    setFitHold({
+      generation: attemptGeneration,
+      key: autoFitKey,
+      extent: routesExtent,
+      firstRouteId: fitHold !== null && fitHold.generation === attemptGeneration ? fitHold.firstRouteId : session.selectedRouteId,
+    });
   }
   const fitExtent = fitRequest?.extent ?? null;
   const autoFitKeyRef = useRef(autoFitKey);
