@@ -139,7 +139,7 @@ export function BestStrip({ best, sources }: { readonly best: readonly IndexRow[
   return (
     <section className="og-routes__strip" aria-label="Best rides near this view" data-testid="best-strip">
       <h2 className="og-routes__strip-title">Best rides near this view</h2>
-      <p className="og-routes__strip-note">{SCORE_NOTE}</p>
+      <p className="og-routes__strip-note">Library scores, not rider votes.</p>
       <ul className="og-routes__strip-list" key={best.map((row) => row.id).join()}>
         {best.map((row) => {
           const length = rowLengthText(row);

@@ -140,7 +140,7 @@ for (const size of SIZES) {
         const strip = page.getByTestId("best-strip");
         await expect(strip).toBeVisible();
         await expect(strip).toContainText("Best rides near this view");
-        await expect(strip).toContainText("not rider votes");
+        await expect(strip).toContainText("Library scores, not rider votes");
         await expect(page.getByTestId("best-card").first()).toContainText(/Standout|Great ride/);
         expect(await strip.textContent()).not.toMatch(/★|stars/i);
         await page.waitForTimeout(1200);
