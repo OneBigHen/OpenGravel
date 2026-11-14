@@ -1,0 +1,6 @@
+{"name":"Hatboro 2-hour (app default)","try":1,"seconds":3.2,"ok":true,"err":null,"minutes":106,"miles":54.4,"minLat":"40.176","headingDeg":12,"intoPhilly":false}
+{"name":"Crystal Cave Street Loop","try":1,"seconds":5.3,"ok":true,"err":null,"minutes":262,"miles":136,"minLat":"40.001"}
+{"name":"Lansdale Street Ride","try":1,"seconds":3.3,"ok":true,"err":null,"minutes":107,"miles":60.7,"minLat":"40.242"}
+{"name":"Phoenixville, Marsh Creek & French Creek Loop","try":1,"seconds":3.6,"ok":true,"err":null,"minutes":173,"miles":87.4,"minLat":"40.118"}
+{"name":"Green Lane and Back Easier Ride","try":1,"seconds":3.2,"ok":true,"err":null,"minutes":151,"miles":77,"minLat":"40.321"}
+{"name":"Frenchtown loop, 3 h","try":1,"seconds":3.4,"ok":true,"err":null,"minutes":179,"miles":95.1,"minLat":"40.306"}
