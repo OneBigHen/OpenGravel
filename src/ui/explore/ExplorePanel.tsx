@@ -1,7 +1,7 @@
 "use client";
 
 import { creditText } from "@/domain/ride/credit";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { PA_RIDING_AREAS, parsePaRidingArea } from "@/application/explore/riding-areas";
 import { staticRouteMapUrl } from "@/application/map/static-map";
@@ -10,6 +10,12 @@ import { AppBar } from "@/ui/nav/AppBar";
 import { AppMenu } from "@/ui/nav/AppMenu";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import { filterRows, sortBest, type LibraryChip, type RouteLibrary, type ViewBounds } from "@/application/route-library/client";
+import { narrowed, resultsTitle, ridesNear, searchRows, type ResultsFilter } from "@/application/route-library/discover";
+import { RoutesHome, RoutesResults, type Narrow } from "@/ui/explore/RoutesFind";
+import { LibraryChips, LibraryRows, useIsPhone } from "@/ui/explore/RoutesList";
+import { RoutesMap } from "@/ui/explore/RoutesMap";
+import type { MapView } from "@/ui/explore/routes-overlay";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
 import { RideCardFacts } from "@/ui/explore/RideCardFacts";
 import { awayLabel } from "@/ui/explore/rider-distance";
@@ -58,6 +64,8 @@ export interface ExplorePanelProps {
   readonly weekendBike?: WeekendPickBike | null;
   /** Routes the rider asked Explore not to show. */
   readonly hiddenIds?: ReadonlySet<string>;
+  /** The national ride library, once loaded. Absent or null renders Explore as it was. */
+  readonly library?: RouteLibrary | null;
 }
 
 /**
@@ -371,10 +379,11 @@ function anyFilterOn(query: ExploreQuery): boolean {
     || query.surface !== undefined
     || query.curvy === true
     || query.region !== undefined
-    || query.area !== undefined;
+    || query.area !== undefined
+    || (query.types?.length ?? 0) > 0;
 }
 
-export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken, weekendBike, hiddenIds }: ExplorePanelProps) {
+export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken, weekendBike, hiddenIds, library }: ExplorePanelProps) {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   // Search, the distance chips and one Filters button; every other filter is
   // one press away in the sheet (phone) or popover (desktop).
@@ -387,6 +396,10 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
   const [rideDate, setRideDate] = useState(() => localDateValue(new Date()));
   const [query, setQuery] = useState<ExploreQuery>(initialQuery ?? { sort: "recommended" });
   const readUrlOnMount = useRef(initialQuery === undefined);
+  /** The address bar has been read: the library map opens where it says. */
+  const [urlRead, setUrlRead] = useState(initialQuery !== undefined);
+  const [viewBounds, setViewBounds] = useState<ViewBounds | null>(null);
+  const phone = useIsPhone();
   /** A discrete filter change is a history entry; typing replaces (EX-12). */
   const pushNext = useRef(false);
   const [origin, setOrigin] = useState<readonly [number, number] | undefined>();
@@ -402,6 +415,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     if (readUrlOnMount.current) {
       readUrlOnMount.current = false;
       setQuery(parseExploreQuery(window.location.search));
+      setUrlRead(true);
       return;
     }
     const nextSearch = serializeExploreQuery(query);
@@ -424,6 +438,34 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     () => filterAndSortCatalog(entries, query, origin),
     [entries, origin, query],
   );
+  const libraryOn = library !== undefined && library !== null;
+  const chips = useMemo<readonly LibraryChip[]>(() => query.types ?? [], [query.types]);
+  const hereOrigin = useMemo<readonly [number, number] | undefined>(() => (origin === undefined ? undefined : [origin[1], origin[0]]), [origin]);
+  const nearOn = libraryOn && query.sort === "near" && hereOrigin !== undefined;
+  const libraryFilter: ResultsFilter = { types: chips, standout: query.standout === true, state: query.state, search: query.search ?? "", near: nearOn };
+  const libraryNarrowed = libraryOn && narrowed(libraryFilter);
+  const libraryRows = useMemo(() => {
+    if (!libraryOn) return [];
+    const chosen = filterRows(library.rows, { types: chips, ...(query.standout === true ? { standoutOnly: true } : {}), ...(query.state === undefined ? {} : { state: query.state }) });
+    return searchRows(chosen, query.search ?? "");
+  }, [libraryOn, library, chips, query.search, query.standout, query.state]);
+  const nearResult = useMemo(() => (nearOn && hereOrigin !== undefined ? ridesNear(libraryRows, hereOrigin) : null), [nearOn, libraryRows, hereOrigin]);
+  const libraryList = useMemo(() => {
+    if (query.here !== undefined) return sortBest(filterRows(libraryRows, { bounds: query.here }), hereOrigin);
+    if (nearResult !== null) return nearResult.rows;
+    return (query.search ?? "").trim() === "" ? sortBest(libraryRows, hereOrigin) : libraryRows;
+  }, [libraryRows, query.here, query.search, nearResult, hereOrigin]);
+  const hereCount = useMemo(
+    () => (viewBounds === null ? filterRows(libraryRows, {}).filter((row) => row.p !== null).length : filterRows(libraryRows, { bounds: viewBounds }).length),
+    [libraryRows, viewBounds],
+  );
+  const canShowMap = libraryOn && map !== undefined;
+  const mapView = canShowMap && phone && query.view === "map" && query.here === undefined;
+  const updateRef = useRef<(patch: Partial<ExploreQuery>, push?: boolean) => void>(() => undefined);
+  const onMapView = useCallback((next: MapView) => {
+    setViewBounds(next.bounds);
+    updateRef.current({ at: { lat: next.center.lat, lon: next.center.lon, zoom: next.zoom } }, false);
+  }, []);
   // The list shows the nearest rides first and the rest on request: 100+ cards
   // in the page at once made Explore slow to open on a phone. The window starts
   // over whenever the filters or the sort change the list.
@@ -448,9 +490,9 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
   // Why the list is empty, said once each: nothing loaded at all, nothing in
   // the rider's own rides when they asked for those, or nothing matching the
   // filters they set. Only the last one has a way out worth offering.
-  const noRidesAtAll = !hasCatalogEntries && !hasPersonalEntries;
+  const noRidesAtAll = !hasCatalogEntries && !hasPersonalEntries && !libraryOn;
   const noPersonalRidesYet = !hasPersonalEntries && query.source === "personal";
-  const noMatch = visibleEntries.length === 0 && !noRidesAtAll && !noPersonalRidesYet;
+  const noMatch = visibleEntries.length === 0 && !noRidesAtAll && !noPersonalRidesYet && libraryRows.length === 0;
 
   const filterCount = activeFilterCount(query);
   const regions = useMemo(() => [...new Set(entries.flatMap((entry) =>
@@ -551,11 +593,23 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     pushNext.current = pushHistory;
     setQuery((current) => queryWith(current, patch));
   }
+  useEffect(() => { updateRef.current = updateQuery; });
+
+  /** A home section or state tile opens the matching result list. */
+  function narrowTo(narrow: Narrow): void {
+    if (narrow.near === true) {
+      if (origin === undefined) sortByLocation();
+      else updateQuery({ sort: "near" });
+      return;
+    }
+    updateQuery({ ...(narrow.state === undefined ? {} : { state: narrow.state }), ...(narrow.standout === true ? { standout: true } : {}), ...(narrow.types === undefined ? {} : { types: narrow.types }) });
+    window.scrollTo(0, 0);
+  }
 
   /** Reset what the sheet shows, route filters and road filters alike. */
   function clearFilters(): void {
     pushNext.current = true;
-    setQuery({ sort: query.sort });
+    setQuery({ sort: query.sort, ...(query.view === undefined ? {} : { view: query.view }) });
     setRoadSurface("any");
     setRoadsNearMe(false);
   }
@@ -611,6 +665,151 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     filterRoadsByLocation();
   }
 
+  const filtersChip = (
+    <button
+      ref={filtersToggleRef}
+      type="button"
+      className="og-explore__quick-chip og-explore__filters-toggle"
+      data-filter={filterCount > 0 ? "on" : undefined}
+      aria-expanded={filtersOpen}
+      aria-controls="og-explore-filters"
+      aria-label={`Filters${filterCount > 0 ? `, ${filterCount} on` : ""}`}
+      onClick={() => setFiltersOpen((open) => !open)}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+        <circle cx="16" cy="7" r="2" />
+        <circle cx="10" cy="17" r="2" />
+      </svg>
+      <span className="og-explore__filters-label">Filters</span>
+      {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
+    </button>
+  );
+  const nearChip = (
+    <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} data-testid="chip-near" onClick={() => {
+      if (query.sort === "near") updateQuery({ sort: "recommended" });
+      else if (origin === undefined) sortByLocation();
+      else updateQuery({ sort: "near" });
+    }}>Near me</button>
+  );
+  const lengthChip = (
+    <button
+      type="button"
+      className="og-explore__quick-chip"
+      data-filter={query.distance === undefined ? undefined : "on"}
+      aria-expanded={filtersOpen}
+      aria-controls="og-explore-filters"
+      onClick={() => openFiltersOn("length")}
+    >
+      {query.distance === undefined ? "Length" : DISTANCE_LABEL[query.distance]}
+    </button>
+  );
+  const surfaceChip = (
+    <button
+      type="button"
+      className="og-explore__quick-chip"
+      data-filter={query.surface === undefined ? undefined : "on"}
+      aria-expanded={filtersOpen}
+      aria-controls="og-explore-filters"
+      disabled={!hasSurfaceEvidence}
+      title={!hasSurfaceEvidence ? "No surface information for these routes yet." : undefined}
+      onClick={() => openFiltersOn("surface")}
+    >
+      {query.surface === undefined ? "Paved/gravel" : SURFACE_LABEL[query.surface]}
+    </button>
+  );
+  const libraryChips = libraryOn ? <LibraryChips chips={chips} onChange={(types) => updateQuery({ types: types.length === 0 ? undefined : types }, true)} standout={query.standout === true} onStandout={(on) => updateQuery({ standout: on ? true : undefined }, true)} /> : null;
+
+  const hideCatalog = libraryOn && (chips.length > 0 || query.standout === true || query.state !== undefined || nearOn);
+  const catalogList = (
+    visibleEntries.length > 0 && !hideCatalog ? (
+      <div className="og-explore__listing">
+        <ul className="og-explore__list" aria-label="Explore routes">
+          {listedEntries.map((entry) => (
+            <RouteCard
+              key={entry.id}
+              entry={entry}
+              mapboxToken={mapboxToken}
+              awayKm={origin === undefined ? undefined : distanceToStartKm(origin, entry)}
+              {...(map === undefined ? {} : { onHighlight: setHighlightedId })}
+            />
+          ))}
+        </ul>
+        {listedEntries.length < visibleEntries.length ? (
+          <button
+            type="button"
+            className="og-secondary og-explore__more"
+            data-testid="explore-show-more"
+            onClick={() => setListWindow({ query, count: shownCount + EXPLORE_PAGE_SIZE })}
+          >
+            Show {Math.min(EXPLORE_PAGE_SIZE, visibleEntries.length - listedEntries.length)} more rides
+            <span className="og-explore__more-count"> · {visibleEntries.length - listedEntries.length} left</span>
+          </button>
+        ) : null}
+      </div>
+    ) : null
+  );
+
+  const pill = (label: string, patch: Partial<ExploreQuery>, testId: string, cls = ""): React.ReactNode => (
+    <div className={`og-routes__pillbar ${cls}`.trim()}>
+      <button type="button" className="og-routes__pill" data-testid={testId} onClick={() => updateQuery(patch, true)}>{label}</button>
+    </div>
+  );
+
+  // Phone map view: the whole screen is the map, with its chips floating on top.
+  if (mapView && library !== undefined && library !== null && map !== undefined) {
+    return (
+      <main id="main" className="og-explore og-routes">
+        <AppBar current="/explore" />
+        <div className="og-routes__stage" data-testid="routes-stage">
+          <h1 className="og-visually-hidden">Explore rides across the country</h1>
+          {urlRead ? (
+            <RoutesMap
+              library={library}
+              rows={libraryRows}
+              chips={chips}
+              standoutOnly={false}
+              camera={query.at ?? null}
+              strip
+              onView={onMapView}
+              onOpen={map.onOpen}
+              hostFactory={map.hostFactory}
+              basemap={map.basemap}
+              {...(map.assetBasePath === undefined ? {} : { assetBasePath: map.assetBasePath })}
+            />
+          ) : null}
+          <div className="og-routes__chrome">
+            <div className="og-explore__quick og-routes__chips" role="group" aria-label="Ride types">
+              {libraryChips}
+            </div>
+          </div>
+          {pill(`${hereCount} ${hereCount === 1 ? "ride" : "rides"} here · List`, { view: "list", ...(viewBounds === null ? {} : { here: viewBounds }) }, "routes-pill")}
+        </div>
+      </main>
+    );
+  }
+
+  // The list of what was in view: only those rides, best first.
+  if (libraryOn && query.here !== undefined) {
+    return (
+      <main id="main" className="og-explore og-routes">
+        <AppBar current="/explore" />
+        <header className="og-explore__header">
+          <div className="og-explore__heading-row">
+            <div className="og-explore__heading"><h1 data-testid="routes-here-title">{libraryList.length} {libraryList.length === 1 ? "ride" : "rides"} here</h1></div>
+            <AppMenu className="og-page-menu" />
+          </div>
+          <div className="og-explore__quick" role="group" aria-label="Ride types">
+            <button type="button" className="og-explore__quick-chip" onClick={() => updateQuery({ here: undefined, view: "list" }, true)}>All rides</button>
+            {libraryChips}
+          </div>
+        </header>
+        <LibraryRows rows={libraryList} sources={library.sources} label="Rides in view" />
+        {canShowMap && phone ? pill("Map", { view: "map", here: undefined }, "routes-pill") : null}
+      </main>
+    );
+  }
+
   return (
     <main id="main" className="og-explore">
       <AppBar current="/explore" />
@@ -662,7 +861,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
       {lens === "ride" ? <div className="og-explore__toolbar">
         <label className="og-explore__search">
           <span className="og-visually-hidden">Search</span>
-          <input aria-label="Search routes" type="search" value={query.search ?? ""} onChange={(event) => updateQuery({ search: event.target.value || undefined })} placeholder="Search routes" />
+          <input aria-label="Search routes" type="search" value={query.search ?? ""} onChange={(event) => updateQuery({ search: event.target.value || undefined })} placeholder={libraryOn ? "Search rides or a state" : "Search routes"} />
         </label>
         {/* One row of chips at every width: the two decisions a rider makes
             while scanning (how far, how far from me), one surface choice, and
@@ -670,64 +869,22 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             the row so it never scrolls out of reach and search keeps the whole
             width above it; no decision is asked for twice. */}
         <div className="og-explore__quick" role="group" aria-label="Quick filters">
-          {/* The first chip opens the rest, so it never scrolls out of reach. A
-              rider who has narrowed the list sees how many of the sheet's own
-              filters are on, without a second row of controls above the rides. */}
-          <button
-            ref={filtersToggleRef}
-            type="button"
-            className="og-explore__quick-chip og-explore__filters-toggle"
-            data-filter={filterCount > 0 ? "on" : undefined}
-            aria-expanded={filtersOpen}
-            aria-controls="og-explore-filters"
-            aria-label={`Filters${filterCount > 0 ? `, ${filterCount} on` : ""}`}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-              <circle cx="16" cy="7" r="2" />
-              <circle cx="10" cy="17" r="2" />
-            </svg>
-            <span className="og-explore__filters-label">Filters</span>
-            {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
-          </button>
-          <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} onClick={() => {
-            if (query.sort === "near") updateQuery({ sort: "recommended" });
-            else if (origin === undefined) sortByLocation();
-            else updateQuery({ sort: "near" });
-          }}>Near me</button>
-          <button
-            type="button"
-            className="og-explore__quick-chip"
-            data-filter={query.distance === undefined ? undefined : "on"}
-            aria-expanded={filtersOpen}
-            aria-controls="og-explore-filters"
-            onClick={() => openFiltersOn("length")}
-          >
-            {query.distance === undefined ? "Length" : DISTANCE_LABEL[query.distance]}
-          </button>
-          <button
-            type="button"
-            className="og-explore__quick-chip"
-            data-filter={query.surface === undefined ? undefined : "on"}
-            aria-expanded={filtersOpen}
-            aria-controls="og-explore-filters"
-            disabled={!hasSurfaceEvidence}
-            title={!hasSurfaceEvidence ? "No surface information for these routes yet." : undefined}
-            onClick={() => openFiltersOn("surface")}
-          >
-            {query.surface === undefined ? "Paved/gravel" : SURFACE_LABEL[query.surface]}
-          </button>
-          <button
-            type="button"
-            className="og-explore__quick-chip"
-            aria-pressed={query.curvy === true}
-            disabled={!hasCurvatureEvidence}
-            title={!hasCurvatureEvidence ? "Curvature evidence is not available for these routes." : undefined}
-            onClick={() => updateQuery({ curvy: query.curvy === true ? undefined : true })}
-          >
-            Twisty
-          </button>
+          {/* With the library on, Near me and the ride types lead (they are the
+              ways in) and Filters follows at the end of the one swipeable row;
+              without it, Filters leads as before. */}
+          {libraryOn ? <>{nearChip}{libraryChips}{lengthChip}{surfaceChip}{filtersChip}</> : <>{filtersChip}{nearChip}{lengthChip}{surfaceChip}</>}
+          {libraryOn ? null : (
+            <button
+              type="button"
+              className="og-explore__quick-chip"
+              aria-pressed={query.curvy === true}
+              disabled={!hasCurvatureEvidence}
+              title={!hasCurvatureEvidence ? "Curvature evidence is not available for these routes." : undefined}
+              onClick={() => updateQuery({ curvy: query.curvy === true ? undefined : true })}
+            >
+              Twisty
+            </button>
+          )}
         </div>
         {filtersOpen ? (
           <button type="button" className="og-explore__backdrop" aria-label="Close filters" tabIndex={-1} onClick={closeFilters} />
@@ -888,33 +1045,45 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             ) : null}
           </p>
         ) : null}
-        {visibleEntries.length > 0 ? (
+        {visibleEntries.length > 0 || libraryOn ? (
           <div className={map === undefined ? undefined : "og-explore__split"}>
-            <div className="og-explore__listing">
-            <ul className="og-explore__list" aria-label="Explore routes">
-              {listedEntries.map((entry) => (
-                <RouteCard
-                  key={entry.id}
-                  entry={entry}
-                  mapboxToken={mapboxToken}
-                  awayKm={origin === undefined ? undefined : distanceToStartKm(origin, entry)}
-                  {...(map === undefined ? {} : { onHighlight: setHighlightedId })}
-                />
-              ))}
-            </ul>
-            {listedEntries.length < visibleEntries.length ? (
-              <button
-                type="button"
-                className="og-secondary og-explore__more"
-                data-testid="explore-show-more"
-                onClick={() => setListWindow({ query, count: shownCount + EXPLORE_PAGE_SIZE })}
-              >
-                Show {Math.min(EXPLORE_PAGE_SIZE, visibleEntries.length - listedEntries.length)} more rides
-                <span className="og-explore__more-count"> · {visibleEntries.length - listedEntries.length} left</span>
-              </button>
-            ) : null}
+            <div className="og-routes__col">
+              {libraryOn && libraryNarrowed ? (
+                <RoutesResults title={resultsTitle(libraryFilter)} rows={libraryList} sources={library.sources} origin={hereOrigin} near={nearResult} onClear={() => clearFilters()} />
+              ) : null}
+              {libraryOn && libraryNarrowed ? catalogList : null}
+              {libraryOn && !libraryNarrowed ? (
+                <RoutesHome rows={library.rows} sources={library.sources} origin={hereOrigin} onNarrow={narrowTo}>
+                  {catalogList}
+                  {libraryList.length > 0 ? (
+                    <section className="og-routes__section" aria-labelledby="routes-title" data-testid="routes-section">
+                      <h2 id="routes-title" className="og-road-discovery__title">{visibleEntries.length > 0 ? "Across the country" : `${libraryList.length.toLocaleString("en-US")} rides across the country`}</h2>
+                      <LibraryRows rows={libraryList} sources={library.sources} label="Rides across the country" origin={hereOrigin} />
+                    </section>
+                  ) : null}
+                </RoutesHome>
+              ) : catalogList}
             </div>
-            {map === undefined ? null : (
+            {map === undefined ? null : libraryOn ? (
+              phone ? null : (
+                <div className="og-explore-map-panel">
+                  {urlRead ? (
+                    <RoutesMap
+                      library={library}
+                      rows={libraryRows}
+                      chips={chips}
+                      standoutOnly={false}
+                      camera={query.at ?? null}
+                      onView={onMapView}
+                      onOpen={map.onOpen}
+                      hostFactory={map.hostFactory}
+                      basemap={map.basemap}
+                      {...(map.assetBasePath === undefined ? {} : { assetBasePath: map.assetBasePath })}
+                    />
+                  ) : null}
+                </div>
+              )
+            ) : (
               <ExploreMap
                 {...map}
                 entries={visibleEntries}
@@ -949,6 +1118,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </>}
       </> : <ThingsFeed />}
       </div>
+      {canShowMap && phone && lens === "ride" ? pill("Map", { view: "map", here: undefined }, "routes-pill") : null}
     </main>
   );
 }

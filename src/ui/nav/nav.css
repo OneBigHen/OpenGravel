@@ -89,12 +89,6 @@
   text-decoration: none;
 }
 
-.og-appbar__tagline {
-  flex: 1;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
 .og-appbar__brand:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);

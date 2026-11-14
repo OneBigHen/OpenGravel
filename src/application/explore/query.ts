@@ -1,5 +1,6 @@
 import type { CatalogEntry, CatalogSource } from "./catalog";
 import { parsePaRidingArea, startsInPaRidingArea, type PaRidingArea } from "./riding-areas";
+import { LIBRARY_CHIPS, type LibraryChip, type ViewBounds } from "@/application/route-library/client";
 
 /** Short ≤ 30 mi, medium 30–90 mi, long > 90 mi. */
 export type DistanceBucket = "short" | "medium" | "long";
@@ -25,6 +26,18 @@ export interface ExploreQuery {
   readonly surface?: "paved" | "gravel";
   readonly curvy?: boolean;
   readonly sort: ExploreSort;
+  /** National ride library chips (`?type=twisty,dirt`). */
+  readonly types?: readonly LibraryChip[];
+  /** A state's ride list (`?state=NC`): the library's rides in that state. */
+  readonly state?: string;
+  /** Only Standout rides (`?standout=1`). */
+  readonly standout?: boolean;
+  /** Phones: which view is showing (`?view=map`). The list is the default. */
+  readonly view?: "map" | "list";
+  /** The in-view list: only rides starting in this box (`?here=west,south,east,north`). */
+  readonly here?: ViewBounds;
+  /** Where the library map was left (`?at=lat,lon,zoom`), so Back lands in the same place. */
+  readonly at?: { readonly lat: number; readonly lon: number; readonly zoom: number };
 }
 
 const DEFAULT_QUERY: ExploreQuery = { sort: "recommended" };
@@ -51,6 +64,18 @@ function sort(value: string | null): ExploreSort {
     : DEFAULT_QUERY.sort;
 }
 
+function numbers(value: string | null, count: number): readonly number[] | undefined {
+  if (value === null) return undefined;
+  const parts = value.split(",").map(Number);
+  return parts.length === count && parts.every(Number.isFinite) ? parts : undefined;
+}
+
+function libraryTypes(value: string | null): readonly LibraryChip[] | undefined {
+  if (value === null) return undefined;
+  const chips = LIBRARY_CHIPS.filter((chip) => value.split(",").includes(chip));
+  return chips.length === 0 ? undefined : chips;
+}
+
 export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery {
   const params = typeof value === "string" ? new URLSearchParams(value.startsWith("?") ? value.slice(1) : value) : value;
   const parsedSource = source(params.get("source"));
@@ -60,6 +85,11 @@ export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery
   const search = params.get("search")?.trim() ?? "";
   const surface = params.get("surface");
   const curvy = params.get("curvy");
+  const types = libraryTypes(params.get("type"));
+  const view = params.get("view");
+  const state = (params.get("state") ?? "").toUpperCase();
+  const here = numbers(params.get("here"), 4);
+  const at = numbers(params.get("at"), 3);
   return {
     ...(parsedSource === undefined ? {} : { source: parsedSource }),
     ...(parsedDistance === undefined ? {} : { distance: parsedDistance }),
@@ -69,6 +99,12 @@ export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery
     ...(curvy === "true" ? { curvy: true } : {}),
     ...(area === undefined ? {} : { area }),
     sort: sort(params.get("sort")),
+    ...(types === undefined ? {} : { types }),
+    ...(/^[A-Z]{2}$/.test(state) ? { state } : {}),
+    ...(params.get("standout") === "1" ? { standout: true } : {}),
+    ...(view === "map" || view === "list" ? { view } : {}),
+    ...(here === undefined ? {} : { here: { west: here[0]!, south: here[1]!, east: here[2]!, north: here[3]! } }),
+    ...(at === undefined ? {} : { at: { lat: at[0]!, lon: at[1]!, zoom: at[2]! } }),
   };
 }
 
@@ -82,7 +118,13 @@ export function serializeExploreQuery(query: ExploreQuery): string {
   if (query.surface !== undefined) params.set("surface", query.surface);
   if (query.curvy === true) params.set("curvy", "true");
   if (query.sort !== DEFAULT_QUERY.sort && query.sort !== "near") params.set("sort", query.sort);
-  const value = params.toString();
+  if (query.types !== undefined && query.types.length > 0) params.set("type", query.types.join(","));
+  if (query.state !== undefined) params.set("state", query.state);
+  if (query.standout === true) params.set("standout", "1");
+  if (query.view !== undefined) params.set("view", query.view);
+  if (query.here !== undefined) params.set("here", [query.here.west, query.here.south, query.here.east, query.here.north].map((n) => n.toFixed(3)).join(","));
+  if (query.at !== undefined) params.set("at", `${query.at.lat.toFixed(3)},${query.at.lon.toFixed(3)},${query.at.zoom.toFixed(2)}`);
+  const value = params.toString().replace(/%2C/gi, ",");
   return value.length === 0 ? "" : `?${value}`;
 }
 

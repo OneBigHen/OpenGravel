@@ -397,12 +397,6 @@
   box-shadow: var(--og-shadow-float);
 }
 
-.og-map__point-stop {
-  fill: var(--og-route-alt);
-  stroke: var(--og-ink);
-  stroke-width: 3;
-}
-
 .og-map__veil {
   position: absolute;
   inset: 0;

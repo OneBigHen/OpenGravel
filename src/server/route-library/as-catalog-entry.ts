@@ -49,6 +49,7 @@ export function entryFromPackRide(ride: PackRide): CatalogEntry {
     provenanceDetail: libraryProvenanceDetail(detail),
     ...(detail.facts.surface.value === "paved" ? { surfaceSummary: "Paved" } : {}),
     referenceTrack: true,
+    libraryDetail: detail,
   };
 }
 
