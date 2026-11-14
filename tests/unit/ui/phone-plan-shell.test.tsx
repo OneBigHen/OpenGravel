@@ -113,6 +113,25 @@ describe("RideSummary", () => {
     expect(screen.getByTestId("ride-truth").querySelectorAll(".og-truth__line")).toHaveLength(3);
   });
 
+  it("keeps the arrival time steady when the page is reopened with no new input (QA-25)", () => {
+    vi.useFakeTimers();
+    try {
+      const planned = { ...cards[0]!, durationSeconds: 3_600, plannedAt: "2026-11-14T01:00:00.000Z" };
+      vi.setSystemTime(new Date("2026-11-14T01:00:00.000Z"));
+      const first = render(<RideSummary {...base} card={planned} />);
+      const arrival = screen.getByTestId("route-summary").textContent;
+      expect(arrival).toContain("Arrive");
+      first.unmount();
+
+      // A refresh 37 minutes later, same plan: the arrival is the plan's own.
+      vi.setSystemTime(new Date("2026-11-14T01:37:00.000Z"));
+      render(<RideSummary {...base} card={planned} />);
+      expect(screen.getByTestId("route-summary").textContent).toBe(arrival);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("hides the compare switch when there is only one ride", () => {
     render(<RideSummary {...base} cards={[cards[0]!]} />);
     expect(screen.queryByTestId("compare-rides")).toBeNull();

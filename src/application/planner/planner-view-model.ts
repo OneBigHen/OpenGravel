@@ -181,6 +181,12 @@ export interface RouteCardVm {
   readonly durationLabel: string;
   /** The same duration in seconds, so the sheet can say when the ride gets back. */
   readonly durationSeconds?: number;
+  /**
+   * When the plan was answered. The arrival line is read from this instant, not
+   * from the page's clock, so a refresh with no new input does not move the ETA
+   * by a minute.
+   */
+  readonly plannedAt?: string;
   /** The ride's length, so the sheet can turn surface shares into miles. */
   readonly distanceMeters?: number;
   readonly distanceLabel: string;
@@ -796,6 +802,7 @@ function routeCards(
       ...(provisional ? { provisional: true } : {}),
       durationLabel: formatDuration(candidate.durationSeconds),
       durationSeconds: candidate.durationSeconds,
+      plannedAt: bundle.createdAt,
       distanceMeters: candidate.distanceMeters,
       distanceLabel: formatDistance(candidate.distanceMeters),
       addedTimeLabel:

@@ -43,7 +43,7 @@ import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
 import { formatFeet } from "@/application/planner/measurements";
-import { arrivalClock, arrivalLabel } from "@/application/planner/arrival";
+import { arrivalClock, arrivalLabel, plannedArrivalClock } from "@/application/planner/arrival";
 import { RouteDecisionCard, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { RouteContext } from "./RouteContext";
@@ -56,9 +56,13 @@ const ShareSheet = dynamic(() => import("@/ui/sharing/ShareSheet").then((mod) =>
 const NO_LINE: readonly Coordinate[] = [];
 
 /** "Back 12:04 PM" for a loop, "Arrive 12:04 PM" for a destination (Google's arrival line). */
-function arrivalLine(seconds: number | undefined, loop: boolean): string | null {
+function arrivalLine(seconds: number | undefined, loop: boolean, plannedAt: string | undefined): string | null {
   if (seconds === undefined || !Number.isFinite(seconds)) return null;
-  return arrivalLabel(arrivalClock(Date.now() + seconds * 1000), loop);
+  // The answer's own instant when there is one: the same plan reads the same
+  // arrival on every refresh. Only an injected card with no plan falls back to
+  // the clock.
+  const clock = plannedArrivalClock(plannedAt, seconds) ?? arrivalClock(Date.now() + seconds * 1000);
+  return arrivalLabel(clock, loop);
 }
 
 /**
@@ -162,7 +166,7 @@ export function RideSummary({
       {(["paved", "gravel", "dirt", "unknown"] as const).filter((kind) => strip[kind] > 0).map((kind) => <span key={kind} data-surface={kind}>{SURFACE_WORDS[kind]}</span>)}
     </p>
   );
-  const arrival = arrivalLine(card.durationSeconds, rideStyle?.view.shape === "loop");
+  const arrival = arrivalLine(card.durationSeconds, rideStyle?.view.shape === "loop", card.plannedAt);
   // Three lines, always: a card that carries none (an injected view model) gets
   // the neutral answer to the same questions rather than no lines at all.
   const truth = truthOf(card);
