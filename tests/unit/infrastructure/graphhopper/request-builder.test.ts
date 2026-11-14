@@ -298,6 +298,7 @@ describe("GraphHopper request builder", () => {
       algorithm: "round_trip",
       "round_trip.distance": 122_310,
       "round_trip.seed": 17,
+      max_visited_nodes: 1_500_000,
       headings: [80],
     });
 
