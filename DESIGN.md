@@ -261,6 +261,15 @@ the primary button.
   swatch, and the same pair is used in the bar, the legend dots and the surface line's own dot —
   including "some of this was not measured", which used to wear the gravel tone's amber.
 
+- 2026-11-14 Library trips and trail areas (L7, L8, `.fable/LIBRARY-PLAN.md`): a big trip's ride page
+  reads as **Days and sections** — the source's own section names in order, one day per section, each
+  with the miles the source stated, the source's day count when it wrote one, then **Fuel and camps**
+  as the source lists them (or "the source lists no …"), then **Good to know** with access, permit and
+  season. A trail area is a place, not a line: its source-supplied pin on the map, one action worded
+  by how exact that pin is ("Ride to the trailhead" for a trailhead, "Directions to the area" for an
+  area), and the same quoted access, permit and season in a **Ride here** block. Both are solid cards
+  on the page, tokens only, and neither turns a silence into a fact.
+
 ## Open proposals
 
 (none)
