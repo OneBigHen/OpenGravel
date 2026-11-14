@@ -257,6 +257,15 @@
 
   .og-routes__strip-link {
     grid-template-columns: minmax(0, 1fr);
+    padding: var(--og-space-1) var(--og-space-2);
+  }
+
+  .og-routes__strip {
+    padding-block: var(--og-space-2) var(--og-space-1);
+  }
+
+  .og-routes__stripwrap {
+    bottom: calc(var(--og-touch) + var(--og-space-4));
   }
 }
 
