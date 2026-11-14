@@ -142,7 +142,7 @@ export default defineConfig({
       // never go red because a tile server blinked. The page resolves this per
       // request (`src/app/page.tsx`), which is why it belongs here and not in the
       // build environment.
-      NEXT_PUBLIC_OGV_BASEMAP: "empty",
+      NEXT_PUBLIC_OGV_BASEMAP: "openfreemap",
       // The Ride Focus surface's fixture position feed (Task 8.5). The real
       // position pipeline is the navigation engine's (8.2), so without this the
       // ride surface is honest but inert — no fix, recenter disabled — and the
