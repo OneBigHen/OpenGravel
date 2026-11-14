@@ -111,6 +111,11 @@ interface SeedAnswer {
 const LOOP_CALIBRATION_PASSES = 2;
 const LOOP_SCALE_MIN = 0.25;
 const LOOP_SCALE_MAX = 2;
+/** After a node-cap miss the same seed is asked again at this share of the distance. */
+const LOOP_NODE_CAP_RETRY_SCALE = 0.5;
+const isNodeCapError = (caught: unknown): boolean =>
+  caught instanceof GraphHopperProviderError &&
+  /maximum nodes exceeded/i.test(caught.providerDetail ?? "");
 /**
  * Fresh seeds a loop gets when the engine's answer rides down a dead-end road
  * and back. The engine's round trip picks a far point and, when that point
@@ -447,15 +452,29 @@ export function createGraphHopperProvider(
         seed: number | undefined,
         startScale = 1,
       ): Promise<{ readonly answer: SeedAnswer; readonly scale: number }> => {
-        let best = await answerFor(seed, startScale === 1 ? undefined : startScale);
-        let bestScale = startScale;
         const discovery = request.discovery;
+        let firstScale = startScale;
+        let best: SeedAnswer;
+        try {
+          best = await answerFor(seed, startScale === 1 ? undefined : startScale);
+        } catch (caught) {
+          // The search ran into the node cap: this seed's loop is far bigger
+          // than asked. Ask again for a smaller one (cheap) instead of losing
+          // the seed.
+          if (
+            discovery === undefined || signal.aborted || !isNodeCapError(caught) ||
+            startScale * LOOP_NODE_CAP_RETRY_SCALE < LOOP_SCALE_MIN
+          ) throw caught;
+          firstScale = startScale * LOOP_NODE_CAP_RETRY_SCALE;
+          best = await answerFor(seed, firstScale);
+        }
+        let bestScale = firstScale;
         if (discovery === undefined) return { answer: best, scale: bestScale };
         const targetMs = discovery.targetMinutes * 60_000;
         const toleranceMs = discovery.toleranceMinutes * 60_000;
         const miss = (answer: SeedAnswer): number =>
           Math.abs((answer.paths[0]?.time ?? Number.POSITIVE_INFINITY) - targetMs);
-        let scale = startScale;
+        let scale = firstScale;
         for (let pass = 0; pass < LOOP_CALIBRATION_PASSES; pass += 1) {
           const time = best.paths[0]?.time;
           if (time === undefined || time <= 0 || miss(best) <= toleranceMs) break;

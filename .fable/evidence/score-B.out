@@ -1,0 +1,30 @@
+
+> opengravel@0.1.0 scorecard
+> node --conditions=react-server --import tsx scripts/scorecard/run.ts --set tuning
+
+1/20 Loyalsock State Forest Loop: Win (v2 Win, v1 Win); trust 0; 49 router calls, first answer 1.1s, first call 0.7s; rider line 57.5 vs fastest 21.8 good mi; 
+2/20 Bald Eagle State Forest Loop: Win (v2 Win, v1 Win); trust 0; 39 router calls, first answer 0.8s, first call 0.8s; rider line 39.0 vs fastest 11.1 good mi; 
+3/20 Bald Eagle Dual Sport Loop: Win (v2 Win, v1 Win); trust 0; 48 router calls, first answer 1.5s, first call 0.9s; 
+4/20 Green Buch Bonus Loop: Loss (v2 Loss, v1 Loss); trust 0; 40 router calls, first answer ?s, first call 0.3s; rider line 7.9 vs fastest 3.6 good mi; Outside 15% of requested loop time
+5/20 The Quick and the Dead: Tie (v2 Tie, v1 Tie); trust 0; 24 router calls, first answer 1.3s, first call 0.2s; rider line 23.6 vs fastest 4.1 good mi; Good miles below win threshold
+6/20 Old Buck Loop: Tie (v2 Tie, v1 Tie); trust 0; 28 router calls, first answer 1.6s, first call 1.3s; rider line 25.9 vs fastest 8.9 good mi; Good miles below win threshold
+7/20 Hawley Loop: Loss (v2 Loss, v1 Tie); trust 0; 33 router calls, first answer ?s, first call 0.5s; rider line 2.9 vs fastest 1.4 good mi; Fewer good miles than fastest
+8/20 Green Lane and Back Easier Ride: Win (v2 Win, v1 Tie); trust 0; 31 router calls, first answer ?s, first call 1.1s; rider line 1.8 vs fastest 0.8 good mi; 
+9/20 Out and Back Loop: Win (v2 Win, v1 Tie); trust 0; 24 router calls, first answer ?s, first call 0.7s; rider line 2.5 vs fastest 1.1 good mi; 
+10/20 Crystal Cave Street Loop: Win (v2 Win, v1 Tie); trust 0; 34 router calls, first answer 2.9s, first call 4.1s; rider line 5.8 vs fastest 1.5 good mi; 
+11/20 Lansdale Street Ride: Win (v2 Win, v1 Loss); trust 0; 25 router calls, first answer 1.2s, first call 1.1s; rider line 1.6 vs fastest 0.8 good mi; 
+12/20 Phoenixville, Marsh Creek & French Creek Loop: Win (v2 Win, v1 Tie); trust 0; 33 router calls, first answer 1.4s, first call 2.2s; rider line 2.5 vs fastest 0.5 good mi; 
+13/20 Pine Grove Furnace loop, 2 h: Win (v2 Win, v1 Win); trust 0; 29 router calls, first answer 1.5s, first call 0.5s; 
+14/20 State College to Rothrock loop, 2 h: Tie (v2 Tie, v1 Tie); trust 0; 42 router calls, first answer 0.1s, first call 0.5s; Good miles below win threshold
+15/20 Lock Haven to Slate Run: Loss (v2 Loss, v1 Loss); trust 0; 11 router calls, first answer 0.1s, first call 0.0s; fastest reference 75.1 min (chosen 103.2 min, 37.3% slower); More than 35% slower than fastest
+16/20 Williamsport to Waterville: Tie (v2 Tie, v1 Tie); trust 0; 11 router calls, first answer 0.1s, first call 0.0s; fastest reference 39.7 min (chosen 39.7 min, 0.0% quicker); Good miles below win threshold
+17/20 Allentown → Stroudsburg: Win (v2 Tie, v1 Tie); trust 0; 6 router calls, first answer 0.3s, first call 0.1s; fastest reference 58.0 min (chosen 76.3 min, 31.5% slower); 
+18/20 Hawk Mountain → Jim Thorpe: Tie (v2 Tie, v1 Loss); trust 0; 6 router calls, first answer 0.0s, first call 0.0s; fastest reference 59.0 min (chosen 55.1 min, 6.6% quicker) FASTEST REFERENCE FAILED; Good miles below win threshold
+19/20 Doylestown → New Hope: Win (v2 Tie, v1 Tie); trust 0; 6 router calls, first answer 0.0s, first call 0.0s; fastest reference 29.1 min (chosen 28.8 min, 1.1% quicker); 
+20/20 Harrisburg → Lancaster: Loss (v2 Loss, v1 Loss); trust 0; 6 router calls, first answer 0.2s, first call 0.1s; fastest reference 50.2 min (chosen 73.1 min, 45.7% slower); More than 35% slower than fastest
+v3 (this scorecard, tuning 11/20): Wins 11/20 (1 thin), trust failures 0, fastest-reference failures 1, +136.5 good miles for +258.6 minutes
+v2 (previous rule):  Wins 9/20, trust failures 0, fastest-reference failures 1, +136.5 good miles for +258.6 minutes
+v1 (old yardstick):  Wins 4/20, trust failures 0, fastest-reference failures 1, +124.6 good miles for +258.6 minutes
+Yardstick OK: the rider's own line beats fastest on good miles on 11 of 12 tracked rides (needs 10).
+Router calls per plan: 75th percentile 34, 95th 48, most 49, 16 of 20 over the cap of 6. First-answer seconds (one real first-answer request): p50 0.8, p75 1.4, p95 2.9, slowest 2.9. First-call seconds (first call of the full plan, single file): 75th percentile 0.9, slowest 4.1.
+Note: Rider lines with unmatched stretches (measured, those stretches earn nothing; under 80% is not measured): Loyalsock State Forest Loop 99%, Bald Eagle State Forest Loop 95%, Bald Eagle Dual Sport Loop 72%, Green Buch Bonus Loop 97%

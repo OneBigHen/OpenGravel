@@ -244,6 +244,41 @@ describe("GraphHopper provider", () => {
     }
   });
 
+  it("caps a loop search's size and asks a smaller loop again when the cap is hit", async () => {
+    // An engine whose search runs away for any ask above 150 km.
+    const calls: Record<string, unknown>[] = [];
+    const fetcher: typeof fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      calls.push(body);
+      if (Number(body["round_trip.distance"]) > 150_000) {
+        return jsonResponse({ message: "No path found due to maximum nodes exceeded 1500000" }, 400);
+      }
+      return jsonResponse(RESPONSE_FIXTURE);
+    };
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+    const answer = await provider.candidates({
+      ...REQUEST,
+      destination: HARRISBURG,
+      discovery: { targetMinutes: 240, toleranceMinutes: 3000 },
+    }, new AbortController().signal);
+
+    expect(calls.every((body) => body["max_visited_nodes"] === 1_500_000)).toBe(true);
+    // Each of the three seeds hit the cap once, then got a half-size ask.
+    expect(answer.candidates).toHaveLength(3);
+    expect(calls).toHaveLength(6);
+    const first = Number(calls[0]?.["round_trip.distance"]);
+    const retry = Number(calls.find((body) => Number(body["round_trip.distance"]) <= 150_000)?.["round_trip.distance"]);
+    expect(retry / first).toBeCloseTo(0.5, 1);
+  });
+
+  it("does not cap an ordinary route", async () => {
+    const { calls, fetcher } = stubFetch([() => jsonResponse(RESPONSE_FIXTURE)]);
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+    await provider.candidates(REQUEST, new AbortController().signal);
+    expect(calls[0]?.body["max_visited_nodes"]).toBeUndefined();
+  });
+
   describe("loops that ride down a dead-end road and back", () => {
     // East of a fixed point by `east` metres, north by `north` metres.
     const at = (east: number, north = 0): [number, number] => [
