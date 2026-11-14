@@ -35,7 +35,7 @@ import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
 import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
 import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
-import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
+import { CLEAR_RIDE_LABEL, RIDE_SHAPE_LABELS } from "@/ui/stores/ride-document-store";
 import { destinationLineFor } from "@/ui/planner/destination-line";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import { IntentComposer, PlanCommitment } from "@/ui/planner/IntentComposer";
@@ -129,6 +129,9 @@ function HistoryGlyph({ direction }: { readonly direction: "undo" | "redo" }) {
     </svg>
   );
 }
+
+/** Nothing authored yet: no history, or only the rider picking a shape. */
+const untouchedHistory = (label: string | null): boolean => label === null || RIDE_SHAPE_LABELS.includes(label);
 
 export function PlannerWorkspaceDock({
   placeSheet,
@@ -240,7 +243,7 @@ export function PlannerWorkspaceDock({
   // Only while Loop is the chosen shape: with "To a destination" selected the big
   // button must not say "Make my loop" (QA-21).
   const loopFirst = desktop && idle && loopRide && !hiking && currentLocation !== undefined && shapeActions !== undefined &&
-    composer.viewModel.startLabel === NO_START_LABEL && viewModel.undoLabel === null && viewModel.redoLabel === null
+    composer.viewModel.startLabel === NO_START_LABEL && untouchedHistory(viewModel.undoLabel) && untouchedHistory(viewModel.redoLabel)
     ? (): void => { shapeActions.setShape("loop"); currentLocation.onUse(); }
     : undefined;
   const commitment = desktop
