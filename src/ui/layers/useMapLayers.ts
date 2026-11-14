@@ -94,6 +94,8 @@ export interface MapLayersView {
 }
 
 const CAMERA_ROUTE_CORRIDOR_METERS = 5_000;
+/** A layer still loading after this long reads "Couldn't load", never "Loading…" forever. */
+const LOAD_TIMEOUT_MS = 20_000;
 const LOAD_DEBOUNCE_MS = 450;
 
 /** Which provider serves each feature layer, to read `unavailable` per layer. */
@@ -223,6 +225,8 @@ export function zoomOf(extent: MapExtent, widthPx: number): number {
   const span = Math.max(1e-6, extent.maxLon - extent.minLon);
   return Math.log2((360 * Math.max(1, widthPx)) / (512 * span));
 }
+
+const EMPTY_IDS: ReadonlySet<MapLayerId> = new Set();
 
 function emptyRecord<T>(value: T): Record<MapLayerId, T> {
   return Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, value])) as Record<MapLayerId, T>;
@@ -467,7 +471,19 @@ export function useMapLayers(
         east: extent.maxLon,
         north: extent.maxLat,
       });
-      void source.load(bounds, loadable, controller.signal).then(
+      const failAll = (): void => {
+        const providers = loadable
+          .map((id) => LAYER_PROVIDER[id])
+          .filter((provider): provider is InfoProvider => provider !== undefined);
+        setResult({ key, rasters: [], freshness: [], features: [], unavailable: new Set(providers) });
+      };
+      // A provider that never answers is a failed load, with a visible state.
+      const guard = setTimeout(() => {
+        if (controller.signal.aborted) return;
+        controller.abort();
+        failAll();
+      }, LOAD_TIMEOUT_MS);
+      void source.load(bounds, loadable, controller.signal).finally(() => clearTimeout(guard)).then(
         (answer) => {
           if (controller.signal.aborted) return;
           setResult({ key, rasters: answer.rasters ?? [], freshness: answer.freshness ?? [], features: answer.features, unavailable: new Set(answer.unavailable) });
@@ -513,13 +529,25 @@ export function useMapLayers(
     return record;
   }, [features]);
 
+  // View layers (hill shading, 3D terrain) report their own draw state; one
+  // that never reports back is a failed load, not an endless spinner.
+  const viewLoading = enabled.filter((id) => mapLayer(id).kind === "view" && (drawStatus[id] ?? "loading") === "loading").join(",");
+  const [stalled, setStalled] = useState<{ readonly key: string; readonly ids: ReadonlySet<MapLayerId> }>({ key: "", ids: new Set() });
+  useEffect(() => {
+    if (viewLoading === "") return;
+    const timer = setTimeout(() => setStalled({ key: viewLoading, ids: new Set(viewLoading.split(",") as MapLayerId[]) }), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [viewLoading]);
+  const stalledIds = stalled.key === viewLoading ? stalled.ids : EMPTY_IDS;
+
   const status = useMemo(() => {
     const record = emptyRecord<MapLayerStatus>("off");
     for (const id of enabled) {
       const definition = mapLayer(id);
       if (id === "trail-closures") { record[id] = "unavailable"; continue; }
       if (definition.kind === "view") {
-        record[id] = drawStatus[id] ?? "loading";
+        const drawn = drawStatus[id] ?? "loading";
+        record[id] = drawn === "loading" && stalledIds.has(id) ? "unavailable" : drawn;
         continue;
       }
       // The rain radar's own frame list decides its row: a layer that could not
@@ -549,7 +577,7 @@ export function useMapLayers(
                 : result?.freshness.some((entry) => entry.layerId === id && (entry.stale)) ? "stale" : "ready";
     }
     return record;
-  }, [drawStatus, enabled, extent, loadable, pending, radarFresh, radarList, radarUnavailable, result, unavailable, zoom]);
+  }, [drawStatus, stalledIds, enabled, extent, loadable, pending, radarFresh, radarList, radarUnavailable, result, unavailable, zoom]);
 
   const trafficFlow = enabled.includes("traffic-flow") && source?.trafficTileUrl != null ? source.trafficTileUrl : null;
   const scene = useMemo<InfoLayersScene | undefined>(

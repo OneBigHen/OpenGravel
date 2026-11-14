@@ -17,7 +17,8 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import {
   MAP_LAYER_CATEGORIES,
   MAP_LAYER_LENSES,
-  MAP_LAYERS,
+  RIDER_MAP_LAYERS,
+  layerAbout,
   type LayerFreshness,
   type MapLayerDefinition,
   type MapLayerId,
@@ -195,7 +196,7 @@ function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: nu
     case "loading":
       return layer.id === "terrain-3d" ? "Loading terrain" : "Loading…";
     case "unavailable":
-      return layer.id === "terrain-3d" ? "Terrain unavailable" : "Unavailable";
+      return layer.id === "terrain-3d" ? "Terrain unavailable" : "Couldn’t load";
     case "flat-offline":
       return "Flat offline";
     case "stale":
@@ -254,10 +255,16 @@ function LayerRow({
         i
       </button>
       {about ? (
-        <p className="og-layers__caveat">
-          <strong>{layer.source}.</strong> {layer.caveat}
-          {freshness === undefined ? null : <> {freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}</>}
-        </p>
+        <div className="og-layers__caveat" data-testid={`layer-about-${layer.id}`}>
+          <p className="og-layers__about-line">{layerAbout(layer.id)}</p>
+          <details className="og-layers__data">
+            <summary>About this data</summary>
+            <p>
+              <strong>{layer.source}.</strong> {layer.caveat}
+              {freshness === undefined ? null : <> {freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()}</>}
+            </p>
+          </details>
+        </div>
       ) : null}
       {on && !about && layer.id === "traffic-cameras" ? <p className="og-layers__caveat og-layers__camera-source" data-testid="camera-provenance">
         {freshness?.source ?? layer.source} · {freshness?.observedAt == null ? "Observation time unknown" : `Observed ${new Date(freshness.observedAt).toLocaleString()}`}{freshness === undefined ? " · Retrieval time unknown" : ` · Retrieved ${new Date(freshness.fetchedAt).toLocaleString()}`}{freshness?.stale ? " · May be out of date" : ""}
@@ -302,7 +309,7 @@ export function MapLayersPanel({
   // is a hiking row here; every definition and its data stay in the catalog.
   const mode = useActivityMode();
   const lenses = mode === "hike" ? MAP_LAYER_LENSES : MAP_LAYER_LENSES.filter((lens) => lens.id !== "hiking");
-  const layers = mode === "hike" ? MAP_LAYERS : MAP_LAYERS.filter((layer) => !HIKE_ONLY_LAYER_IDS.has(layer.id));
+  const layers = mode === "hike" ? RIDER_MAP_LAYERS : RIDER_MAP_LAYERS.filter((layer) => !HIKE_ONLY_LAYER_IDS.has(layer.id));
   const offered = (layer: MapLayerDefinition): boolean => layer.id !== "traffic-cameras" || camerasOffered;
   // Escape closes the panel and hands focus back to Layers (PD-03).
   useEffect(() => {
@@ -334,7 +341,7 @@ export function MapLayersPanel({
           <path d="m3 17 9 5 9-5" />
         </svg>
         <span className="og-layers__button-label">Layers</span>
-        {active === 0 ? null : <span className="og-layers__badge">{active}</span>}
+        {active === 0 ? null : <span className="og-layers__badge" aria-hidden="true" data-testid="map-layers-dot" />}
       </button>
       {open ? (
         <section className="og-layers__panel" id={panelId} aria-label="Map layers">

@@ -106,7 +106,7 @@ import {
   type PipelineDiagnostic,
 } from "@/application/planner/pipeline";
 import type { ConstraintContext } from "@/domain/route/eligibility";
-import { engineRoadEvidence } from "@/application/roads/engine-road-evidence";
+import { engineRoadEvidence, engineUrbanFrictionEvidence } from "@/application/roads/engine-road-evidence";
 import type { KnownRoadsPort } from "@/application/roads/known-roads";
 import { knownRoadsFromEnv } from "@/server/roads/known-roads-db";
 import type { PipelineIntent } from "@/domain/route/intent";
@@ -809,6 +809,10 @@ async function planRideAttempt(
       const verdict = verdictFor(candidate);
       return {
         ...engineRoadEvidence(candidate.roadSummary, intent.surface?.preference ?? "mixed"),
+        // Time in towns (owner 2026-11-13: a Hatboro loop ran into Philadelphia
+        // because suburb and countryside scored alike). Fast keeps its old
+        // ranking: there the quicker road through town is the point.
+        ...(intent.roadCharacter === "efficient" ? {} : engineUrbanFrictionEvidence(candidate.roadSummary)),
         ...catalogueEvidence(candidate.geometry),
         ...(verdict === null ? {} : { closures: verdict.evidence.closures, access: verdict.evidence.access }),
       };

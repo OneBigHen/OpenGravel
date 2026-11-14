@@ -121,7 +121,7 @@ describe("RideSummary", () => {
   it("says how much is gravel and how much is unknown, with a bar, when the surface was measured", () => {
     const measured = { ...cards[0]!, distanceMeters: 62 * 1609.344, surfaceStrip: { paved: 0.54, gravel: 0.41, dirt: 0, unknown: 0.05 } };
     render(<RideSummary {...base} card={measured} />);
-    expect(screen.getByTestId("phone-surface-line")).toHaveTextContent("41% gravel · 3 mi unknown");
+    expect(screen.getByTestId("phone-surface-line")).toHaveTextContent("41% gravel · 3 mi surface unknown");
     expect(screen.getByTestId("phone-surface-strip").getAttribute("aria-label")).toBe("Surface: 54% paved, 41% gravel, 0% dirt, 5% unknown");
   });
 
