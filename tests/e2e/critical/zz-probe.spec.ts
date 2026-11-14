@@ -39,6 +39,6 @@ test("probe landscape", async ({ page }) => {
   await page.setViewportSize(LANDSCAPE);
   await settleChrome(page);
   await page.screenshot({ path: `${shot}/plan-landscape.png` });
-  const info = await page.evaluate(() => ["app-menu", "map-layers-toggle", "start-ride", "summary-save", "primary-nav", "planner-sheet", "top-search"].map((id) => { const e = document.querySelector(`[data-testid="${id}"]`); if (!e) return [id, null]; const r = e.getBoundingClientRect(); return [id, Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom), getComputedStyle(e).display, getComputedStyle(e).visibility]; }));
+  const info = await page.evaluate(() => ["app-menu", "map-layers-toggle", "start-ride", "summary-save", "primary-nav", "planner-sheet", "top-search", "primary-nav"].map((id) => { const e = document.querySelector(`[data-testid="${id}"]`); if (!e) return [id, null]; const r = e.getBoundingClientRect(); return [id, Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom), getComputedStyle(e).display, getComputedStyle(e).visibility]; }));
   console.log("PROBE", JSON.stringify(info));
 });

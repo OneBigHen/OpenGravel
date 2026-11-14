@@ -8,7 +8,6 @@ import {
   expectReachable,
   floatingControlProblems,
   settleChrome,
-  waitingOn,
   withWeatherAlert,
 } from "./rider-gate-helpers";
 import { directionsTo } from "./search-helpers";
@@ -20,15 +19,12 @@ import { directionsTo } from "./search-helpers";
  * need stays on screen and reachable. A control counts only if its whole box is inside 844x390 and a tap
  * at its centre lands on it.
  *
- * The plan half is waiting on PR #242 (small phones and landscape): on main the first nav tab is covered in
- * landscape. Remove `waitingOn` when #242 lands. The ride half passes on main and is live.
+ * On its side the phone has no round Menu button: Settings sits at the end of the tab row instead, so the
+ * gate wants every tab and Settings reachable.
  */
 test.describe.configure({ timeout: 150_000 });
 
-const WAIT_242 = "waiting on PR #242 (small phones and landscape): on main Layers sits over the tabs and search in landscape";
-
 test("turning the phone sideways mid-plan keeps nav, Layers and the sheet actions reachable", async ({ page }) => {
-  waitingOn(WAIT_242);
   await withWeatherAlert(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -41,9 +37,15 @@ test("turning the phone sideways mid-plan keeps nav, Layers and the sheet action
   await page.setViewportSize(LANDSCAPE);
   await settleChrome(page);
   await expectNoSidewaysScroll(page, "plan in landscape");
-  await expectReachable(page, page.getByTestId("primary-nav").getByRole("link").first(), "the first nav tab");
+  const tabs = page.getByTestId("primary-nav").getByRole("link");
+  const tabCount = await tabs.count();
+  expect(tabCount, "the tab row has its tabs").toBeGreaterThanOrEqual(3);
+  for (let i = 0; i < tabCount; i += 1) {
+    await expectReachable(page, tabs.nth(i), `nav tab ${i + 1} of ${tabCount}`);
+  }
+  // Settings is the way to the menu on its side (the round Menu button is hidden there).
+  await expectReachable(page, page.locator(".og-planner__settings-link"), "Settings");
   await expectReachable(page, page.getByTestId("map-layers-toggle"), "the Layers button");
-  await expectReachable(page, page.getByTestId("app-menu"), "the menu button");
   // Sheet actions: Start is the one to ride; Save and Share are the quiet choices beside it.
   await page.getByTestId("planner-sheet").evaluate((sheet) => sheet.scrollIntoView({ block: "nearest" }));
   await expectReachable(page, page.getByTestId("start-ride"), "Start");
