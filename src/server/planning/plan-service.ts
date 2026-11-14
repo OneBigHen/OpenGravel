@@ -655,7 +655,7 @@ async function candidateSource(input: {
   const firstAnswerOnly = input.lanesOverride === undefined && !input.includeAlternatives;
   const request: ProviderRouteRequest =
     firstAnswerOnly && input.request.discovery !== undefined
-      ? { ...input.request, discovery: { ...input.request.discovery, seedCount: FIRST_ANSWER_LOOP_SEEDS } }
+      ? { ...input.request, discovery: { ...input.request.discovery, seedCount: FIRST_ANSWER_LOOP_SEEDS, firstAnswer: true } }
       : input.request;
   // Fast first (UX rework, live measure 2026-09-25): an engine alternatives
   // search costs 4–7 s on a long ride, a single path ~1.3 s. With three or more

@@ -614,6 +614,7 @@ describe("planRide — the first answer is the rider's own kind of ride", () => 
     expect(provider.requests).toHaveLength(1);
     expect(provider.requests[0]?.profile).toBe("motorcycle_adventure");
     expect(provider.requests[0]?.discovery?.seedCount).toBe(1);
+    expect(provider.requests[0]?.discovery?.firstAnswer).toBe(true);
   });
 
   it("keeps the rider's twisty profile for a Curvy A-to-B first answer", async () => {
@@ -639,6 +640,7 @@ describe("planRide — the first answer is the rider's own kind of ride", () => 
 
     expect(provider.requests.length).toBeGreaterThan(1);
     expect(provider.requests.every((sent) => sent.discovery?.seedCount === undefined)).toBe(true);
+    expect(provider.requests.every((sent) => sent.discovery?.firstAnswer === undefined)).toBe(true);
   });
 });
 

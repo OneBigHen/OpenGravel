@@ -5,7 +5,7 @@
  * converted into a provider error, and a 30 s engine timeout is.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ProviderRouteRequest } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
@@ -342,6 +342,77 @@ describe("GraphHopper provider", () => {
         expect(countDeadEndSpurs(candidate.geometry)).toBe(0);
         expect(Math.abs(candidate.durationSeconds - 180 * 60)).toBeLessThanOrEqual(27 * 60);
       }
+    });
+
+    describe("the quick first answer", () => {
+      const quick: ProviderRouteRequest = { ...loop, discovery: { ...loop.discovery!, seedCount: 1, firstAnswer: true } };
+
+      it("still turns down a loop that rides down a dead end and back", async () => {
+        let asked = 0;
+        const fetcher: typeof fetch = async () => {
+          asked += 1;
+          return jsonResponse(asked === 1 ? RETRACING : RESPONSE_FIXTURE);
+        };
+        const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+        const answer = await provider.candidates(quick, new AbortController().signal);
+
+        expect(asked).toBe(2);
+        expect(answer.candidates).toHaveLength(1);
+        expect(countDeadEndSpurs(answer.candidates[0]!.geometry)).toBe(0);
+      });
+
+      it("asks again with the next seed when the engine cannot place a loop on the first one", async () => {
+        let asked = 0;
+        const fetcher: typeof fetch = async () => {
+          asked += 1;
+          return asked === 1
+            ? jsonResponse({ message: "Could not find a valid point around the start" }, 400)
+            : jsonResponse(RESPONSE_FIXTURE);
+        };
+        const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+        const answer = await provider.candidates(quick, new AbortController().signal);
+
+        expect(asked).toBe(2);
+        expect(answer.candidates).toHaveLength(1);
+      });
+
+      it("starts a second seed when the first one is still wandering, and takes whichever answers first", async () => {
+        vi.useFakeTimers();
+        try {
+          const seeds: number[] = [];
+          const fetcher: typeof fetch = (_input, init) => {
+            const seed = Number((JSON.parse(String(init?.body)) as Record<string, unknown>)["round_trip.seed"]);
+            seeds.push(seed);
+            // The first seed never comes back; the second answers at once.
+            return seeds.length === 1 ? pendingFetch(_input, init) : Promise.resolve(jsonResponse(RESPONSE_FIXTURE));
+          };
+          const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+          const pending = provider.candidates(quick, new AbortController().signal);
+
+          await vi.advanceTimersByTimeAsync(1_000);
+          expect(seeds).toHaveLength(1);
+          await vi.advanceTimersByTimeAsync(3_000);
+          const answer = await pending;
+
+          expect(seeds).toHaveLength(2);
+          expect(seeds[1]).not.toBe(seeds[0]);
+          expect(answer.candidates).toHaveLength(1);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it("makes no more calls than the full plan would for the same loop", async () => {
+        const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
+        const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+        await provider.candidates(quick, new AbortController().signal);
+
+        // One seed, re-asked at most twice: never the full plan's nine.
+        expect(calls.length).toBeLessThanOrEqual(3);
+      });
     });
 
     it("never spends extra calls on the hosted plan, which bills each one", async () => {
