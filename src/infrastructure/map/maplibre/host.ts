@@ -55,7 +55,7 @@
 
 import { getActivityMode, subscribeActivityMode } from "@/application/map/activity-mode";
 import { solarPositionAt, type SolarPosition } from "@/application/map/solar-position";
-import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
+import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, USGS_TOPO_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
   LONG_PRESS_MS,
   TAP_MAX_MS,
@@ -1775,6 +1775,26 @@ export async function createMapLibreHost(
     }
   }
 
+  /** USGS topographic tiles, under the labels like the other rasters; hidden, not removed, when off. */
+  function syncUsgsTopo(map: MapLibreMap, tiles: string | null): void {
+    try {
+      if (tiles === null) {
+        if (map.getLayer(USGS_TOPO_SOURCE_ID) !== undefined) map.setLayoutProperty?.(USGS_TOPO_SOURCE_ID, "visibility", "none");
+        return;
+      }
+      if (map.getSource(USGS_TOPO_SOURCE_ID) === undefined) {
+        map.addSource(USGS_TOPO_SOURCE_ID, { type: "raster", tiles: [tiles], tileSize: 256, minzoom: 4, maxzoom: 16, attribution: "Map © USGS The National Map" });
+      }
+      if (map.getLayer(USGS_TOPO_SOURCE_ID) === undefined) {
+        const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
+        map.addLayer({ id: USGS_TOPO_SOURCE_ID, type: "raster", source: USGS_TOPO_SOURCE_ID, paint: { "raster-opacity": 0.92 } }, belowOverlay(map, firstLabel));
+      }
+      map.setLayoutProperty?.(USGS_TOPO_SOURCE_ID, "visibility", "visible");
+    } catch {
+      recordError({ kind: "source", detail: USGS_TOPO_SOURCE_ID });
+    }
+  }
+
   /**
    * One RainViewer radar frame as a raster under the labels (map-experience wave
    * 3). The timeline swaps the frame, so the tiles are replaced in place when the
@@ -2159,6 +2179,7 @@ export async function createMapLibreHost(
       current.map.getSource(sourceId)?.setData(sourceData(sourceId, scene));
     }
     syncTrafficFlow(current.map, scene.infoLayers?.trafficFlowTiles ?? null);
+    syncUsgsTopo(current.map, scene.infoLayers?.usgsTopoTiles ?? null);
     syncRadarTiles(current.map, scene.infoLayers?.radarTiles ?? null);
     syncLayerRasters(current.map, scene);
     syncWindDrift(current.map, scene);
@@ -2259,7 +2280,7 @@ export async function createMapLibreHost(
       const pin = pendingPin;
       clearHold();
       pendingPin = pin;
-      const holdMs = pin === null ? LONG_PRESS_MS : PIN_HOLD_MS;
+      const holdMs = pin === null || pin.kind === "route" ? LONG_PRESS_MS : PIN_HOLD_MS;
       const started = performance.now();
       const timeout = (): void => {
         const elapsedMs = performance.now() - started;
@@ -2460,22 +2481,20 @@ export async function createMapLibreHost(
     const ref = consumed ? null : grabbed ?? objectAt(map, coordinate);
     pressedRef = ref;
     if (event.button === 0 && event.pointerType === "touch" && interaction.activeTool === "pan" && isDraggablePointRef(ref)) pendingPin = ref;
-    const onSelectedRoute =
-      interaction.activeTool === "pan" &&
-      ref?.kind === "route" &&
-      latestScene !== null &&
-      ref.routeId === latestScene.selectedRouteId;
+    // The selected line is grabbed only by a deliberate hold (LONG_PRESS_MS) of
+    // any pointer; a press that moves first is a pan, never a reshape (QA-19).
+    if (event.button === 0 && interaction.activeTool === "pan" && ref?.kind === "route" &&
+        latestScene !== null && ref.routeId === latestScene.selectedRouteId) pendingPin = ref;
     // A mouse or pen press on an authored point immediately claims the marker.
     // The scope lasts one gesture; the rider still holds the neutral tool after it.
     // A mouse or pen press on the selected route line drags the line itself.
-    if (event.button === 0 && interaction.activeTool === "pan" && (isDraggablePointRef(ref) || onSelectedRoute) && event.pointerType !== "touch") {
+    if (event.button === 0 && interaction.activeTool === "pan" && isDraggablePointRef(ref) && event.pointerType !== "touch") {
       gestureScoped = true;
       handleInteraction({ type: "tool-change", tool: "point-drag" });
     }
     handleInteraction({
       type: "pointer-down",
       timeMs: performance.now(),
-      ...(onSelectedRoute && gestureScoped ? { routePress: true } : {}),
       button: event.button,
       pointerType: event.pointerType,
       pointerId: event.pointerId,
@@ -2548,7 +2567,10 @@ export async function createMapLibreHost(
       coordinate,
       pixel,
     });
-    if (drawing && !ownership.longPressed) emit({ type: "pointer-up", pointerId: event.pointerId, coordinate });
+    // A pen touch that never left its tap radius is not a stroke: nothing is drawn or replanned.
+    // A held line released without moving drags nothing, so it must not replan.
+    const idleHold = !moved && (ownership.tool === "sketch" || (ownership.tool === "point-drag" && pressedRef?.kind === "route"));
+    if (drawing && !ownership.longPressed) emit(idleHold ? { type: "gesture-cancel" } : { type: "pointer-up", pointerId: event.pointerId, coordinate });
     for (const effect of effects) {
       if (effect.type === "tap" && performance.now() >= quietUntil) tapAt(current.map, coordinate, !drawing);
       else if (effect.type === "commit-gesture") {
@@ -2569,6 +2591,9 @@ export async function createMapLibreHost(
       if (!moved && !ownership.longPressed && performance.now() >= quietUntil &&
           (ownership.pressedAt === undefined || performance.now() - ownership.pressedAt <= TAP_MAX_MS)) {
         if (pressedRef !== null) emit({ type: "object-click", coordinate, ref: pressedRef });
+      } else if (!moved && pressedRef?.kind === "route") {
+        // A held line released without moving is still the road menu.
+        emit({ type: "object-click", coordinate, ref: pressedRef, source: "long-press" });
       }
       pressedRef = null;
     }

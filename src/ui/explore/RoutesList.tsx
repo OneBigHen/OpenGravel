@@ -7,7 +7,7 @@ import { decodeCardLine } from "@/application/route-library/card-line";
 import { LIBRARY_CHIPS, LIBRARY_CHIP_LABEL, type LibraryChip } from "@/application/route-library/client";
 import { awayWords } from "@/application/route-library/discover";
 import { creditWord, qualityAndType, statesWord } from "@/application/route-library/row-words";
-import type { IndexRow } from "@/application/route-library/types";
+import { FLAG, type IndexRow } from "@/application/route-library/types";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
 import { rowLengthText } from "@/ui/explore/RoutesMapCard";
 import { rememberListPosition } from "@/ui/explore/list-position";
@@ -75,6 +75,7 @@ function LibraryRow({ row, sources, origin }: { readonly row: IndexRow; readonly
           <span className="og-explore-card__credit">
             <span>{statesWord(row.st)}</span>
             {away === null ? null : <span data-testid="library-away">{away}</span>}
+            {(row.f & FLAG.merged) === 0 ? null : <span data-testid="library-also-on">Also on other sites</span>}
             {row.p === null ? <span>Not on the map yet</span> : null}
             {credit === null ? null : <span className="og-explore-card__byline">{credit}</span>}
           </span>

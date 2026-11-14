@@ -105,6 +105,11 @@ describe("Explore across the country", () => {
     expect(screen.getByTestId("routes-results-note")).toHaveTextContent("Fewer than 5 rides start within 75 mi");
   });
 
+  it("says 'Also on other sites' on a card that merged several sources, and only there", () => {
+    render(<ExplorePanel entries={[]} library={library([row("m", { q: 3, f: FLAG.line | FLAG.merged }), row("s", { q: 3 })])} />);
+    expect(screen.getAllByTestId("library-also-on")).toHaveLength(1);
+  });
+
   it("shows thirty at a time", () => {
     const many = Array.from({ length: 70 }, (_, index) => row(`r${String(index).padStart(2, "0")}`));
     render(<ExplorePanel entries={[]} library={library(many)} />);

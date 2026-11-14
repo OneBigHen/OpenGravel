@@ -163,14 +163,20 @@ test("idle: the planner asks for a start and offers a loop from here", async ({
   // make this run red, and the assertion is the proof.
   await expect(plannerMap(page)).toHaveAttribute("data-basemap", "empty");
 
-  // The laptop opens on Loop (R3-4): with nothing authored, the one live action
-  // is "Make my loop" from here; a destination still plans itself.
+  // The laptop opens on "To a destination" (QA-21): the big button names what it
+  // does, so with nothing authored it is "Create ride" and waits for a start.
+  // Choosing Loop relabels it "Make my loop" and starts looking for the rider's
+  // position (it stays disabled until a start exists).
   const plan = page.getByTestId("compose-create");
-  await expect(plan).toHaveText("Make my loop");
-  await expect(plan).toBeEnabled();
+  await expect(plan).toHaveText("Create ride");
+  await expect(plan).toBeDisabled();
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
     "Search for a start, or press and hold the map.",
   );
+  await page.getByTestId("ride-shape-loop").check({ force: true });
+  await expect(plan).toHaveText("Make my loop");
+  await page.getByTestId("ride-shape-destination").check({ force: true });
+  await expect(plan).toHaveText("Create ride");
 
   // Arming the tool is the one time a tap places a point (maps-for-riders §1),
   // so the map says so: an unarmed map stays quiet, an armed one instructs.

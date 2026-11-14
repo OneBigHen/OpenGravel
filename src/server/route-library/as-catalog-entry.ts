@@ -46,6 +46,9 @@ export function entryFromPackRide(ride: PackRide): CatalogEntry {
       sourceName: detail.credit.sourceName,
       sourceUrl: detail.credit.sourceUrl,
     },
+    ...(detail.alsoOn.length === 0
+      ? {}
+      : { alsoOn: detail.alsoOn.map((other) => ({ author: other.author, sourceName: other.sourceName, sourceUrl: other.sourceUrl })) }),
     provenanceDetail: libraryProvenanceDetail(detail),
     ...(detail.facts.surface.value === "paved" ? { surfaceSummary: "Paved" } : {}),
     referenceTrack: true,

@@ -60,7 +60,7 @@ function when(date: string | null): string | null {
 
 /** What the source says about the ride, what riders wrote, the stops it lists and where else it appears. */
 export function RideMore({ worth, detail }: { readonly worth: Worth; readonly detail: RideDetail }) {
-  const nothing = worth.goodToKnow.length === 0 && worth.stops.length === 0 && worth.notes.length === 0 && worth.alsoOn.length === 0 && detail.partOf.length === 0;
+  const nothing = worth.goodToKnow.length === 0 && worth.stops.length === 0 && worth.notes.length === 0 && detail.partOf.length === 0;
   if (nothing) return null;
   return (
     <section className="og-worth og-worth--more" aria-labelledby="worth-more-title" data-testid="worth-more">
@@ -89,16 +89,6 @@ export function RideMore({ worth, detail }: { readonly worth: Worth; readonly de
                   {note.url === null ? null : <> · <a href={note.url} target="_blank" rel="noopener noreferrer">on {detail.credit.sourceName}<span className="sr-only"> (opens the original in a new tab)</span></a></>}
                 </span>
               </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {worth.alsoOn.length === 0 ? null : (
-        <div className="og-worth__notes" data-testid="worth-also">
-          <h3>Also on</h3>
-          <ul>
-            {worth.alsoOn.map((credit) => (
-              <li key={credit.sourceUrl}>{credit.creditLine} · <a href={credit.sourceUrl} target="_blank" rel="noopener noreferrer">{credit.sourceName}<span className="sr-only"> (opens the original in a new tab)</span></a></li>
             ))}
           </ul>
         </div>
