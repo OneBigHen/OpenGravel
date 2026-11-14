@@ -5,11 +5,11 @@ export default async function () {
   const p = s.page;
   await open(s, "/", 5000);
   await shot(s, "desk-home");
-  const f = p.getByTestId("finish-search-field").first();
+  const f = p.getByTestId("finish-search").first();
   await f.click(); await f.fill("Jim Thorpe PA"); await p.waitForTimeout(2500); await shot(s, "desk-suggest");
   await p.getByText("Carbon County, PA").first().click().catch(() => {});
   await p.waitForTimeout(1500);
-  const st = p.getByTestId("start-search-field").first();
+  const st = p.getByTestId("start-search").first();
   console.log("START VAL", await txt(p, "start-value"), "| FINISH VAL", await txt(p, "finish-value"));
   await shot(s, "desk-picked");
   await p.getByTestId("compose-create").first().click().catch((e) => console.log("create fail", String(e).slice(0, 100)));
