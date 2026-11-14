@@ -161,6 +161,8 @@ for (const size of SIZES) {
       await page.goto("/explore");
       await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
       // The title is not a control, so the guard cannot see it: it must end before the Ride / Things switch.
+      await expect(page.locator(".og-explore__lens")).toBeVisible();
+      await expect(page.locator(".og-explore h1")).toBeVisible();
       const title = await page.evaluate(() => {
         const h = document.querySelector(".og-explore h1")!;
         const range = document.createRange();
