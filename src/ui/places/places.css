@@ -145,7 +145,6 @@
   cursor: pointer;
 }
 
-
 .og-places-overlay--planner .og-places-control__option:disabled {
   color: var(--og-ink-2);
   cursor: default;
@@ -624,20 +623,10 @@
   color: var(--og-danger);
 }
 
-.og-map-point-menu__info {
-  padding: var(--og-space-2) var(--og-space-3);
-  font-size: var(--og-text-body);
-}
-
-.og-map-point-menu__secondary,
-.og-map-point-menu__info p {
+.og-map-point-menu__secondary {
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
   font-weight: 500;
-}
-
-.og-map-point-menu__info p {
-  margin: var(--og-space-1) 0 0;
 }
 
 .og-rider-toast {
