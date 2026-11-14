@@ -49,7 +49,7 @@ import type {
   StopArrivalIntent,
 } from "@/domain/ride/types";
 import type { SketchEndpoints } from "@/domain/sketch/types";
-import { rideTruth, type RideTruth, type RideTruthBike } from "./ride-truth";
+import { rideTruth, storedRideTruth, type RideTruth, type RideTruthBike } from "./ride-truth";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type {
   RouteBundle,
@@ -764,6 +764,11 @@ function routeCards(
     const surface = aggregateRouteSurface(candidate.evidence["surfaceMix"]);
     const surfaceBadge = surfaceBadgeLabel(surface, candidate.evidence["surfaceMix"]);
     const curves = curvatureLabel(candidate.evidence["curvature"]);
+    // A curated ride carries the summary it was published with. It is the
+    // ride's own fact, not a re-measurement: show it instead of "unknown", and
+    // keep its surface line in the ride's own words ("1.6 mi dirt").
+    const publishedSurface = candidate.publishedFacts?.surfaceSummary;
+    const publishedCurves = candidate.publishedFacts?.curvatureSummary;
     const ownTraffic = trafficLabelFor(candidate);
     const unverifiedMeters = unverifiedSurfaceMeters(
       candidate.evidence["surfaceMix"],
@@ -801,8 +806,12 @@ function routeCards(
         ? {}
         : { addedMinutes: addedMinutesBetween(candidate.durationSeconds, reference.durationSeconds) }),
       badges: [
-        ...(surfaceBadge === null ? [] : [surfaceBadge]),
-        ...(curves === null ? [] : [curves]),
+        ...(publishedSurface === undefined
+          ? surfaceBadge === null ? [] : [surfaceBadge]
+          : [publishedSurface]),
+        ...(publishedCurves === undefined
+          ? curves === null ? [] : [curves]
+          : [publishedCurves]),
         ...(candidate.warnings.some((warning) => warning.code === "basic-routing") ? [BASIC_ROUTING_BADGE] : []),
         ...(candidate.warnings.some((warning) => warning.code === "offline-routing") ? [OFFLINE_ROUTING_BADGE] : []),
       ],
@@ -821,12 +830,18 @@ function routeCards(
           ? routeTraffic.label
           : ownTraffic,
       isSelected: candidate.id === selectedRouteId,
-      truth: rideTruth({
-        evidence: candidate.evidence,
-        distanceMeters: candidate.distanceMeters,
-        ...(bike === undefined ? {} : { bike }),
-        warnings: candidate.warnings,
-      }),
+      truth: publishedSurface === undefined
+        ? rideTruth({
+            evidence: candidate.evidence,
+            distanceMeters: candidate.distanceMeters,
+            ...(bike === undefined ? {} : { bike }),
+            warnings: candidate.warnings,
+          })
+        : storedRideTruth({
+            surfaceSummary: publishedSurface,
+            distanceMeters: candidate.distanceMeters,
+            ...(bike === undefined ? {} : { bike }),
+          }),
     };
   });
 }

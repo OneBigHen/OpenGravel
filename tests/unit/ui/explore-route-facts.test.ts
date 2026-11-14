@@ -44,14 +44,18 @@ describe("ride time", () => {
     expect(formatRideMinutes(0.4)).toBe("1 min");
   });
 
-  it("estimates only from a distance somebody measured, to the quarter hour", () => {
-    // 27 km is 17 mi, which is 36 minutes at the stated pace.
-    expect(estimatedRideMinutes(27)).toBe(30);
-    expect(estimatedRideMinutes(17)).toBe(30);
+  it("estimates only from a distance somebody measured, round enough to be honest", () => {
+    // 27 km is 17 mi, which is 36 minutes at the stated pace; over half an
+    // hour, the estimate is rounded to five minutes.
+    expect(estimatedRideMinutes(27)).toBe(35);
+    // 17 km is 10.6 mi, or 23 minutes.
+    expect(estimatedRideMinutes(17)).toBe(23);
     // 43 km is 27 mi, or a little under an hour.
-    expect(estimatedRideMinutes(43)).toBe(60);
-    // A walk to the corner is still a quarter hour, not "2 min".
-    expect(estimatedRideMinutes(0.2)).toBe(15);
+    expect(estimatedRideMinutes(43)).toBe(55);
+    // QA-24: a 2.9 mi rural track at 28 mph is 6 minutes, not a quarter hour
+    // (which read "15 min", 11 mph). Short rides round to the minute.
+    expect(estimatedRideMinutes(4.67)).toBe(6);
+    expect(estimatedRideMinutes(0.2)).toBe(1);
     expect(estimatedRideMinutes(null)).toBeNull();
     expect(estimatedRideMinutes(undefined)).toBeNull();
     expect(estimatedRideMinutes(0)).toBeNull();
@@ -63,14 +67,14 @@ describe("the route page's facts", () => {
   it("puts the facts in the order a rider asks them", () => {
     const facts = factsOf({ surfaceLabel: "Mostly paved", curvatureSummary: "14 mi of curves" });
     expect(facts.map((fact) => fact.key)).toEqual(["distance", "time", "surface", "curvature"]);
-    expect(facts.map((fact) => fact.text)).toEqual(["17 mi", "~30 min", "Mostly paved", "14 mi of curves"]);
+    expect(facts.map((fact) => fact.text)).toEqual(["17 mi", "~35 min", "Mostly paved", "14 mi of curves"]);
   });
 
   it("keeps the estimate's pace off the line", () => {
     // The bug: the footnote lived inside the time fact, so at 320 px the fact
     // split into "~2 h 15 min" and "at 28 mph", stranding the separator.
     const [time] = factsOf().filter((fact) => fact.key === "time");
-    expect(time?.text).toBe("~30 min");
+    expect(time?.text).toBe("~35 min");
     expect(time?.text).not.toMatch(/mph/i);
     expect(time?.note).toBe(`Estimated at ${RIDE_TIME_PACE_MPH} mph`);
   });
@@ -119,5 +123,9 @@ describe("the list card's facts and the credit under them", () => {
     expect(cssRule(".og-explore-card__facts")).toMatch(/row-gap: var\(--og-space-1\)/);
     // The card is frameless (v3), so nothing clips it.
     expect(cssRule(".og-explore-card")).not.toMatch(/overflow:\s*(hidden|clip)/);
+    // The card's separator belongs to the fact before it too (QA-22: a wrapped
+    // row began "· 2.1 mi of curves"). The dot must not lead a line.
+    expect(cssRule(".og-explore-card__facts > :not(:last-child)::after")).toMatch(/content: " · "/);
+    expect(cssRule(".og-explore-card__facts > :not(:first-child)::before")).not.toMatch(/content:/);
   });
 });
