@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenGravel national ride library refresh (rebuild the pack, publish it when changed)
+Documentation=file:@REPO@/infra/route-library/refresh-pack.sh
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=3600
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+# install.sh replaces @REPO@ with the checkout this unit was installed from.
+Environment=HOME=/root
+Environment=OGV_REPO_DIR=@REPO@
+# Kill switch for a scheduled publish: set to 0 to keep building the new pack
+# without switching what production serves.
+Environment=OGV_ROUTE_LIBRARY_PUBLISH=1
+ExecStart=/usr/local/lib/opengravel/route-library-refresh.sh --publish
+Nice=10
+IOSchedulingClass=idle
+# The full-library build peaks near 400 MB; the cap leaves room for the page cache.
+MemoryMax=2G
+# 75 means another run held the lock, which is not a failure.
+SuccessExitStatus=75
