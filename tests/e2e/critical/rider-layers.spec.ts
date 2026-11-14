@@ -52,9 +52,10 @@ for (const size of SIZES) {
   for (const theme of ["day", "night"] as const) {
     const label = `${size.width}x${size.height} ${theme}`;
 
-    test(`LAYERS-HALF ${label}: the sheet opens at half height and the map stays visible while layers are switched`, async ({ page }) => {
+    test(`LAYERS-HALF ${label}: the sheet opens at half height and the map stays visible while layers are switched`, async ({ page }, info) => {
       await openLayers(page, size, theme);
       const panel = page.getByRole("region", { name: "Map layers" });
+      await page.screenshot({ path: info.outputPath(`layers-half-${label.replace(" ", "-")}.png`) });
       const box = (await panel.boundingBox())!;
       expect(box.y / size.height, "the sheet top is at or below the middle of the screen").toBeGreaterThanOrEqual(0.5 - 0.01);
       expect(box.y + box.height, "inside the screen").toBeLessThanOrEqual(size.height + 1);
@@ -66,7 +67,7 @@ for (const size of SIZES) {
       expect(hit, "the top third of the screen is still the map").not.toMatch(/layers|sheet|panel/);
     });
 
-    test(`LAYERS-RIDER ${label}: the ride-stopper layers are listed whole, readable and switch on`, async ({ page }) => {
+    test(`LAYERS-RIDER ${label}: the ride-stopper layers are listed whole, readable and switch on`, async ({ page }, info) => {
       const topo: string[] = [];
       await page.route("https://basemap.nationalmap.gov/**", async (route) => {
         topo.push(route.request().url());
@@ -75,6 +76,8 @@ for (const size of SIZES) {
       await page.route("**/api/map-layers?*", (route) => route.fulfill({ json: { features: [], unavailable: [] } }));
       await openLayers(page, size, theme);
       const panel = page.getByRole("region", { name: "Map layers" });
+      await page.getByTestId("map-layer-gates").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: info.outputPath(`layers-rows-${label.replace(" ", "-")}.png`) });
       for (const id of NEW_LAYERS) {
         const row = page.getByTestId(`map-layer-${id}`);
         await row.scrollIntoViewIfNeeded();
@@ -98,6 +101,7 @@ for (const size of SIZES) {
         await expect(row).toHaveAttribute("aria-checked", "true");
       }
       await expect(panel, "the sheet stays open").toBeVisible();
+      await page.screenshot({ path: info.outputPath(`layers-rider-${label.replace(" ", "-")}.png`) });
       // The topo map really asks USGS for tiles.
       await expect.poll(() => topo.length, { timeout: 20_000 }).toBeGreaterThan(0);
       expect(topo[0]).toContain("USGSTopo");
