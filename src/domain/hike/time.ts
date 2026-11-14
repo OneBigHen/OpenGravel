@@ -17,6 +17,7 @@
  */
 
 import type { HikeProfile } from "./types";
+import { formatWholeMinutes } from "@/domain/format/duration";
 
 /** Tobler's constants, named so the formula in the doc comment is checkable. */
 export const TOBLER = {
@@ -81,12 +82,7 @@ function factor(value: number | undefined, name: string): number {
 }
 
 function formatDuration(minutes: number): string {
-  const whole = Math.max(0, Math.round(minutes));
-  const hours = Math.floor(whole / 60);
-  const rest = whole % 60;
-  if (hours === 0) return `${rest} m`;
-  if (rest === 0) return `${hours} h`;
-  return `${hours} h ${rest} m`;
+  return formatWholeMinutes(minutes);
 }
 
 function formatFactor(value: number): string {

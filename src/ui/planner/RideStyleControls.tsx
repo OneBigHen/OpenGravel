@@ -24,6 +24,7 @@ import type { ArrivalTarget } from "@/application/planner/arrive-by";
 import { loopMinutesUntilSunset } from "@/application/planner/loop-until-sunset";
 import type { BikeConstraintSnapshot, Coordinate, DepartureIntent, LoopHeading, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
 import { useActivityMode } from "@/ui/stores/activity-mode";
+import { formatWholeMinutes } from "@/domain/format/duration";
 
 export type RideShapeChoice = "destination" | "loop";
 export type SurfaceChoice = SurfaceIntent["preference"];
@@ -124,10 +125,7 @@ const SURFACES: readonly SurfaceChoice[] = ["pavement", "mostly-pavement", "mixe
 
 /** `2 h`, `1 h 30 min` — ride times are whole hours today, but never lie if not. */
 export function formatRideTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours === 0) return `${rest} min`;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+  return formatWholeMinutes(minutes);
 }
 
 /**

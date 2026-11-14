@@ -49,7 +49,7 @@ describe("closeout layers sheet", () => {
     panel({ "weather-radar": "stale", "public-land": "unavailable", gravel: "ready" });
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
     expect(screen.getByText("Out of date")).toBeInTheDocument();
-    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Couldn’t load")).toBeInTheDocument();
     expect(screen.getByText(/May be out of date · Updated/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About Rain radar" }));
     expect(screen.getByText(/NOAA \/ IEM · Observed/)).toBeInTheDocument();

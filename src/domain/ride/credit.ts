@@ -8,7 +8,7 @@
  * themselves has no credit.
  *
  * `author` is `null` when the source never named a person. That is stated as
- * "author not named", never guessed.
+ * "author unknown", never guessed.
  */
 export interface RideCredit {
   readonly author: string | null;
@@ -53,7 +53,7 @@ export function isRideCredit(value: unknown): value is RideCredit {
 /** The plain credit sentence: "Route by Jane Doe · PA Adventure Bike Rides". */
 export function creditText(credit: RideCredit): string {
   return credit.author === null
-    ? `Route from ${credit.sourceName} · author not named`
+    ? `Route from ${credit.sourceName} · author unknown`
     : `Route by ${credit.author} · ${credit.sourceName}`;
 }
 
