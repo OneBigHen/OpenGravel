@@ -154,8 +154,20 @@ describe("RideSummary", () => {
     expect(screen.getByTestId("phone-surface-strip").getAttribute("aria-label")).toBe("Surface: 54% paved, 41% gravel, 0% dirt, 5% unknown");
   });
 
-  it("says where the ride goes above the time", () => {
-    render(<RideSummary {...base} title="To Hawk Mountain Sanctuary" />);
+  it("marks an unmeasured surface as unknown, not as a gravel-toned warning (QA-10)", () => {
+    const measured = { ...cards[0]!, distanceMeters: 62 * 1609.344, surfaceStrip: { paved: 0.54, gravel: 0.41, dirt: 0, unknown: 0.05 } };
+    render(<RideSummary {...base} card={measured} />);
+    // The amber dot is the gravel swatch's colour. "Some of this was not
+    // measured" gets the unknown mark, which is the hatch the bar uses.
+    const line = screen.getByTestId("phone-surface-line").closest(".og-truth__line");
+    expect(line?.getAttribute("data-tone")).toBe("unknown");
+    expect(line?.querySelector(".og-truth__dot")?.getAttribute("data-tone")).toBe("unknown");
+    const legend = screen.getByTestId("phone-surface-legend");
+    expect(legend.querySelector('[data-surface="paved"]')).not.toBeNull();
+    expect(legend.querySelector('[data-surface="unknown"]')).not.toBeNull();
+  });
+
+  it("says where the ride goes above the time", () => {    render(<RideSummary {...base} title="To Hawk Mountain Sanctuary" />);
     expect(screen.getByTestId("phone-destination").textContent).toBe("To Hawk Mountain Sanctuary");
   });
 

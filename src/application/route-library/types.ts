@@ -55,12 +55,18 @@ export interface LibraryRecord {
   readonly scraped_at: string;
   readonly last_verified: string;
   readonly claimed_distance_km?: number;
+  /** Plan 5.4 item 1: a place the library supplied, never a geocoded guess. */
   readonly location?: {
     readonly lat: number;
     readonly lon: number;
     readonly precision: "trailhead" | "town" | "area";
     readonly source?: string;
   };
+  /** Plan 5.4 item 2: the rating as fields, when the library supplies it. */
+  readonly source_rating?: SourceRating | null;
+  /** Where the terms wording came from; the rating is read out of it when no structured field exists. */
+  readonly terms_provenance?: string | Record<string, unknown> | null;
+  readonly scraper?: { readonly notes?: string | null } & Record<string, unknown>;
   readonly surface?: {
     readonly mix?: string;
     readonly surface_claim_source?: string;
@@ -120,6 +126,13 @@ export interface RideFact<T> {
   readonly source: string | null;
 }
 
+/** A rider rating a source published (plan 5.4 item 2). `count` is null when the source gave none. */
+export interface SourceRating {
+  readonly value: number;
+  readonly scale: number;
+  readonly count: number | null;
+}
+
 export interface RideCreditLine {
   readonly author: string | null;
   readonly sourceName: string;
@@ -156,8 +169,8 @@ export interface RideDetail {
   };
   readonly facts: {
     readonly surface: RideFact<"paved" | "unpaved" | "mixed">;
-    readonly legal: RideFact<string>;
-    readonly difficulty: RideFact<string>;
+    readonly legal: RideFact<"public-roads" | "designated-ohv" | "mixed">;
+    readonly difficulty: RideFact<"easy" | "moderate" | "difficult" | "expert">;
     readonly permits: RideFact<string>;
     readonly season: RideFact<string>;
   };
@@ -165,7 +178,7 @@ export interface RideDetail {
   readonly alsoOn: readonly RideCreditLine[];
   readonly partOf: readonly (readonly [string, string])[];
   readonly includes: readonly (readonly [string, string])[];
-  readonly sourceRating: null;
+  readonly sourceRating: SourceRating | null;
   readonly notes: readonly { readonly author: string; readonly text: string; readonly date: string | null; readonly url: string | null }[];
   readonly stops: {
     readonly fuel: readonly LibraryPoi[];

@@ -247,6 +247,12 @@ the primary button.
   byline and the shared-ride page, and is written into GPX exports. A ride the rider made shows no
   line. Credit rides on the ride's provenance, so save, copy, fork and share never drop it.
 
+- 2026-11-14 QA sweep (QA-10): a surface strip has four possible states, and paved and unknown used
+  the same grey, so the bar and its legend could not say which was which. Paved is now one solid
+  green (`--og-surface-paved`), unknown is a grey hatch (`--og-surface-unknown`) and never a solid
+  swatch, and the same pair is used in the bar, the legend dots and the surface line's own dot —
+  including "some of this was not measured", which used to wear the gravel tone's amber.
+
 ## Open proposals
 
 (none)

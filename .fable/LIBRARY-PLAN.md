@@ -355,19 +355,7 @@ Next route handlers  ->  Cloudflare  ->  phone (index kept in the browser cache)
 miles or `null`, `p` start point or `null`, `pp` how exact the point is (`start`, `area`, `town`), `f` flags
 (1 has line, 2 loop, 4 GPX allowed, 8 old track, 16 rough, 32 rider notes, 64 stops, 128 merged from several
 sites), `s` index into the top-level `sources` name list, `c` card line, `sf` surface claim (`p`, `u`, `m`,
-`null`). The file's top level also carries `version`, `precision`, `sources` and `stateCounts`.
-
-**Built in L1a, differs from the first draft of this plan (measured on the full library, 2026-11-13):**
-- `c` is a 16-point card *shape*, not a polyline: two base64url characters per point (x, y on a 64 x 64 grid,
-  scaled to the line's longer side so proportions are true; y 0 is north). 24-point polylines added 300 KB
-  gzipped and broke the 400 KB index gate (index is now about 374 KB). Decode with
-  `decodeCardLine` in `src/application/route-library/card-line.ts`. `c` is `null` when a ride has no line.
-- `bb` is rounded outward to 3 decimals (about 100 m); the ride detail has the exact box.
-- Every stored polyline (`lines/<ST>.json`, `line`, `segments`) is `polyline5`; the file says so in `precision`.
-  Decode with `decodeCatalogPolyline(text, 5)` (the app's own default is 6).
-- `mi` is `null` for riding areas and trail bundles (a segment sum is not a ride length); the detail carries
-  `trailMiles`. A ride with a source box but no track of ours gets `p` at the middle of the box with `pp: "area"`.
-- A ride with no track and no box has `p`, `bb` and `c` all `null`.
+`null`). The file's top level also carries `version`, `sources` and `stateCounts`.
 
 **Ride detail** (`/rides/<id>`): `id, name, kind, type, score, scoreReason, states, summary, miles, loop, start,
 bounds, line | segments, points, track { availability, year, old, rough, gpxAllowed, sourceDownloadUrl },
