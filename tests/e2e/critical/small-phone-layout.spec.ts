@@ -81,18 +81,39 @@ async function layoutProblems(page: Page): Promise<LayoutProblem[]> {
       }
       return right - left > 4 && bottom - top > 4 ? new DOMRect(left, top, right - left, bottom - top) : null;
     };
+    // Chrome floats over the map (fixed, sticky or absolutely placed). Plain page
+    // content that scrolls under the bottom bar is normal and not a clash.
+    const floats = (el: HTMLElement): boolean => {
+      for (let p: HTMLElement | null = el; p !== null; p = p.parentElement) {
+        if (["fixed", "sticky", "absolute"].includes(getComputedStyle(p).position)) return true;
+      }
+      return false;
+    };
+    const inScroller = (el: HTMLElement): boolean => {
+      for (let p = el.parentElement; p !== null && p !== document.body; p = p.parentElement) {
+        const s = getComputedStyle(p);
+        if (s.overflowX !== "visible" || s.overflowY !== "visible") return true;
+      }
+      return false;
+    };
+    for (const el of controls) {
+      const r = el.getBoundingClientRect();
+      if (!inScroller(el) && floats(el) && (r.right > window.innerWidth + 1 || r.left < -1)) {
+        problems.push({ kind: "off-screen", detail: `${label(el)} spans ${Math.round(r.left)}..${Math.round(r.right)} of ${window.innerWidth}` });
+      }
+    }
     const shown = controls.flatMap((el) => { const r = visible(el); return r === null ? [] : [{ el, r }]; });
     for (let i = 0; i < shown.length; i += 1) {
       const a = shown[i]!;
       const cx = a.r.left + a.r.width / 2;
       const cy = a.r.top + a.r.height / 2;
       const top = document.elementFromPoint(cx, cy);
-      if (top !== null && !a.el.contains(top) && !top.contains(a.el)) {
+      if (top !== null && !a.el.contains(top) && !top.contains(a.el) && floats(a.el)) {
         problems.push({ kind: "covered", detail: `${label(a.el)} is under ${label(top)}` });
       }
       for (let j = i + 1; j < shown.length; j += 1) {
         const b = shown[j]!;
-        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        if (a.el.contains(b.el) || b.el.contains(a.el) || !(floats(a.el) && floats(b.el))) continue;
         const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
         const h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
         if (w > 3 && h > 3) problems.push({ kind: "overlap", detail: `${label(a.el)} and ${label(b.el)} (${Math.round(w)}x${Math.round(h)}px)` });
