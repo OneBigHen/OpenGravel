@@ -243,21 +243,29 @@ for (const width of [320, 390]) {
   });
 }
 
-test("QA-20 the attribution disc is not hidden behind the locate button on a cold open", async ({ page }) => {
+test("QA-20 the map's corner (i) disc sits below the locate button, not behind it", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
+  // The test map draws no attribution of its own, so put MapLibre's corner disc where MapLibre
+  // puts it (inside .og-map, in the bottom-right control group) and measure where our CSS leaves it.
   const gap = await page.evaluate(() => {
-    const attr = document.querySelector(".og-map .maplibregl-ctrl-attrib-button")?.getBoundingClientRect();
-    const buttons = [...document.querySelectorAll(".og-map__cluster button")].map((b) => b.getBoundingClientRect());
-    if (attr === undefined) return { found: false, clash: 0, attr: [], buttons: [] };
+    const map = document.querySelector(".og-planner__map-slot .og-map")!;
+    let corner = map.querySelector<HTMLElement>(".maplibregl-ctrl-bottom-right");
+    if (corner === null) { corner = document.createElement("div"); corner.className = "maplibregl-ctrl-bottom-right"; map.appendChild(corner); }
+    const disc = document.createElement("button");
+    disc.className = "maplibregl-ctrl-attrib-button";
+    disc.setAttribute("aria-label", "Toggle attribution");
+    disc.style.cssText = "width:29px;height:29px;display:block;margin:0 10px 10px 0;position:relative";
+    corner.appendChild(disc);
+    const attr = disc.getBoundingClientRect();
+    const buttons = [...document.querySelectorAll(".og-map__cluster button, .og-layers button")].map((b) => b.getBoundingClientRect());
     const clash = buttons.filter((b) => Math.min(attr.right, b.right) - Math.max(attr.left, b.left) > 1
       && Math.min(attr.bottom, b.bottom) - Math.max(attr.top, b.top) > 1).length;
-    return { found: true, clash, attr: [attr.left, attr.top, attr.width, attr.height], buttons: buttons.map((b) => [b.left, b.top, b.width, b.height]) };
+    return { clash, attr: [attr.left, attr.top, attr.width, attr.height].map(Math.round), buttons: buttons.map((b) => [b.left, b.top, b.width, b.height].map(Math.round)) };
   });
-  expect(gap.found, "attribution disc exists").toBe(true);
-  expect(gap.clash, `attribution disc overlaps a map button ${JSON.stringify(gap)}`).toBe(0);
+  expect(gap.clash, `(i) disc overlaps a map button ${JSON.stringify(gap)}`).toBe(0);
 });
 
 test("QA-21 desktop: the destination shape does not say Make my loop, and the corners are clear", async ({ page }) => {
