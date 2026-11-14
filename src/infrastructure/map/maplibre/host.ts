@@ -2472,7 +2472,9 @@ export async function createMapLibreHost(
       pixel,
     });
     // A pen touch that never left its tap radius is not a stroke: nothing is drawn or replanned.
-    if (drawing && !ownership.longPressed) emit(ownership.tool === "sketch" && !moved ? { type: "gesture-cancel" } : { type: "pointer-up", pointerId: event.pointerId, coordinate });
+    // A held line released without moving drags nothing, so it must not replan.
+    const idleHold = !moved && (ownership.tool === "sketch" || (ownership.tool === "point-drag" && pressedRef?.kind === "route"));
+    if (drawing && !ownership.longPressed) emit(idleHold ? { type: "gesture-cancel" } : { type: "pointer-up", pointerId: event.pointerId, coordinate });
     for (const effect of effects) {
       if (effect.type === "tap" && performance.now() >= quietUntil) tapAt(current.map, coordinate, !drawing);
       else if (effect.type === "commit-gesture") {
@@ -2495,7 +2497,6 @@ export async function createMapLibreHost(
         if (pressedRef !== null) emit({ type: "object-click", coordinate, ref: pressedRef });
       } else if (!moved && pressedRef?.kind === "route") {
         // A held line released without moving is still the road menu.
-        emit({ type: "gesture-cancel" });
         emit({ type: "object-click", coordinate, ref: pressedRef, source: "long-press" });
       }
       pressedRef = null;

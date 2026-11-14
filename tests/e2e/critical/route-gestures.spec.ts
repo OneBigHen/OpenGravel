@@ -1,6 +1,6 @@
 import { expect, test, type CDPSession, type Page } from "@playwright/test";
 
-import { fractionOf, openRefine, placeEndpoint, plannerMap, settledExtent, type Coordinate } from "./map-helpers";
+import { fractionOf, openRefine, placeEndpoint, plannerMap, ROUTE_PLUM, settledExtent, type Coordinate } from "./map-helpers";
 
 /**
  * Looking at a route never changes it (QA-19, "the route reroutes a ton as you
@@ -19,9 +19,6 @@ test.setTimeout(150_000);
 
 const START: Coordinate = { lon: -75.44, lat: 40.14 };
 const FINISH: Coordinate = { lon: -75.4328, lat: 40.131 };
-/** A vertex of the fixture's first candidate, away from the second one. */
-const ON_LINE: Coordinate = { lon: -75.4361, lat: 40.1408 };
-
 interface Point { readonly x: number; readonly y: number }
 
 async function touch(cdp: CDPSession, type: "touchStart" | "touchMove" | "touchEnd", points: readonly Point[]): Promise<void> {
@@ -64,12 +61,63 @@ async function planned(page: Page): Promise<{ count: number }> {
   return seen;
 }
 
-/** The line pixel must be showing above the sheet, or the gesture would hit the sheet. */
+/**
+ * A pixel in the middle of the drawn route line, found by looking at the map
+ * (not by assuming where the fixture puts it), so the gesture really starts on
+ * the line. The line must also be above the sheet, or the gesture would hit the sheet.
+ */
 async function linePixel(page: Page): Promise<Point> {
-  const at = await pixelOf(page, ON_LINE);
+  const map = plannerMap(page);
+  const box = await map.boundingBox();
   const sheet = await page.getByTestId("planner-sheet").boundingBox();
-  expect(at.y, "the route line is visible above the sheet").toBeLessThan((sheet?.y ?? 844) - 20);
-  return at;
+  if (box === null) throw new Error("the planner map has no measured box");
+  const limit = (sheet?.y ?? 844) - 30;
+  const shot = (await map.screenshot()).toString("base64");
+  const found = await map.evaluate(async (_el, input) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${input.png}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (context === null) return null;
+    context.drawImage(image, 0, 0);
+    const scale = image.width / input.width;
+    const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const target = [1, 3, 5].map((i) => Number.parseInt(input.color.slice(i, i + 2), 16));
+    const near = (x: number, y: number): boolean => {
+      const at = (Math.round(y) * canvas.width + Math.round(x)) * 4;
+      return [0, 1, 2].every((c) => Math.abs((data[at + c] ?? 0) - (target[c] ?? 0)) <= 20);
+    };
+    const hits: Array<{ x: number; y: number }> = [];
+    for (let y = 8; y < Math.min(canvas.height - 8, input.limit * scale); y += 2) {
+      for (let x = 8; x < canvas.width - 8; x += 2) {
+        // A fat part of the line: every pixel a few px around is line colour.
+        if (near(x, y) && near(x + 3, y) && near(x - 3, y) && near(x, y + 3) && near(x, y - 3)) hits.push({ x: x / scale, y: y / scale });
+      }
+    }
+    if (hits.length === 0) return null;
+    return hits[Math.floor(hits.length / 2)] ?? null;
+  }, { png: shot, color: ROUTE_PLUM, width: box.width, limit: limit - box.y });
+  expect(found, "the route line is drawn on the map above the sheet").not.toBeNull();
+  return { x: box.x + (found?.x ?? 0), y: box.y + (found?.y ?? 0) };
+}
+
+/** What the rider sees of the ride: its summary and what Undo would undo. */
+async function rideState(page: Page): Promise<{ summary: string; undo: string }> {
+  return {
+    summary: (await page.getByTestId("route-summary").first().textContent().catch(() => null)) ?? "",
+    undo: (await page.getByTestId("undo").getAttribute("title")) ?? "",
+  };
+}
+
+async function openPen(page: Page): Promise<void> {
+  const toggle = page.getByTestId("refine-toggle");
+  if (!(await toggle.isVisible())) await page.getByRole("button", { name: /Expand to half/ }).click();
+  await openRefine(page);
+  await page.getByTestId("start-drawing").click();
+  await expect(page.getByTestId("start-drawing")).toHaveAttribute("aria-pressed", "true");
 }
 
 test.beforeEach(async ({ page }) => {
@@ -82,19 +130,21 @@ test("a finger pan that starts on the route line moves the map and plans nothing
   const seen = await planned(page);
   const at = await linePixel(page);
   const before = seen.count;
+  const ride = await rideState(page);
   const extent = await settledExtent(page);
   const cdp = await page.context().newCDPSession(page);
   await touchDrag(page, cdp, at, { x: at.x + 70, y: at.y + 40 }, 0);
   await page.waitForTimeout(2500);
   expect(seen.count).toBe(before);
   expect(await settledExtent(page)).not.toEqual(extent);
-  await expect(page.getByTestId("undo")).toBeDisabled();
+  expect(await rideState(page)).toEqual(ride);
 });
 
 test("a mouse drag that starts on the route line pans the map and plans nothing", async ({ page }) => {
   const seen = await planned(page);
   const at = await linePixel(page);
   const before = seen.count;
+  const ride = await rideState(page);
   const extent = await settledExtent(page);
   await page.mouse.move(at.x, at.y);
   await page.mouse.down();
@@ -103,14 +153,12 @@ test("a mouse drag that starts on the route line pans the map and plans nothing"
   await page.waitForTimeout(2500);
   expect(seen.count).toBe(before);
   expect(await settledExtent(page)).not.toEqual(extent);
-  await expect(page.getByTestId("undo")).toBeDisabled();
+  expect(await rideState(page)).toEqual(ride);
 });
 
 test("tapping the map with the pen armed draws nothing and plans nothing", async ({ page }) => {
   const seen = await planned(page);
-  await openRefine(page);
-  await page.getByTestId("start-drawing").click();
-  await expect(page.getByTestId("start-drawing")).toHaveAttribute("aria-pressed", "true");
+  await openPen(page);
   const before = seen.count;
   const cdp = await page.context().newCDPSession(page);
   const at = await pixelOf(page, { lon: -75.445, lat: 40.1445 });
@@ -127,13 +175,58 @@ test("tapping the map with the pen armed draws nothing and plans nothing", async
   expect(await plannerMap(page).getAttribute("data-map-scene")).toContain("sketchDraft:0");
 });
 
+test("with the pen armed, two fingers pan the map and draw nothing; one finger still draws", async ({ page }) => {
+  const seen = await planned(page);
+  await openPen(page);
+  const before = seen.count;
+  const extent = await settledExtent(page);
+  const cdp = await page.context().newCDPSession(page);
+  const a = await pixelOf(page, { lon: -75.445, lat: 40.1445 });
+  const b = { x: a.x + 40, y: a.y };
+  await touch(cdp, "touchStart", [a, b]);
+  for (let step = 1; step <= 8; step += 1) {
+    const d = step * 10;
+    await touch(cdp, "touchMove", [{ x: a.x + d, y: a.y + d / 2 }, { x: b.x + d, y: b.y + d / 2 }]);
+    await page.waitForTimeout(16);
+  }
+  await touch(cdp, "touchEnd", []);
+  await page.waitForTimeout(2500);
+  expect(await settledExtent(page), "two fingers moved the map").not.toEqual(extent);
+  expect(await plannerMap(page).getAttribute("data-map-scene")).toContain("sketchDraft:0");
+  expect(seen.count).toBe(before);
+  // The pen is still armed, and one finger still draws a stroke.
+  await expect(page.getByTestId("start-drawing")).toHaveAttribute("aria-pressed", "true");
+  const from = await pixelOf(page, { lon: -75.445, lat: 40.1445 });
+  await touchDrag(page, cdp, from, { x: from.x + 90, y: from.y + 30 }, 0);
+  await expect.poll(async () => plannerMap(page).getAttribute("data-map-scene")).toContain("sketchDraft:1");
+});
+
 test("holding the route line then dragging reshapes it once and can be undone", async ({ page }) => {
   const seen = await planned(page);
   const at = await linePixel(page);
   const before = seen.count;
+  const ride = await rideState(page);
   const cdp = await page.context().newCDPSession(page);
   await touchDrag(page, cdp, at, { x: at.x - 40, y: at.y - 30 }, 700);
   await expect.poll(() => seen.count, { timeout: 30_000 }).toBeGreaterThan(before);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 60_000 });
-  await expect(page.getByTestId("undo")).toBeEnabled();
+  await page.waitForTimeout(1500);
+  expect(seen.count, "one hold-and-drag is one replan").toBe(before + 1);
+  expect((await rideState(page)).undo).not.toEqual(ride.undo);
+  await page.getByTestId("undo").click();
+  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 60_000 });
+});
+
+test("holding the route line without moving offers the road and plans nothing", async ({ page }) => {
+  const seen = await planned(page);
+  const at = await linePixel(page);
+  const before = seen.count;
+  const ride = await rideState(page);
+  const cdp = await page.context().newCDPSession(page);
+  await touch(cdp, "touchStart", [at]);
+  await page.waitForTimeout(700);
+  await touch(cdp, "touchEnd", []);
+  await page.waitForTimeout(2500);
+  expect(seen.count).toBe(before);
+  expect(await rideState(page)).toEqual(ride);
 });
