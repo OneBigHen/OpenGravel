@@ -166,7 +166,7 @@ for (const size of SIZES) {
         const range = document.createRange();
         range.selectNodeContents(h);
         const text = range.getBoundingClientRect();
-        const next = document.querySelector(".og-explore__heading-row [role='tablist'], .og-explore__heading-row [role='radiogroup'], .og-explore__heading-row > :nth-child(2)")!.getBoundingClientRect();
+        const next = document.querySelector(".og-explore__lens")!.getBoundingClientRect();
         return { textRight: text.right, nextLeft: next.left, clipped: h.scrollWidth > h.clientWidth };
       });
       expect(title.textRight, "Explore title runs under the Ride / Things switch").toBeLessThanOrEqual(title.nextLeft + 1);
