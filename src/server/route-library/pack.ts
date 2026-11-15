@@ -15,9 +15,17 @@ export interface PackManifest {
   readonly rides: number;
   readonly located: number;
   readonly withLine: number;
+  /** Rides removed from the library; an old link to one answers 410. */
+  readonly removed: number;
   readonly states: Readonly<Record<string, number>>;
   /** Decimal places of every stored polyline. */
   readonly polylinePrecision: number;
+}
+
+export interface PackTombstone {
+  readonly id: string;
+  readonly removedAt: string;
+  readonly reason: string;
 }
 
 export interface PackRide {
@@ -42,6 +50,7 @@ interface OpenPack {
   readonly asset: StatementSync;
   readonly ride: StatementSync;
   readonly alias: StatementSync;
+  readonly tombstone: StatementSync | null;
 }
 
 let open: OpenPack | null = null;
@@ -88,7 +97,19 @@ function pack(): OpenPack | null {
       database.close();
       return null;
     }
-    const manifest = { ...(JSON.parse(manifestRow.value) as Omit<PackManifest, "polylinePrecision">), polylinePrecision: Number(precisionRow?.value ?? 5) };
+    let removed = 0;
+    let tombstone: StatementSync | null = null;
+    try {
+      const count = database.prepare("SELECT COUNT(*) AS removed FROM tombstone").get() as { removed: number } | undefined;
+      removed = Number(count?.removed ?? 0);
+      tombstone = database.prepare("SELECT removed_at, reason FROM tombstone WHERE id = ?");
+    } catch {
+      // A pack built before the tombstone table existed: every ride is either
+      // present or an ordinary 404, and the library still serves normally.
+      tombstone = null;
+    }
+    const stored = JSON.parse(manifestRow.value) as Omit<PackManifest, "polylinePrecision" | "removed">;
+    const manifest = { ...stored, removed, polylinePrecision: Number(precisionRow?.value ?? 5) };
     open = {
       key,
       database,
@@ -97,6 +118,7 @@ function pack(): OpenPack | null {
       asset: database.prepare("SELECT body, content_type FROM asset WHERE key = ?"),
       ride: database.prepare("SELECT id, detail, line, points FROM ride WHERE id = ?"),
       alias: database.prepare("SELECT primary_id FROM alias WHERE id = ?"),
+      tombstone,
     };
     return open;
   } catch {
@@ -136,6 +158,14 @@ export function packRide(id: string): PackRide | null {
   }
   if (row === undefined) return null;
   return { id: row.id, detail: JSON.parse(gunzipSync(row.detail).toString("utf8")) as RideDetail, line: row.line, points: row.points };
+}
+
+/** A ride the library removed, so an old link can say so instead of a bare 404. */
+export function packTombstone(id: string): PackTombstone | null {
+  const current = pack();
+  if (current === null || current.tombstone === null) return null;
+  const row = current.tombstone.get(id) as { removed_at: string; reason: string } | undefined;
+  return row === undefined ? null : { id, removedAt: row.removed_at, reason: row.reason };
 }
 
 /** Test helper: forget the open pack so the next call reads the environment again. */

@@ -3,6 +3,7 @@
  * Reads `<library>/routes/<ST>/<id>.json` (+ its GPX), one file at a time, and
  * writes one SQLite pack. Dedupe (L2a) merges one road listed by several sites into
  * one card and records every old id in `alias`; locating is package L2b.
+ * Removed rides are kept in the `tombstone` table so an old link can say so (L9).
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -17,11 +18,12 @@ import { FACT_NAMES, hasFactRow, phraseFor, saysNothing, unsourcedClaims, type F
 import { parseSourcesPolicy, policyForSource, type SourcesPolicy } from "@/application/route-library/policy";
 import { checkLibraryRecord } from "@/application/route-library/record";
 import { deriveRide } from "@/application/route-library/ride-detail";
-import { FLAG, type IndexRow, type LibraryRecord, type RideCreditLine, type RideDetail } from "@/application/route-library/types";
+import { mergeTombstones, parseTombstones, RIDE_ID } from "@/application/route-library/tombstones";
+import { FLAG, type IndexRow, type LibraryRecord, type RideCreditLine, type RideDetail, type Tombstone } from "@/application/route-library/types";
 import { parseGpx } from "@/infrastructure/import/gpx-parser";
 import type { Coordinate } from "@/domain/ride/types";
 
-export const PACK_SCHEMA = 1;
+export const PACK_SCHEMA = 2;
 export const BUDGETS = {
   indexGzipBytes: 400 * 1024,
   stateLinesGzipBytes: 200 * 1024,
@@ -44,6 +46,8 @@ export interface BuildOptions {
   readonly policyPath: string;
   /** Curated catalog (`data/catalog/routes.json.gz`); library ids may not collide with it. */
   readonly catalogPath?: string | undefined;
+  /** Deliberate removals. Default `<library>/tombstones.json`; a missing file means none. */
+  readonly tombstonePath?: string | undefined;
   /** Exact file name for the pack (the fixture uses `pack.sqlite`); default `route-library-<version>.sqlite`. */
   readonly packName?: string | undefined;
   readonly allowDrop?: boolean | undefined;
@@ -171,6 +175,71 @@ function readSegments(gpxPath: string, bundle: boolean, onFallback: () => void):
   return bundle ? segments : [segments.flat()];
 }
 
+interface PreviousPack {
+  readonly path: string;
+  readonly version: string | null;
+  readonly rides: number | null;
+  readonly ids: readonly string[];
+  readonly tombstones: readonly Tombstone[];
+}
+
+function stringId(value: unknown): string | null {
+  return typeof value === "string" && RIDE_ID.test(value) ? value : null;
+}
+
+/**
+ * The newest pack already in the output folder, read for the drop gate, the
+ * removals it noticed last time, and the ids an old link may still ask for.
+ * A missing, half-written or foreign file counts as no previous pack.
+ */
+function readPreviousPack(dir: string, packName: string | undefined): PreviousPack | null {
+  let newest: { name: string; time: number } | undefined;
+  try {
+    newest = readdirSync(dir)
+      .filter((name) => /^route-library-[0-9a-f]{12}\.sqlite$/.test(name) || name === packName)
+      .map((name) => ({ name, time: statSync(path.join(dir, name)).mtimeMs }))
+      .sort((a, b) => b.time - a.time)[0];
+  } catch {
+    return null;
+  }
+  if (newest === undefined) return null;
+  const file = path.join(dir, newest.name);
+  let database: DatabaseSync | null = null;
+  try {
+    database = new DatabaseSync(file, { readOnly: true });
+    const meta = database.prepare("SELECT value FROM meta WHERE key = ?");
+    const value = (key: string): string | null => {
+      const row = meta.get(key) as { value: string } | undefined;
+      return row?.value ?? null;
+    };
+    const rides = value("rides");
+    let ids: readonly string[] = [];
+    const asset = database.prepare("SELECT body FROM asset WHERE key = 'index'").get() as { body: Uint8Array } | undefined;
+    if (asset !== undefined) {
+      const index = JSON.parse(gunzipSync(asset.body).toString("utf8")) as { rows?: unknown };
+      if (Array.isArray(index.rows)) {
+        ids = index.rows
+          .map((row) => (typeof row === "object" && row !== null ? stringId((row as { id?: unknown }).id) : null))
+          .filter((id): id is string => id !== null);
+      }
+    }
+    let tombstones: readonly Tombstone[] = [];
+    try {
+      const rows = database.prepare("SELECT id, removed_at, reason FROM tombstone").all() as { id: string; removed_at: string; reason: string }[];
+      tombstones = rows
+        .filter((row) => RIDE_ID.test(row.id))
+        .map((row) => ({ id: row.id, removedAt: row.removed_at, reason: row.reason }));
+    } catch {
+      tombstones = [];
+    }
+    return { path: file, version: value("version"), rides: rides === null ? null : Number(rides), ids, tombstones };
+  } catch {
+    return null;
+  } finally {
+    database?.close();
+  }
+}
+
 function tally(counts: Map<string, number>, key: string): void {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
@@ -245,8 +314,14 @@ export function buildPack(options: BuildOptions): BuildResult {
     CREATE TABLE ride (id TEXT PRIMARY KEY, detail BLOB NOT NULL, line TEXT NOT NULL, points INTEGER NOT NULL);
     CREATE TABLE asset (key TEXT PRIMARY KEY, body BLOB NOT NULL, content_type TEXT NOT NULL);
     CREATE TABLE alias (id TEXT PRIMARY KEY, primary_id TEXT NOT NULL);
+    CREATE TABLE tombstone (id TEXT PRIMARY KEY, removed_at TEXT NOT NULL, reason TEXT NOT NULL);
   `);
   const insertRide = db.prepare("INSERT INTO ride (id, detail, line, points) VALUES (?, ?, ?, ?)");
+
+  const tombstonePath = options.tombstonePath ?? path.join(options.libraryDir, "tombstones.json");
+  const deliberate = existsSync(tombstonePath) ? parseTombstones(JSON.parse(readFileSync(tombstonePath, "utf8")), tombstonePath) : [];
+  const deliberateIds = new Set(deliberate.map((entry) => entry.id));
+  const removedOnDisk: Tombstone[] = [];
 
   // Problems are collected per gate, then each gate writes one line in the report.
   const collisions: string[] = [];
@@ -309,6 +384,11 @@ export function buildPack(options: BuildOptions): BuildResult {
         continue;
       }
       const record: LibraryRecord = checked.record;
+      if (deliberateIds.has(record.id)) {
+        const entry = deliberate.find((candidate) => candidate.id === record.id);
+        if (entry !== undefined) removedOnDisk.push(entry);
+        continue;
+      }
       const rule = policyForSource(policy, record.source.name);
       if (rule.mode === "hide") {
         hidden.push(record.id);
@@ -480,7 +560,19 @@ export function buildPack(options: BuildOptions): BuildResult {
   for (const [state, list] of [...mapLines.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     stateFiles.set(state, { state, precision: 5, lines: list.sort((a, b) => (a.id < b.id ? -1 : 1)).map((entry) => [entry.id, entry.line]) });
   }
-  hash.update(JSON.stringify({ rows: indexRows, sources, stateFiles: [...stateFiles.entries()] }));
+  // Removals: the deliberate list wins; the previous pack's table carries a removal forward; a card that
+  // disappeared is recorded by this build. A merged-away id still answers through `alias`, so it counts as present.
+  const builtAt = new Date().toISOString();
+  const previous = readPreviousPack(options.outDir, options.packName);
+  const tombstones = mergeTombstones({
+    deliberate,
+    carried: previous?.tombstones ?? [],
+    previousIds: previous?.ids ?? [],
+    currentIds: [...indexRows.map((row) => row.id), ...aliasOf.keys()],
+    withdrawn: hidden,
+    removedAt: builtAt,
+  });
+  hash.update(JSON.stringify({ rows: indexRows, sources, stateFiles: [...stateFiles.entries()], tombstones }));
   const version = hash.digest("hex").slice(0, 12);
 
   const insertAsset = db.prepare("INSERT INTO asset (key, body, content_type) VALUES (?, ?, ?)");
@@ -504,8 +596,9 @@ export function buildPack(options: BuildOptions): BuildResult {
 
   const located = indexRows.filter((row) => row.p !== null).length;
   const withLine = indexRows.filter((row) => (row.f & 1) !== 0).length;
-  const builtAt = new Date().toISOString();
-  const manifest = { version, builtAt, rides: indexRows.length, located, withLine, states: sortedStateCounts };
+  const manifest = { version, builtAt, rides: indexRows.length, located, withLine, removed: tombstones.length, states: sortedStateCounts };
+  const insertTombstone = db.prepare("INSERT INTO tombstone (id, removed_at, reason) VALUES (?, ?, ?)");
+  for (const entry of tombstones) insertTombstone.run(entry.id, entry.removedAt, entry.reason);
   const insertMeta = db.prepare("INSERT INTO meta (key, value) VALUES (?, ?)");
   for (const [key, value] of Object.entries({
     schema: String(PACK_SCHEMA),
@@ -515,33 +608,23 @@ export function buildPack(options: BuildOptions): BuildResult {
     rides: String(indexRows.length),
     located: String(located),
     with_line: String(withLine),
+    removed: String(tombstones.length),
     manifest: JSON.stringify(manifest),
   })) insertMeta.run(key, value);
   db.exec("COMMIT");
   db.close();
 
-  // Drop against the previous pack in the output folder.
-  let previousRides: number | null = null;
-  const previous = readdirSync(options.outDir)
-    .filter((name) => /^route-library-.*\.sqlite$/.test(name) || name === options.packName)
-    .map((name) => ({ name, time: statSync(path.join(options.outDir, name)).mtimeMs }))
-    .sort((a, b) => b.time - a.time)[0];
-  if (previous !== undefined) {
-    try {
-      const old = new DatabaseSync(path.join(options.outDir, previous.name), { readOnly: true });
-      const row = old.prepare("SELECT value FROM meta WHERE key = 'rides'").get() as { value: string } | undefined;
-      previousRides = row === undefined ? null : Number(row.value);
-      old.close();
-    } catch {
-      previousRides = null;
-    }
-  }
-  const dropped = previousRides !== null && previousRides > 0 && indexRows.length < previousRides * (1 - budgets.dropFraction);
+  // Drop against the previous pack in the output folder. A deliberate removal (tombstones.json) is not a
+  // drop: the operator said so, and old links still answer. A record that merely vanished is not excused.
+  const previousRides = previous?.rides ?? null;
+  const removedFromPrevious = previous === null ? 0 : previous.ids.filter((id) => deliberateIds.has(id)).length;
+  const expectedRides = previousRides === null ? null : Math.max(0, previousRides - removedFromPrevious);
+  const dropped = expectedRides !== null && expectedRides > 0 && indexRows.length < expectedRides * (1 - budgets.dropFraction);
   const dropDetail =
     previousRides === null
       ? `no earlier pack in ${options.outDir} to compare`
-      : `${previousRides} rides in the earlier pack, ${indexRows.length} now${dropped ? `; allowed by --allow-drop` : ""}`;
-  const dropProblems = dropped && options.allowDrop !== true ? [`ride count fell from ${previousRides} to ${indexRows.length} (more than ${Math.round(budgets.dropFraction * 100)}%); pass --allow-drop if that is intended`] : [];
+      : `${previousRides} rides in the earlier pack${removedFromPrevious > 0 ? ` (${removedFromPrevious} removed on purpose)` : ""}, ${indexRows.length} now${dropped && options.allowDrop === true ? "; allowed by --allow-drop" : ""}`;
+  const dropProblems = dropped && options.allowDrop !== true ? [`ride count fell from ${expectedRides} to ${indexRows.length} (more than ${Math.round(budgets.dropFraction * 100)}%); pass --allow-drop if that is intended`] : [];
 
   const packName = options.packName ?? `route-library-${version}.sqlite`;
   const packPath = path.join(options.outDir, packName);
@@ -597,6 +680,7 @@ export function buildPack(options: BuildOptions): BuildResult {
     `- Credit lines taken from the source: ${indexRows.length - derivedCredit}; written from author and site name: ${derivedCredit}; missing: 0`,
     `- Claims dropped because the record names no source: ${droppedClaims.length} (all listed below)`,
     `- Length mismatches flagged (measured vs source's stated miles, over 40%): ${mismatches}`,
+    `- Removed rides (old links say "this ride was removed"): ${tombstones.length}`,
     `- One road, one card (L2a): ${before} records became ${indexRows.length} cards; ${sameRoad.groups.length} groups merged (${sameRoad.pairs.filter((pair) => pair.method === "line").length} line matches, ${sameRoad.pairs.filter((pair) => pair.method === "box").length} name-and-box matches); ${aliasOf.size} old ids kept in \`alias\`; full list in \`dedupe-groups.json\``,
     "",
     "## Gates",
@@ -680,6 +764,14 @@ export function buildPack(options: BuildOptions): BuildResult {
     "## Tracks that could not be read (the ride is packed without a line, with its source link)",
     "",
     unreadable.length === 0 ? "None." : unreadable.slice(0, 200).map((entry) => `- ${entry.id}: ${entry.why}`).join("\n"),
+    "",
+    `## Removed rides (${tombstones.length})`,
+    "",
+    tombstones.length === 0 ? "None." : ["| Ride | Removed | Reason |", "|---|---|---|", ...tombstones.slice(0, 200).map((entry) => `| ${entry.id} | ${entry.removedAt} | ${entry.reason.replace(/\|/g, "\\|")} |`)].join("\n"),
+    "",
+    "## Removed by tombstone (still on disk, not packed)",
+    "",
+    removedOnDisk.length === 0 ? "None." : removedOnDisk.map((entry) => `- ${entry.id}: ${entry.reason}`).join("\n"),
     "",
     "## Hidden by policy",
     "",

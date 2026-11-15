@@ -59,6 +59,14 @@ describe("one road listed by three sites becomes one card", () => {
     expect(database.prepare("SELECT count(*) AS n FROM ride").get()).toEqual({ n: 1 });
   });
 
+  it("a rebuild does not call a merged-away id removed, and the alias still wins over a tombstone", () => {
+    const again = buildPack({ libraryDir: SOURCE, outDir: path.join(work, "a"), policyPath: POLICY, packName: "pack.sqlite" });
+    const next = new DatabaseSync(again.packPath, { readOnly: true });
+    expect(next.prepare("SELECT count(*) AS n FROM tombstone").get()).toEqual({ n: 0 });
+    expect(next.prepare("SELECT count(*) AS n FROM alias").get()).toEqual({ n: 2 });
+    expect(again.version).toBe(built.version);
+  });
+
   it("matches the committed browser-test pack", () => {
     const committed = new DatabaseSync(path.join(ROOT, "tests/fixtures/route-library/dedupe-pack.sqlite"), { readOnly: true });
     const version = (committed.prepare("SELECT value FROM meta WHERE key = 'version'").get() as { value: string }).value;

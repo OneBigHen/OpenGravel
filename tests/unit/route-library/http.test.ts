@@ -1,7 +1,10 @@
+import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { gunzipSync } from "node:zlib";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -12,6 +15,7 @@ import { gpxResponse, indexResponse, linesResponse, manifestResponse, rideRespon
 import { packManifest, resetPackForTests } from "@/server/route-library/pack";
 
 const FIXTURE = path.resolve(import.meta.dirname, "../../fixtures/route-library/pack.sqlite");
+const work = mkdtempSync(path.join(tmpdir(), "route-library-http-"));
 
 interface RideBody {
   readonly line?: string;
@@ -32,6 +36,7 @@ afterEach(() => {
   delete process.env["OGV_ROUTE_LIBRARY_PACK"];
   resetPackForTests();
 });
+afterAll(() => rmSync(work, { recursive: true, force: true }));
 
 async function version(): Promise<string> {
   return ((await manifestResponse().json()) as { version: string }).version;
@@ -42,7 +47,7 @@ describe("the manifest", () => {
     const response = manifestResponse();
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("max-age=300");
-    expect(await response.json()).toMatchObject({ rides: 14, located: 12, withLine: 11, polylinePrecision: 5, states: { PA: 4, NC: 2, TN: 2, NY: 1 } });
+    expect(await response.json()).toMatchObject({ rides: 14, located: 12, withLine: 11, removed: 1, polylinePrecision: 5, states: { PA: 4, NC: 2, TN: 2, NY: 1 } });
   });
 
   it("is 404 with no pack configured, or a missing file, or a file that is not a pack", async () => {
@@ -112,6 +117,52 @@ describe("a ride", () => {
     expect(rideResponse(request({ "if-none-match": `"${await version()}"` }), "nc-diamondback-loop").status).toBe(304);
     expect(rideResponse(request(), "no-such-ride").status).toBe(404);
     expect(rideResponse(request(), "../../etc").status).toBe(404);
+  });
+});
+
+describe("a removed ride", () => {
+  it("answers 410 with the removal sentence, date and reason, and never caches it as live", async () => {
+    const response = rideResponse(request(), "pa-old-mill-road");
+    expect(response.status).toBe(410);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({
+      error: "This ride was removed from the library.",
+      id: "pa-old-mill-road",
+      removedAt: "2026-11-01T09:00:00Z",
+      reason: "The source withdrew this listing.",
+    });
+  });
+
+  it("answers 410 for the GPX too, not a bare 404", () => {
+    expect(gpxResponse("pa-old-mill-road").status).toBe(410);
+  });
+
+  it("still answers 404 for an id that was never in the library", () => {
+    expect(rideResponse(request(), "never-existed").status).toBe(404);
+    expect(gpxResponse("never-existed").status).toBe(404);
+  });
+
+  it("does not send a 304 to an old ETag for a removed ride", () => {
+    const response = rideResponse(request({ "if-none-match": `"${packManifest()?.version}"` }), "pa-old-mill-road");
+    expect(response.status).toBe(410);
+  });
+});
+
+describe("a pack from before tombstones", () => {
+  it("still serves rides and answers a plain 404 for an unknown id (rollback safety)", async () => {
+    const old = path.join(work, "schema-1.sqlite");
+    copyFileSync(FIXTURE, old);
+    const database = new DatabaseSync(old);
+    database.exec("DROP TABLE tombstone");
+    database.close();
+
+    process.env["OGV_ROUTE_LIBRARY_PACK"] = old;
+    resetPackForTests();
+    const manifest = (await manifestResponse().json()) as { rides: number; removed: number };
+    expect(manifest.rides).toBe(14);
+    expect(manifest.removed).toBe(0);
+    expect(rideResponse(request(), "nc-diamondback-loop").status).toBe(200);
+    expect(rideResponse(request(), "pa-old-mill-road").status).toBe(404);
   });
 });
 

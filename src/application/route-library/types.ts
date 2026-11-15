@@ -101,6 +101,13 @@ export interface LibraryRecord {
   };
 }
 
+/** A ride that is no longer in the library. An old link to it says it was removed. */
+export interface Tombstone {
+  readonly id: string;
+  readonly removedAt: string;
+  readonly reason: string;
+}
+
 /** One card in the phone's index. Field names are short on purpose: the file ships to every phone. */
 export interface IndexRow {
   readonly id: string;

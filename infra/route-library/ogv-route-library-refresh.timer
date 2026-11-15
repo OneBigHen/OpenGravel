@@ -1,0 +1,14 @@
+[Unit]
+Description=Refresh the OpenGravel national ride library four times a day
+
+[Timer]
+# Same-day removals are the rule: the library session's batch is picked up at
+# the next slot, and a takedown can start the service immediately.
+OnCalendar=*-*-* 03:30,09:30,15:30,21:30
+RandomizedDelaySec=600
+AccuracySec=1min
+Persistent=true
+Unit=ogv-route-library-refresh.service
+
+[Install]
+WantedBy=timers.target
