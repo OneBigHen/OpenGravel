@@ -101,6 +101,8 @@ export interface PlanRequestContext {
    * spot reports on this device. Merged after the drawn avoid areas.
    */
   readonly extraAvoidRings?: readonly (readonly Coordinate[])[];
+  /** "Try another loop" count for this ride; 0 or absent is the first ask. */
+  readonly loopVariation?: number;
   /** Correlation id for one provider call; minted when omitted. */
   readonly requestId?: string;
   /** Whether the caller wants alternative candidates in this call (06 §5). */
@@ -235,10 +237,11 @@ export function defaultLoopToleranceMinutes(targetMinutes: number): number {
   return Math.max(15, Math.round(targetMinutes * 0.15));
 }
 
-function loopDiscovery(intent: RideIntent): {
+function loopDiscovery(intent: RideIntent, variation = 0): {
   readonly targetMinutes: number;
   readonly toleranceMinutes: number;
   readonly headingDegrees?: number;
+  readonly variation?: number;
 } {
   const time = intent.time;
   const heading = loopHeadingDegrees(intent.loopHeading);
@@ -251,7 +254,8 @@ function loopDiscovery(intent: RideIntent): {
         };
   // "Any way" is the default and sends no heading at all, so a loop authored
   // before this preference existed asks for exactly the same round trip.
-  return heading === null ? timebox : { ...timebox, headingDegrees: heading };
+  const asked = heading === null ? timebox : { ...timebox, headingDegrees: heading };
+  return variation > 0 ? { ...asked, variation } : asked;
 }
 
 /**
@@ -462,7 +466,7 @@ export async function buildProviderRequest(
     roadSpans,
     ...(sketchResolution.sketch === null ? {} : { sketch: sketchResolution.sketch }),
     ...(wantsLoopDiscovery(intent, origin, destination)
-      ? { discovery: loopDiscovery(intent) }
+      ? { discovery: loopDiscovery(intent, context.loopVariation) }
       : {}),
     options,
   });

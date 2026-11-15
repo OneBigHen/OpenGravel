@@ -58,6 +58,13 @@ import {
   sketchCorridorBand,
 } from "@/domain/sketch/snap";
 
+/**
+ * Visited-node cap per search leg for round trips (0 turns it off). Healthy
+ * legs stay under about 0.7 M; a wandering one (a 300 km answer to a 120 km
+ * ask) runs to 3-12 M and burns 10 to 30 s on a slow box.
+ */
+export const LOOP_MAX_VISITED_NODES = Number(process.env["OGV_LOOP_MAX_VISITED_NODES"] ?? 1_500_000);
+
 /** The custom-model area id of a sketch's corridor band. */
 export const SKETCH_BAND_AREA_ID = "opengravel_sketch";
 import { characterProfileFor } from "./profiles";
@@ -205,6 +212,8 @@ export interface GraphHopperRequestBody {
   readonly "alternative_route.max_share_factor"?: number;
   readonly "round_trip.distance"?: number;
   readonly "round_trip.seed"?: number;
+  /** Per-search cap on visited nodes; the engine's own default is none. */
+  readonly max_visited_nodes?: number;
   /**
    * One bearing per point, or `"NaN"` for "any direction" (the engine parses
    * the string; JSON has no NaN). Only sent in flexible mode.
@@ -285,6 +294,8 @@ export interface GraphHopperRequestOptions {
    */
   readonly riderModesEnabled?: boolean;
   readonly omitSmoothness?: boolean;
+  /** Encoded values the running graph lists (`/info`); absent means unknown, treated as the old graph. */
+  readonly encodedValues?: ReadonlySet<string>;
   /** Surface/roughness rules; absent when no bike policy was supplied. */
   readonly surfacePolicy?: GraphHopperSurfacePolicy;
   /** Road spans to route through or toward. */
@@ -715,7 +726,7 @@ export function createGraphHopperRequest(
   const trafficFeatures = options.riderModesEnabled === false ? [] :
     (request.options.trafficPenaltyPolygons ?? []).map((ring, index) => areaFeature(`opengravel_traffic_${index}`, closeRing(ring)));
   const priorityRules: GraphHopperCustomModelRule[] = [
-    ...riderModeRules(request.options, options.riderModesEnabled !== false, options.omitSmoothness === true, request.profile),
+    ...riderModeRules(request.options, options.riderModesEnabled !== false, options.omitSmoothness === true, request.profile, options.encodedValues),
     ...trafficFeatures.map(feature => ({ if: `in_${feature.id}`, multiply_by: "0.35" })),
     ...(request.options.avoidHighways
       ? [{ if: "road_class == MOTORWAY || road_class == TRUNK", multiply_by: "0" }]
@@ -804,6 +815,11 @@ export function createGraphHopperRequest(
           (roundTrip.distanceScale ?? 1),
       ),
       "round_trip.seed": roundTrip.seed ?? 0,
+      // A round trip that wanders (some seeds find a 300 km answer to a
+      // 120 km ask) searches millions of nodes and burns 10 to 30 s of a slow
+      // box. Capping the search turns that into a quick "too big" the provider
+      // answers by asking again for a shorter loop.
+      ...(LOOP_MAX_VISITED_NODES > 0 ? { max_visited_nodes: LOOP_MAX_VISITED_NODES } : {}),
       ...(roundTrip.heading === undefined ? {} : { headings: [roundTrip.heading] }),
     };
   }

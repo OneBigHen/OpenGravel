@@ -237,7 +237,9 @@ export function PlannerWorkspaceDock({
   // destination typed above still plans itself.
   const currentLocation = composer.placeSearch?.currentLocation;
   const shapeActions = composer.rideStyle?.actions;
-  const loopFirst = desktop && idle && !hiking && currentLocation !== undefined && shapeActions !== undefined &&
+  // Only while Loop is the chosen shape: with "To a destination" selected the big
+  // button must not say "Make my loop" (QA-21).
+  const loopFirst = desktop && idle && loopRide && !hiking && currentLocation !== undefined && shapeActions !== undefined &&
     composer.viewModel.startLabel === NO_START_LABEL && viewModel.undoLabel === null && viewModel.redoLabel === null
     ? (): void => { shapeActions.setShape("loop"); currentLocation.onUse(); }
     : undefined;

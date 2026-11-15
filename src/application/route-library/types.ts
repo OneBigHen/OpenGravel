@@ -8,7 +8,7 @@ export type RideKind = "road" | "area" | "trip";
 export type SurfaceCode = "p" | "u" | "m" | null;
 export type PolicyMode = "host" | "link" | "hide";
 
-/** Index flag bits (plan section 6). Bit 128 (merged from several sites) is set by the L2 dedupe stage. */
+/** Index flag bits (plan section 6). Bit 128 (merged from several sites) is set by the L2a dedupe stage. */
 export const FLAG = {
   line: 1,
   loop: 2,
@@ -55,12 +55,18 @@ export interface LibraryRecord {
   readonly scraped_at: string;
   readonly last_verified: string;
   readonly claimed_distance_km?: number;
+  /** Plan 5.4 item 1: a place the library supplied, never a geocoded guess. */
   readonly location?: {
     readonly lat: number;
     readonly lon: number;
     readonly precision: "trailhead" | "town" | "area";
     readonly source?: string;
   };
+  /** Plan 5.4 item 2: the rating as fields, when the library supplies it. */
+  readonly source_rating?: SourceRating | null;
+  /** Where the terms wording came from; the rating is read out of it when no structured field exists. */
+  readonly terms_provenance?: string | Record<string, unknown> | null;
+  readonly scraper?: { readonly notes?: string | null } & Record<string, unknown>;
   readonly surface?: {
     readonly mix?: string;
     readonly surface_claim_source?: string;
@@ -111,6 +117,8 @@ export interface IndexRow {
   readonly s: number;
   readonly c: string | null;
   readonly sf: "p" | "u" | "m" | null;
+  /** Merged cards only (flag 128): the `sources` indexes of the other sites that list this ride. */
+  readonly o?: readonly number[];
 }
 
 /** A fact the source claims, kept with its words; `value` is null when the source did not say. */
@@ -118,6 +126,13 @@ export interface RideFact<T> {
   readonly value: T | null;
   readonly quote: string | null;
   readonly source: string | null;
+}
+
+/** A rider rating a source published (plan 5.4 item 2). `count` is null when the source gave none. */
+export interface SourceRating {
+  readonly value: number;
+  readonly scale: number;
+  readonly count: number | null;
 }
 
 export interface RideCreditLine {
@@ -156,8 +171,8 @@ export interface RideDetail {
   };
   readonly facts: {
     readonly surface: RideFact<"paved" | "unpaved" | "mixed">;
-    readonly legal: RideFact<string>;
-    readonly difficulty: RideFact<string>;
+    readonly legal: RideFact<"public-roads" | "designated-ohv" | "mixed">;
+    readonly difficulty: RideFact<"easy" | "moderate" | "difficult" | "expert">;
     readonly permits: RideFact<string>;
     readonly season: RideFact<string>;
   };
@@ -165,7 +180,7 @@ export interface RideDetail {
   readonly alsoOn: readonly RideCreditLine[];
   readonly partOf: readonly (readonly [string, string])[];
   readonly includes: readonly (readonly [string, string])[];
-  readonly sourceRating: null;
+  readonly sourceRating: SourceRating | null;
   readonly notes: readonly { readonly author: string; readonly text: string; readonly date: string | null; readonly url: string | null }[];
   readonly stops: {
     readonly fuel: readonly LibraryPoi[];

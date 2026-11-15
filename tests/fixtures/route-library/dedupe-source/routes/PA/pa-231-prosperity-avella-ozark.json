@@ -1,0 +1,58 @@
+{
+ "id": "pa-231-prosperity-avella-ozark",
+ "name": "PA 231 Prosperity to Avella",
+ "states": [
+  "PA"
+ ],
+ "lane": "paved-twisty",
+ "lanes_secondary": [],
+ "source": {
+  "name": "OzarkRides.com",
+  "url": "https://www.ozarkrides.com/rides/pa-231"
+ },
+ "author_credit": {
+  "author": "unknown",
+  "credit_line": "Ride listing via OzarkRides.com"
+ },
+ "terms": {
+  "quote": "Best Biking Roads - All the Best Motorcycle Rides : Please Credit us and help support our project",
+  "terms_url": "https://www.bestbikingroads.com/",
+  "allows_rehost": "unclear",
+  "checked_at": "2026-11-13T12:27:31Z"
+ },
+ "publishability": {
+  "status": "needs-permission",
+  "permission_contact": "BestBikingRoads \u2014 contact via https://www.bestbikingroads.com/ (site contact page; credit required)",
+  "permission_notes": "BBR GPX carries a credit line in its metadata; the site asks for credit and support. Re-hosting permission not confirmed \u2014 needs-permission."
+ },
+ "value_score": 3,
+ "value_reason": "BBR 4.0/5; 42.7 km measured from the track; Rural roads. PA 231: Prosperity to Avella.",
+ "summary": "43 km run \u2014 PA 231: Prosperity to Avella \u2014 on rural roads.",
+ "scraped_at": "2026-11-13T12:27:31Z",
+ "last_verified": "2026-11-13T12:27:31Z",
+ "scraper": {
+  "adapter": "fixture",
+  "notes": "fixture: second listing of the same road"
+ },
+ "surface": {
+  "legal_status": "public-roads",
+  "mix": "paved",
+  "surface_claim_source": "BestBikingRoads route page",
+  "difficulty": "unknown",
+  "seasonality": "unknown",
+  "permits": "none stated"
+ },
+ "gpx": {
+  "availability": "link-only",
+  "download_url": "https://www.ozarkrides.com/rides/pa-231.gpx",
+  "distance_km": 42.3,
+  "points": 300,
+  "bounds": {
+   "west": -80.469,
+   "south": 39.9985,
+   "east": -80.356,
+   "north": 40.265
+  },
+  "track_vintage": "2012"
+ }
+}

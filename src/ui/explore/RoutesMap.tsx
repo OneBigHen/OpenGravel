@@ -1,0 +1,268 @@
+"use client";
+
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
+import type { MapHost } from "@/application/map/map-host";
+import type { MapScene } from "@/application/map/types";
+import { sortBest, type LibraryChip, type RouteLibrary } from "@/application/route-library/client";
+import { bestNear } from "@/application/route-library/discover";
+import type { IndexRow } from "@/application/route-library/types";
+import { PlannerMap } from "@/ui/map/PlannerMap";
+import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import { bubblesFor, COUNTRY_EXTENT, COUNTRY_INSETS, extentFromCamera, statesInView, zoomForBounds, type Bubble } from "@/ui/explore/routes-camera";
+import { createRoutesOverlay, LINE_MIN_ZOOM, STATE_BUBBLE_MAX_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
+import { BestStrip } from "@/ui/explore/RoutesFind";
+import { RoutesMapCard } from "@/ui/explore/RoutesMapCard";
+
+export interface RoutesCamera {
+  readonly lat: number;
+  readonly lon: number;
+  readonly zoom: number;
+}
+
+export interface RoutesMapProps extends ExploreMapConfig {
+  readonly library: RouteLibrary;
+  /** The rides that pass the chips (and Standout). */
+  readonly rows: readonly IndexRow[];
+  readonly chips: readonly LibraryChip[];
+  readonly standoutOnly: boolean;
+  /** Where the map opens; the whole country when absent. */
+  readonly camera: RoutesCamera | null;
+  /** The view settled: the numbers the address bar and the "rides here" pill need. */
+  readonly onView: (view: MapView) => void;
+  readonly onOpen: (id: string) => void;
+  /** Phone map view: a strip of the best rides near the view fills the room under the country. */
+  readonly strip?: boolean;
+  /** The card sits above this bottom clearance (the pill and tab bar); CSS owns the number. */
+  readonly className?: string;
+}
+
+const EMPTY_SCENE: MapScene = {
+  mode: "explore",
+  routes: [],
+  selectedRouteId: null,
+  points: [],
+  preview: null,
+  avoidAreas: [],
+  roadSpans: [],
+  sketch: null,
+  avoidHandles: [],
+  previewArea: null,
+  selectedObject: null,
+};
+
+const GROUP_ZOOM_STEP = 2;
+const COUNTRY_CENTRE = [39, -96] as const;
+/** Air between the strip and the country above it, in pixels. */
+const STRIP_GAP = 8;
+/** The Map / List pill and its margins, from the bottom of the map. */
+const PILL_ZONE = 72;
+
+/**
+ * Explore's whole-country map: a bubble per state, then bubbles for groups of
+ * rides, then the rides themselves as thin lines. The bubbles are page buttons
+ * pinned to the map (so they are real, labelled, thumb-sized controls); the
+ * lines and dots are map layers (routes-overlay.ts).
+ */
+export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, onOpen, hostFactory, basemap, assetBasePath, className, strip = false }: RoutesMapProps) {
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const [host, setHost] = useState<MapHost | null>(null);
+  const [view, setView] = useState<MapView | null>(null);
+  const [pickedIds, setPickedIds] = useState<readonly string[]>([]);
+  const [pickedIndex, setPickedIndex] = useState(0);
+  const [initial] = useState(() => camera);
+  const [linesDrawn, setLinesDrawn] = useState(0);
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [stripHeight, setStripHeight] = useState<number | null>(null);
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const byId = useMemo(() => new Map(library.rows.map((row) => [row.id, row])), [library.rows]);
+  const handlers = useRef({ onView, tap: (ids: readonly string[]): void => { void ids; }, frame: () => {} });
+  // The callbacks only read the ref when the map fires them, never during render.
+  /* eslint-disable react-hooks/refs */
+  const overlay = useMemo(
+    () => createRoutesOverlay({
+      onView: (next) => { setView(next); handlers.current.onView(next); },
+      onTap: (ids) => handlers.current.tap(ids),
+      onFrame: () => handlers.current.frame(),
+    }),
+    [],
+  );
+  /* eslint-enable react-hooks/refs */
+
+  useEffect(() => { handlers.current.onView = onView; }, [onView]);
+
+  // The map opens on the whole country, or where the address bar says it was.
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (frame !== null) setSize({ width: frame.clientWidth, height: frame.clientHeight });
+  }, []);
+  const fitExtent = useMemo(() => {
+    if (initial === null) return COUNTRY_EXTENT;
+    if (size === null) return null;
+    return extentFromCamera(initial.lat, initial.lon, initial.zoom, size.width, size.height);
+  }, [initial, size]);
+
+  // The opening fit: PlannerMap's own mount fit frames an empty scene, so say where to look.
+  const fitted = useRef<MapHost | null>(null);
+  const best = useMemo(
+    () => (strip ? bestNear(rows, view === null ? COUNTRY_CENTRE : [view.center.lat, view.center.lon]) : []),
+    [strip, rows, view],
+  );
+  // The country frame leaves room for the strip, once the strip has a height.
+  const stripWanted = strip && best.length > 0;
+  useLayoutEffect(() => {
+    if (stripRef.current !== null && stripHeight === null) setStripHeight(stripRef.current.offsetHeight);
+  }, [stripHeight, stripWanted]);
+  useEffect(() => {
+    if (host === null || fitExtent === null || fitted.current === host || (stripWanted && stripHeight === null)) return;
+    fitted.current = host;
+    host.fitBounds(fitExtent, initial === null ? { ...COUNTRY_INSETS, bottom: stripWanted ? PILL_ZONE + stripHeight! + STRIP_GAP : COUNTRY_INSETS.bottom } : { top: 0, right: 0, bottom: 0, left: 0 });
+  }, [host, fitExtent, initial, stripWanted, stripHeight]);
+
+  useEffect(() => {
+    overlay.setAllRows(library.rows);
+  }, [library.rows, overlay]);
+  useEffect(() => {
+    overlay.setShownRows(rows);
+    overlay.setChips(chips, standoutOnly);
+  }, [rows, chips, standoutOnly, overlay]);
+  useEffect(() => {
+    if (host?.attachOverlay === undefined) return undefined;
+    return host.attachOverlay(overlay.attach);
+  }, [host, overlay]);
+
+  // Line files for the states in view, one request each, once.
+  const openingFitSeen = useRef(false);
+  useEffect(() => {
+    if (view === null) return;
+    // The map first reports a stand-in view while it is still flying to the opening
+    // frame (it is zoomed in on the app's default place); that is not worth six
+    // state downloads. The first view that matches the opening frame ends the wait.
+    if (!openingFitSeen.current) {
+      const matches = initial === null ? view.zoom < STATE_BUBBLE_MAX_ZOOM : Math.abs(view.zoom - initial.zoom) < 0.5;
+      if (!matches) return;
+      openingFitSeen.current = true;
+    }
+    if (view.zoom < LINE_MIN_ZOOM) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      for (const state of statesInView(library.rows, view.bounds)) {
+        void library.linesFor(state).then((lines) => { if (live && lines !== null) { overlay.addLines(state, lines); setLinesDrawn(overlay.linesLoaded()); } });
+      }
+    }, 250);
+    return () => { live = false; clearTimeout(timer); };
+  }, [view, library, overlay, initial]);
+
+  const pickedRows = useMemo(() => pickedIds.flatMap((id) => { const row = byId.get(id); return row === undefined ? [] : [row]; }), [pickedIds, byId]);
+  useEffect(() => {
+    overlay.setPicked(pickedRows[pickedIndex]?.id ?? null);
+  }, [overlay, pickedRows, pickedIndex]);
+
+  useEffect(() => {
+    handlers.current.tap = (ids) => {
+      const found = sortBest(ids.flatMap((id) => { const row = byId.get(id); return row === undefined ? [] : [row]; }));
+      setPickedIds(found.map((row) => row.id));
+      setPickedIndex(0);
+    };
+  }, [byId]);
+
+  const bubbles = useMemo<readonly Bubble[]>(
+    () => (view === null ? [] : bubblesFor(rows, view.zoom, view.bounds)),
+    [rows, view],
+  );
+
+  // Page bubbles follow the map while it moves.
+  const place = useCallback((): void => {
+    const layer = bubbleRef.current;
+    if (layer === null) return;
+    for (const element of layer.querySelectorAll<HTMLElement>("[data-lon]")) {
+      const point = overlay.project(Number(element.dataset["lon"]), Number(element.dataset["lat"]));
+      if (point === null) continue;
+      element.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
+      element.style.visibility = "visible";
+    }
+  }, [overlay]);
+  useEffect(() => { handlers.current.frame = place; }, [place]);
+  useLayoutEffect(() => { place(); }, [place, bubbles]);
+
+  function openBubble(bubble: Bubble): void {
+    const zoom = view?.zoom ?? 3;
+    if (bubble.bounds !== undefined) {
+      // Several states merged: look at all of them, and always come in at least a step closer.
+      const frame = frameRef.current;
+      const [west, south, east, north] = bubble.bounds;
+      const fit = frame === null ? zoom + 1.5 : zoomForBounds(bubble.bounds, frame.clientWidth - 24, frame.clientHeight - 200);
+      overlay.zoomTo((west + east) / 2, (south + north) / 2, Math.max(fit, zoom + 1));
+      return;
+    }
+    if (bubble.kind === "state") {
+      // Look where the state's best ride is, not at the state's middle: a state's rides can all be at one edge.
+      let best: IndexRow | null = null;
+      for (const row of rows) {
+        if (row.p !== null && bubble.state !== undefined && row.st.includes(bubble.state) && (best === null || row.q > best.q)) best = row;
+      }
+      if (best?.p != null) { overlay.zoomTo(best.p[1], best.p[0], 6); return; }
+    }
+    overlay.zoomTo(bubble.lon, bubble.lat, bubble.kind === "state" ? 6 : Math.min(Math.max(zoom + GROUP_ZOOM_STEP, LINE_MIN_ZOOM + 0.5), 12));
+  }
+
+  const picked = pickedRows[pickedIndex];
+  const stripShown = best.length > 0 && picked === undefined && (view === null || view.zoom < LINE_MIN_ZOOM);
+  return (
+    <div className={className === undefined ? "og-routes__map" : `og-routes__map ${className}`} ref={frameRef} data-testid="routes-map" data-zoom={view === null ? undefined : view.zoom.toFixed(1)} data-bubbles={bubbles.length} data-lines={linesDrawn} style={stripShown && stripHeight !== null ? ({ "--og-strip-h": `${stripHeight}px` } as React.CSSProperties) : undefined}>
+      {fitExtent === null ? null : (
+        <PlannerMap
+          scene={EMPTY_SCENE}
+          onIntent={() => {}}
+          label="Map of rides across the country"
+          hostFactory={hostFactory}
+          activeTool="pan"
+          basemap={basemap}
+          dimmed={false}
+          fitKey={initial === null ? "country" : "camera"}
+          fitExtent={fitExtent}
+          onHost={setHost}
+          {...(assetBasePath === undefined ? {} : { assetBasePath })}
+        />
+      )}
+      <div className="og-routes__bubbles" ref={bubbleRef}>
+        {bubbles.map((bubble) => (
+          <button
+            key={bubble.key}
+            type="button"
+            className="og-routes__bubble"
+            {...(bubble.inset === true ? {} : { "data-lon": bubble.lon, "data-lat": bubble.lat })}
+            data-kind={bubble.kind}
+            {...(bubble.state === undefined ? {} : { "data-state": bubble.state })}
+            {...(bubble.states === undefined ? {} : { "data-states": bubble.states.join(",") })}
+            {...(bubble.inset === true ? { "data-inset": bubble.state } : {})}
+            aria-label={bubble.label}
+            style={{
+              ...(bubble.inset === true ? {} : { visibility: "hidden" as const }),
+              ...(bubble.size === undefined ? {} : bubble.inset === true ? { minWidth: 0, height: bubble.size, padding: "0 10px", fontSize: 12 } : { width: bubble.size, minWidth: bubble.size, height: bubble.size, padding: 0, fontSize: bubble.size >= 32 ? 13 : 11 }),
+            }}
+            onClick={() => openBubble(bubble)}
+          >
+            {bubble.inset === true ? `${bubble.state} ${bubble.count}` : bubble.count}
+          </button>
+        ))}
+      </div>
+      {stripShown ? (
+        <div className="og-routes__stripwrap" ref={stripRef}>
+          <BestStrip best={best} sources={library.sources} />
+        </div>
+      ) : null}
+      {picked === undefined ? null : (
+        <RoutesMapCard
+          rows={pickedRows}
+          index={pickedIndex}
+          sources={library.sources}
+          onIndex={setPickedIndex}
+          onOpen={onOpen}
+          onClose={() => { setPickedIds([]); setPickedIndex(0); }}
+        />
+      )}
+    </div>
+  );
+}

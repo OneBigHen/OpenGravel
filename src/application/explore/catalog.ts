@@ -1,3 +1,4 @@
+import type { RideDetail } from "@/application/route-library/types";
 import type { LibraryExploreRide, RideSummary } from "@/application/library/library-service";
 import { routeAlongShapingPoints } from "@/application/import/import-artifact";
 import type { BikeConstraintSnapshot, Coordinate, RideDocument, RidePoint } from "@/domain/ride/types";
@@ -112,6 +113,11 @@ export interface CatalogEntry {
    */
   readonly credit?: RideCredit;
   /**
+   * Other sites that list this same road (national library, L2a). Each keeps its own
+   * credit, so a merged card thanks every source. Absent on a ride listed once.
+   */
+  readonly alsoOn?: readonly RideCredit[];
+  /**
    * The mechanics behind `provenance`, for the rider who wants them (09 §6 step
    * 8): what produced the geometry and what has not been checked about it. It is
    * shown behind a disclosure, because a rider choosing a ride needs the one-line
@@ -145,9 +151,12 @@ export interface CatalogEntry {
    * track, a reference to follow, never a route we checked or built.
    */
   readonly referenceTrack?: true;
+  /** A national-library ride's own facts (score, source claims, notes, stops), as the pack holds them. */
+  readonly libraryDetail?: RideDetail;
 }
 
 interface RawCatalogEntry {
+  readonly libraryDetail?: unknown;
   readonly id?: unknown;
   readonly name?: unknown;
   readonly region?: unknown;
@@ -185,6 +194,19 @@ const SOURCE_ORDER: Readonly<Record<CatalogSource, number>> = {
   personal: 1,
   import: 2,
 };
+
+/** `undefined` when absent or empty, `null` when any credit is malformed. */
+function parseAlsoOn(value: unknown): readonly RideCredit[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 12) return null;
+  const credits: RideCredit[] = [];
+  for (const item of value) {
+    const credit = parseRideCredit(item);
+    if (credit === undefined || credit === null) return null;
+    credits.push(credit);
+  }
+  return credits.length === 0 ? undefined : credits;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -543,6 +565,16 @@ function roadReadModel(
     : null;
 }
 
+/** The library's own shape, checked at the doors the page reads: a damaged block is dropped, never half-shown. */
+function isLibraryDetail(value: unknown): value is RideDetail {
+  if (typeof value !== "object" || value === null) return false;
+  const detail = value as Record<string, unknown>;
+  const object = (field: unknown): boolean => typeof field === "object" && field !== null;
+  return typeof detail["id"] === "string" && typeof detail["score"] === "number" && typeof detail["type"] === "string"
+    && object(detail["facts"]) && object(detail["track"]) && object(detail["stops"]) && object(detail["credit"])
+    && Array.isArray(detail["notes"]) && Array.isArray(detail["alsoOn"]);
+}
+
 export function parseCatalogEntry(value: unknown): CatalogEntry | null {
   const raw = value as RawCatalogEntry;
   if (!isRecord(raw)) return null;
@@ -587,6 +619,8 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
   if (story === null || teaser === null) return null;
   const credit = parseRideCredit(raw.credit);
   if (credit === null) return null;
+  const alsoOn = parseAlsoOn(raw.alsoOn);
+  if (alsoOn === null) return null;
   const parsedLongTripFacts = longTripFacts(raw.longTripFacts);
   const base: CatalogEntry = {
     id: raw.id,
@@ -601,6 +635,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(previewGeometry === undefined ? {} : { previewGeometry }),
     provenance: raw.provenance,
     ...(credit === undefined ? {} : { credit }),
+    ...(alsoOn === undefined ? {} : { alsoOn }),
     ...(typeof raw.provenanceDetail === "string" ? { provenanceDetail: raw.provenanceDetail } : {}),
     ...(typeof raw.surfaceSummary === "string" ? { surfaceSummary: raw.surfaceSummary } : {}),
     ...(typeof raw.curvatureSummary === "string" ? { curvatureSummary: raw.curvatureSummary } : {}),
@@ -616,6 +651,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(estimatedTimeMinutes === undefined ? {} : { estimatedTimeMinutes }),
     ...(parsedLongTripFacts === undefined ? {} : { longTripFacts: parsedLongTripFacts }),
     ...(raw.referenceTrack === true ? { referenceTrack: true as const } : {}),
+    ...(isLibraryDetail(raw.libraryDetail) ? { libraryDetail: raw.libraryDetail } : {}),
   };
   const roadData = roadReadModel(raw.roadSummary, raw.roadDetails) ?? roadDetails(raw.roads, base);
   return roadData === null

@@ -89,6 +89,7 @@ import {
   usePlannerAnswerLifecycle,
   usePlannerAvoidAreas,
   usePlannerCamera,
+  useRouteUpgradeToast,
   usePlannerGeometryCache,
   usePlannerHistoryActions,
   usePlannerSheetActions,
@@ -725,9 +726,15 @@ export function PlannerWorkspace({
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
 
+  const upgradeToast = useRouteUpgradeToast({
+    document,
+    snapshot: planningSnapshot,
+    onUndo: (routeId) => planningSessionStore.getState().selectRoute(routeId),
+  });
   const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps), plannedHike = usePlannedHikeSummary(hikeActivity, plannerUiStore, breadcrumbBar);
   return (
     <PlannerWorkspaceFrame
+      toast={upgradeToast}
       trip={tripCard}
       document={document} libraryService={libraryService}
       headerRef={headerRef}

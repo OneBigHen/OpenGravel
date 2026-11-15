@@ -40,6 +40,7 @@
 import type {
   ProviderCandidateSet,
   ProviderCapabilities,
+  ProviderGraphFacts,
   ProviderRouteRequest,
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
@@ -74,6 +75,8 @@ export const GRAPHHOPPER_PROVIDER_ID = "graphhopper";
 
 /** Default engine call budget (06 §29). */
 export const DEFAULT_TIMEOUT_MS = 30_000;
+/** The graph's own description answers at once; a slow one is treated as unknown. */
+const GRAPH_INFO_TIMEOUT_MS = 3_000;
 
 const ROUTE_PATH = "/route";
 
@@ -111,6 +114,11 @@ interface SeedAnswer {
 const LOOP_CALIBRATION_PASSES = 2;
 const LOOP_SCALE_MIN = 0.25;
 const LOOP_SCALE_MAX = 2;
+/** After a node-cap miss the same seed is asked again at this share of the distance. */
+const LOOP_NODE_CAP_RETRY_SCALE = 0.5;
+const isNodeCapError = (caught: unknown): boolean =>
+  caught instanceof GraphHopperProviderError &&
+  /maximum nodes exceeded/i.test(caught.providerDetail ?? "");
 /**
  * Fresh seeds a loop gets when the engine's answer rides down a dead-end road
  * and back. The engine's round trip picks a far point and, when that point
@@ -119,6 +127,19 @@ const LOOP_SCALE_MAX = 2;
  */
 const LOOP_RESEED_ATTEMPTS = 2;
 const LOOP_RESEED_STEP = 1_000_003;
+/**
+ * The quick first answer of a loop makes correction calls and dead-end re-asks
+ * only while the answer is still quick. The full plan that follows keeps every
+ * pass and decides the final pick.
+ */
+const FIRST_ANSWER_RESEED_BUDGET_MS = 2_000;
+/**
+ * A seed that has not answered after this long is probably one the engine is
+ * wandering on (one call visited 12 million roads). A second seed starts then,
+ * and whichever answers first is the first answer.
+ */
+const FIRST_ANSWER_HEDGE_MS = 3_500;
+const FIRST_ANSWER_HEDGE_SEED_STEP = 3 * 1_000_003;
 
 interface RouteAttempt {
   readonly response: Response;
@@ -211,11 +232,35 @@ function detailFrom(error: unknown): string {
 /** The seeds a loop tries when the caller does not narrow them. */
 const DISCOVERY_SEED_COUNT = 3;
 
-function discoverySeeds(requestId: string, count: number = DISCOVERY_SEED_COUNT): readonly number[] {
-  // FNV-1a gives retries of one discovery the same three bounded engine seeds,
-  // while a later rider request can explore another set of loops.
+/**
+ * The seed key for one loop. It is made only from what the rider asked for:
+ * the start (to about 10 m), the ride time, the heading and the "try another"
+ * count. It deliberately ignores the request id, which is a fresh random
+ * number every time: hashing that gave the same Lancaster loop a different set
+ * of engine seeds on each ask (54 mi, then 85 mi; QA-13). Only the id's
+ * ":suffix" (balanced-curves, approach) is kept, so those searches still use
+ * their own seed family.
+ */
+function discoveryKey(request: ProviderRouteRequest): string {
+  const discovery = request.discovery;
+  const suffixAt = request.requestId.indexOf(":");
+  const suffix = suffixAt < 0 ? "" : request.requestId.slice(suffixAt);
+  return [
+    "loop",
+    request.origin.lat.toFixed(4),
+    request.origin.lon.toFixed(4),
+    discovery?.targetMinutes ?? "",
+    discovery?.headingDegrees ?? "",
+    discovery?.variation ?? 0,
+    suffix,
+  ].join("|");
+}
+
+function discoverySeeds(key: string, count: number = DISCOVERY_SEED_COUNT): readonly number[] {
+  // FNV-1a over the stable key: one loop request always gets the same three
+  // bounded engine seeds; "Try another loop" changes the key's variation.
   let hash = 0x811c9dc5;
-  for (const character of requestId) {
+  for (const character of key) {
     hash = Math.imul(hash ^ character.charCodeAt(0), 0x01000193);
   }
   const base = hash >>> 0;
@@ -272,8 +317,39 @@ export function createGraphHopperProvider(
     hosted === undefined ? "" : `?key=${encodeURIComponent(hosted.apiKey)}`
   }`;
 
+  // What the running graph carries, read from /info once and kept. A failed
+  // read is not kept, so the next plan asks again; a route rejection that names
+  // an encoded value the cache claimed drops the cache too.
+  let graphFacts: ProviderGraphFacts | null = null;
+  let graphRead: Promise<ProviderGraphFacts | null> | null = null;
+  const infoUrl = `${options.baseUrl.replace(/\/+$/, "")}/info`;
+  const readGraph = (signal: AbortSignal): Promise<ProviderGraphFacts | null> => {
+    if (graphFacts !== null) return Promise.resolve(graphFacts);
+    if (hosted !== undefined) return Promise.resolve(null);
+    graphRead ??= (async () => {
+      try {
+        const response = await fetcher(infoUrl, { method: "GET", signal: AbortSignal.any([signal, AbortSignal.timeout(GRAPH_INFO_TIMEOUT_MS)]) });
+        if (!response.ok) return null;
+        const payload = (await response.json()) as { readonly encoded_values?: unknown };
+        const values = payload.encoded_values;
+        const names = Array.isArray(values) ? values.filter((value): value is string => typeof value === "string")
+          : typeof values === "object" && values !== null ? Object.keys(values) : null;
+        if (names === null) return null;
+        graphFacts = { encodedValues: names };
+        return graphFacts;
+      } catch {
+        return null;
+      } finally {
+        graphRead = null;
+      }
+    })();
+    return graphRead;
+  };
+
   return {
     id: GRAPHHOPPER_PROVIDER_ID,
+
+    graph: readGraph,
 
     capabilities(): ProviderCapabilities {
       return {
@@ -300,6 +376,7 @@ export function createGraphHopperProvider(
             ? details
             : details.filter((detail) => !HOSTED_UNSUPPORTED_DETAILS.has(detail)),
           riderModesEnabled: options.riderModesEnabled ?? process.env["OGV_RIDER_MODES"] !== "off",
+          ...(graphFacts === null ? {} : { encodedValues: new Set(graphFacts.encodedValues) }),
           omitSmoothness,
           spans: spanConstraints(request),
           ...(request.discovery === undefined
@@ -395,7 +472,7 @@ export function createGraphHopperProvider(
       };
 
       const details = [...REQUESTED_DETAILS];
-      const seeds = request.discovery === undefined ? [undefined] : discoverySeeds(request.requestId, request.discovery.seedCount);
+      const seeds = request.discovery === undefined ? [undefined] : discoverySeeds(discoveryKey(request), request.discovery.seedCount);
       const answerFor = async (
         seed: number | undefined,
         distanceScale?: number,
@@ -422,6 +499,7 @@ export function createGraphHopperProvider(
         }
 
         if (!attempt.response.ok) {
+          if (/og_[a-z_]+/.test(attempt.payload.message ?? "")) graphFacts = null;
           throw normalizeGraphHopperProviderError(
             attempt.response.status,
             attempt.payload.message ?? attempt.response.statusText,
@@ -446,17 +524,32 @@ export function createGraphHopperProvider(
       const calibrateSeed = async (
         seed: number | undefined,
         startScale = 1,
+        stopAt = Number.POSITIVE_INFINITY,
       ): Promise<{ readonly answer: SeedAnswer; readonly scale: number }> => {
-        let best = await answerFor(seed, startScale === 1 ? undefined : startScale);
-        let bestScale = startScale;
         const discovery = request.discovery;
+        let firstScale = startScale;
+        let best: SeedAnswer;
+        try {
+          best = await answerFor(seed, startScale === 1 ? undefined : startScale);
+        } catch (caught) {
+          // The search ran into the node cap: this seed's loop is far bigger
+          // than asked. Ask again for a smaller one (cheap) instead of losing
+          // the seed.
+          if (
+            discovery === undefined || signal.aborted || !isNodeCapError(caught) ||
+            startScale * LOOP_NODE_CAP_RETRY_SCALE < LOOP_SCALE_MIN
+          ) throw caught;
+          firstScale = startScale * LOOP_NODE_CAP_RETRY_SCALE;
+          best = await answerFor(seed, firstScale);
+        }
+        let bestScale = firstScale;
         if (discovery === undefined) return { answer: best, scale: bestScale };
         const targetMs = discovery.targetMinutes * 60_000;
         const toleranceMs = discovery.toleranceMinutes * 60_000;
         const miss = (answer: SeedAnswer): number =>
           Math.abs((answer.paths[0]?.time ?? Number.POSITIVE_INFINITY) - targetMs);
-        let scale = startScale;
-        for (let pass = 0; pass < LOOP_CALIBRATION_PASSES; pass += 1) {
+        let scale = firstScale;
+        for (let pass = 0; pass < LOOP_CALIBRATION_PASSES && Date.now() < stopAt; pass += 1) {
           const time = best.paths[0]?.time;
           if (time === undefined || time <= 0 || miss(best) <= toleranceMs) break;
           scale = Math.min(LOOP_SCALE_MAX, Math.max(LOOP_SCALE_MIN, (scale * targetMs) / time));
@@ -483,7 +576,58 @@ export function createGraphHopperProvider(
       // another seed, and the first answer without that is kept. When every
       // seed retraces, the first answer stands: the planner decides what to do
       // with it, the adapter does not hide it.
+      const quickOne = async (seed: number): Promise<SeedAnswer> => {
+        const started = Date.now();
+        // A seed the engine cannot place a loop on is replaced by the next one,
+        // while there is still time, instead of costing the rider the first answer.
+        let firstFailure: unknown;
+        let first: Awaited<ReturnType<typeof calibrateSeed>> | undefined;
+        try {
+          first = await calibrateSeed(seed, 1, started + FIRST_ANSWER_RESEED_BUDGET_MS);
+        } catch (caught) {
+          if (signal.aborted || hosted !== undefined) throw caught;
+          firstFailure = caught;
+        }
+        if (first !== undefined && (options.reseedDeadEndLoops === false || hosted !== undefined || !retraces(first.answer))) return first.answer;
+        for (let attempt = 1; attempt <= LOOP_RESEED_ATTEMPTS; attempt += 1) {
+          if (Date.now() - started > FIRST_ANSWER_RESEED_BUDGET_MS) break;
+          let again: SeedAnswer;
+          try {
+            again = (await calibrateSeed((seed + attempt * LOOP_RESEED_STEP) % 2_147_483_647, first?.scale ?? 1, started + 2 * FIRST_ANSWER_RESEED_BUDGET_MS)).answer;
+          } catch (caught) {
+            if (signal.aborted) throw caught;
+            firstFailure ??= caught;
+            continue;
+          }
+          if (first === undefined || !retraces(again)) return again;
+        }
+        if (first === undefined) throw firstFailure;
+        return first.answer;
+      };
+      const quick = (seed: number): Promise<SeedAnswer> => {
+        const primary = quickOne(seed);
+        return new Promise<SeedAnswer>((resolve, reject) => {
+          let open = 1;
+          let failure: unknown;
+          const settle = (run: Promise<SeedAnswer>): void => {
+            run.then(resolve, (caught: unknown) => {
+              failure ??= caught;
+              open -= 1;
+              if (open === 0) reject(failure);
+            });
+          };
+          settle(primary);
+          const timer = setTimeout(() => {
+            if (signal.aborted) return;
+            open += 1;
+            settle(quickOne((seed + FIRST_ANSWER_HEDGE_SEED_STEP) % 2_147_483_647));
+          }, FIRST_ANSWER_HEDGE_MS);
+          const clear = (): void => clearTimeout(timer);
+          primary.then(clear, () => undefined);
+        });
+      };
       const calibrated = async (seed: number | undefined): Promise<SeedAnswer> => {
+        if (seed !== undefined && request.discovery?.firstAnswer === true) return quick(seed);
         const first = await calibrateSeed(seed);
         // The hosted free plan bills every call, so it never gets the extra asks.
         if (seed === undefined || options.reseedDeadEndLoops === false || hosted !== undefined || !retraces(first.answer)) {
