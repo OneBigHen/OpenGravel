@@ -29,7 +29,7 @@ describe("a big trip reads as days and sections (L7)", () => {
     render(<RouteDetail entry={entry} onUse={vi.fn()} />);
 
     expect(screen.getByRole("heading", { level: 1, name: /Arizona Backcountry/ })).toBeInTheDocument();
-    expect(screen.getByText("Big trip")).toBeInTheDocument();
+    expect(screen.getByTestId("worth-eyebrow").textContent).toContain("Big trip");
 
     const days = screen.getByTestId("trip-days");
     expect(within(days).getByRole("heading", { name: "Days and sections" })).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("a big trip reads as days and sections (L7)", () => {
   });
 
   it("lists the fuel and camps the source does give, with its link", () => {
-    const stops = libraryRideAsCatalogEntry("nc-cherohala-skyway")!.routeLibrary!.stops;
+    const stops = libraryRideAsCatalogEntry("nc-cherohala-skyway")!.libraryDetail!.stops;
     render(<LibraryTripStops stops={stops} />);
     expect(screen.getByText("Fuel in Tellico Plains, TN")).toBeInTheDocument();
     expect(screen.getByText("Fuel in Robbinsville, NC")).toBeInTheDocument();

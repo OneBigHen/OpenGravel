@@ -2,7 +2,6 @@
 
 import { useId } from "react";
 
-import type { CatalogRouteLibrary } from "@/application/explore/catalog";
 import {
   legalWording,
   permitWording,
@@ -15,7 +14,7 @@ import {
   tripLead,
   tripSections,
 } from "@/application/route-library/trip-sections";
-import type { LibraryPoi } from "@/application/route-library/types";
+import type { LibraryPoi, RideDetail } from "@/application/route-library/types";
 
 /**
  * A big trip reads as days and sections, with the fuel and camps the source
@@ -65,7 +64,7 @@ function StopList({ label, none, stops }: {
 
 /** "Days and sections", only when the source gave a day count or named sections. */
 export function LibraryTripDays({ route, summary }: {
-  readonly route: CatalogRouteLibrary;
+  readonly route: RideDetail;
   readonly summary: string;
 }) {
   const titleId = useId();
@@ -101,7 +100,7 @@ export function LibraryTripDays({ route, summary }: {
 }
 
 /** Fuel and camps, on every big trip: a list when the source gave one, and a plain "none" when not. */
-export function LibraryTripStops({ stops }: { readonly stops: CatalogRouteLibrary["stops"] }) {
+export function LibraryTripStops({ stops }: { readonly stops: RideDetail["stops"] }) {
   const titleId = useId();
   return (
     <section className="og-library-ride" data-testid="trip-stops" aria-labelledby={titleId}>
@@ -119,7 +118,7 @@ export function LibraryTripStops({ stops }: { readonly stops: CatalogRouteLibrar
  * surface only appears when the source made a claim.
  */
 export function LibraryFacts({ facts, title }: {
-  readonly facts: CatalogRouteLibrary["facts"];
+  readonly facts: RideDetail["facts"];
   readonly title: string;
 }) {
   const titleId = useId();
@@ -153,9 +152,3 @@ export function LibraryFacts({ facts, title }: {
   );
 }
 
-/** "Big trip" or "Trail area" above the name; other library rides keep the plain heading. */
-export function libraryRideEyebrow(kind: CatalogRouteLibrary["kind"]): string | null {
-  if (kind === "trip") return "Big trip";
-  if (kind === "area") return "Trail area";
-  return null;
-}

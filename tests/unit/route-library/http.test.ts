@@ -190,7 +190,7 @@ describe("a library ride as a catalog entry", () => {
 
   it("carries a trip's sections, stops and quoted facts to the ride page (L7)", () => {
     const bdr = libraryRideAsCatalogEntry("az-arizona-bdr")!;
-    expect(bdr.routeLibrary).toMatchObject({
+    expect(bdr.libraryDetail).toMatchObject({
       kind: "trip",
       sections: [
         "Section 1: Mexico border to Benson (128 mi)",
@@ -203,18 +203,18 @@ describe("a library ride as a catalog entry", () => {
       place: null,
       stops: { fuel: [], camping: [] },
     });
-    expect(bdr.routeLibrary?.facts.permits.value).toContain("Navajo Nation permit");
-    expect(bdr.routeLibrary?.facts.season.value).toBe("May, June, September, October");
+    expect(bdr.libraryDetail?.facts.permits.value).toContain("Navajo Nation permit");
+    expect(bdr.libraryDetail?.facts.season.value).toBe("May, June, September, October");
     // A single track name is the file's name, not a section.
-    expect(libraryRideAsCatalogEntry("ca-fort-bragg-to-medford")!.routeLibrary?.sections).toBeNull();
+    expect(libraryRideAsCatalogEntry("ca-fort-bragg-to-medford")!.libraryDetail?.sections).toBeNull();
     // Real stops stay real stops, with their source address.
-    expect(libraryRideAsCatalogEntry("nc-cherohala-skyway")!.routeLibrary?.stops.fuel).toHaveLength(2);
+    expect(libraryRideAsCatalogEntry("nc-cherohala-skyway")!.libraryDetail?.stops.fuel).toHaveLength(2);
   });
 
   it("gives a trail area a place to ride to, with its permit and season (L8)", () => {
     const area = libraryRideAsCatalogEntry("mi-orv-route-slc")!;
     expect(area.geometry).toEqual([]);
-    expect(area.routeLibrary).toMatchObject({
+    expect(area.libraryDetail).toMatchObject({
       kind: "area",
       sections: null,
       place: { precision: "area" },
@@ -223,29 +223,29 @@ describe("a library ride as a catalog entry", () => {
         season: { value: null, quote: null, source: null },
       },
     });
-    expect(area.routeLibrary?.place?.lat).toBeCloseTo(46.04, 1);
-    expect(area.routeLibrary?.place?.lon).toBeCloseTo(-88.33, 1);
-    expect(area.routeLibrary?.facts.permits.value).toContain("Michigan DNR ORV license");
+    expect(area.libraryDetail?.place?.lat).toBeCloseTo(46.04, 1);
+    expect(area.libraryDetail?.place?.lon).toBeCloseTo(-88.33, 1);
+    expect(area.libraryDetail?.facts.permits.value).toContain("Michigan DNR ORV license");
     const noPin = libraryRideAsCatalogEntry("ok-white-water-orv-area")!;
-    expect(noPin.routeLibrary?.place).toBeNull();
+    expect(noPin.libraryDetail?.place).toBeNull();
   });
 
   it("survives the catalog parser with every trip and area field, and rejects a bad one", () => {
     const area = libraryRideAsCatalogEntry("mi-orv-route-slc")!;
     const parsed = parseCatalogEntry(JSON.parse(JSON.stringify(area)));
-    expect(parsed?.routeLibrary?.kind).toBe("area");
-    expect(parsed?.routeLibrary?.facts.permits.value).toContain("Michigan DNR ORV license");
-    expect(parsed?.routeLibrary?.place?.precision).toBe("area");
+    expect(parsed?.libraryDetail?.kind).toBe("area");
+    expect(parsed?.libraryDetail?.facts.permits.value).toContain("Michigan DNR ORV license");
+    expect(parsed?.libraryDetail?.place?.precision).toBe("area");
 
     const broken = JSON.parse(JSON.stringify(area)) as Record<string, unknown>;
-    const block = broken["routeLibrary"] as Record<string, unknown>;
+    const block = broken["libraryDetail"] as Record<string, unknown>;
     block["kind"] = "monument";
-    expect(parseCatalogEntry(broken)).toBeNull();
+    expect(parseCatalogEntry(broken)?.libraryDetail).toBeUndefined();
 
     const badStop = JSON.parse(JSON.stringify(area)) as Record<string, unknown>;
-    const badBlock = badStop["routeLibrary"] as Record<string, unknown>;
-    (badBlock["stops"] as Record<string, unknown>)["fuel"] = [{ name: "Somewhere", source: 7 }];
-    expect(parseCatalogEntry(badStop)).toBeNull();
+    const badBlock = badStop["libraryDetail"] as Record<string, unknown>;
+    (badBlock["stops"] as Record<string, unknown>)["fuel"] = "Somewhere";
+    expect(parseCatalogEntry(badStop)?.libraryDetail).toBeUndefined();
   });
 
   it("is null for an unknown ride and when no pack is configured", () => {

@@ -13,7 +13,6 @@ import {
   LibraryFacts,
   LibraryTripDays,
   LibraryTripStops,
-  libraryRideEyebrow,
 } from "@/ui/explore/LibraryRideSections";
 import {
   deviceUserAgent,
@@ -55,6 +54,7 @@ import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { AlsoOnLine } from "@/ui/credit/AlsoOnLine";
 import { RideCreditLine } from "@/ui/credit/RideCreditLine";
+import { libraryWorth, RideMore, RideWorth, worthEyebrow } from "@/ui/explore/RideWorth";
 import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
@@ -475,6 +475,9 @@ export function RouteDetail({
   const provenanceSource = entry.credit === undefined ? provenanceSourceName(entry.provenance) : "";
   const toStartLabel = riderOrigin === undefined ? null : approachLabel(distanceToStartKm(riderOrigin, entry) * 1000);
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
+  // A library ride says whether it is worth the trip: its score in words, the
+  // library's reason, and the source's claims, all from the pack.
+  const worth = libraryWorth(entry.libraryDetail);
 
   // The instrument panel uses the same evidence-backed facts as the route
   // summary; compact values retain the complete wording for screen readers.
@@ -543,9 +546,13 @@ export function RouteDetail({
   // L7 and L8: a library trip reads as days and sections, a trail area as a
   // place to ride to. Both blocks read the pack's own copy; absent means an
   // ordinary road page, exactly as before.
-  const libraryRide = entry.routeLibrary;
-  const libraryEyebrow = libraryRide === undefined ? null : libraryRideEyebrow(libraryRide.kind);
-  const libraryPlace = libraryRide?.kind === "area" ? libraryRide.place : null;
+  const libraryRide = entry.libraryDetail?.kind === "trip" || entry.libraryDetail?.kind === "area" ? entry.libraryDetail : undefined;
+  // Main's own eyebrow ("Standout · Twisty"); a trail area says it is one instead of its type.
+  const libraryEyebrow = worth === null ? "" : libraryRide?.kind === "area" ? [worth.quality, "Trail area"].filter((part) => part !== null).join(" · ") : worthEyebrow(worth);
+  // The trip and area blocks above carry the stops and the quoted facts, so the
+  // pack's own "Good to know" keeps only what they do not: riders' notes and groups.
+  const moreWorth = worth === null || libraryRide === undefined ? worth : { ...worth, goodToKnow: [], stops: [] };
+  const libraryPlace = libraryRide?.kind === "area" ? (libraryRide.place ?? null) : null;
   const libraryDirections = libraryPlace === null
     ? null
     : directionsToPlaceUrl(libraryPlace, deviceUserAgent());
@@ -567,7 +574,7 @@ export function RouteDetail({
     <main id="main" className="og-route-detail">
       <header className="og-route-detail__header">
         <div className="og-route-detail__heading">
-          {libraryEyebrow === null ? null : <p className="og-eyebrow">{libraryEyebrow}</p>}
+          {libraryEyebrow === "" ? null : <p className="og-eyebrow og-worth__eyebrow" data-testid="worth-eyebrow">{libraryEyebrow}</p>}
           <h1>{entry.name}</h1>
         </div>
         <RideCreditLine credit={entry.credit} />
@@ -650,6 +657,7 @@ export function RouteDetail({
       </section>
         </div>
         <div className="og-route-detail__content">
+      {worth === null ? null : <RideWorth worth={libraryRide?.kind === "area" ? { ...worth, truth: worth.truth.filter((line) => line.key !== "track" && line.key !== "legal") } : worth} />}
 
       {/* ONE action a rider takes on this page: it opens the ride ready to
           start. Saving and sharing sit beside it as the quiet choices, together
@@ -725,8 +733,8 @@ export function RouteDetail({
       {/* The group post usually opens with the same words; say them once. */}
       {repeatsStory(entry.summary, entry.story?.description) ? null : <p className="og-route-detail__summary">{entry.summary}</p>}
 
-      {/* L7: a trip's days and sections, its fuel and camps, and the facts it
-          is ridden under. L8: a trail area's permit and season. */}
+      {/* L7: a trip's days and sections, its fuel and camps. L8: a trail area's
+          permit and season. The rest of "Good to know" is the pack's own. */}
       {libraryRide === undefined ? null : libraryRide.kind === "trip" ? (
         <>
           <LibraryTripDays route={libraryRide} summary={entry.summary} />
@@ -736,6 +744,7 @@ export function RouteDetail({
       ) : libraryRide.kind === "area" ? (
         <LibraryFacts facts={libraryRide.facts} title="Ride here" />
       ) : null}
+      {worth === null || entry.libraryDetail === undefined ? null : <RideMore worth={moreWorth ?? worth} detail={entry.libraryDetail} heading={libraryRide === undefined ? undefined : "More from the library"} />}
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} credit={entry.credit} />}
 

@@ -80,3 +80,16 @@ trip's published multi-section names. No endpoint path or response envelope chan
 ## Not done
 
 No push, merge or deploy. BDR and MotorcycleRoads.com remain link-only; no track was fetched.
+
+## Merge with origin/main (PR #346)
+
+Main's `CatalogEntry.libraryDetail` (the pack's own `RideDetail`) is now the one shape. The parallel
+`routeLibrary` / `CatalogRouteLibrary` was removed: `place` stays on `RideDetail`, and the L7/L8
+blocks read `libraryDetail` (kind, sections, stops, facts, place). `isLibraryDetail` now also checks
+kind, stop lists, sections and place, and drops a damaged block instead of half-showing it.
+Ride page: main's "Worth the trip?" card and eyebrow stay ("Standout · Dirt · Big trip"; an area reads
+"Trail area"). A trip adds Days and sections, Fuel and camps and Good to know; an area adds the
+map pin, directions and Ride here. Main's own Good to know (stops, season, permits) is trimmed on those
+two so nothing is said twice; its riders' notes and "part of" remain under "More from the library".
+An area hides the track and "riding here" lines from the worth card (it has no line).
+Shots re-taken against the merged build: `.fable/shots/l7-l8/` (script `.fable/l78shots.mjs`).

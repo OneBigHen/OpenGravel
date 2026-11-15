@@ -1,3 +1,4 @@
+import type { RideDetail } from "@/application/route-library/types";
 import type { LibraryExploreRide, RideSummary } from "@/application/library/library-service";
 import { routeAlongShapingPoints } from "@/application/import/import-artifact";
 import type { BikeConstraintSnapshot, Coordinate, RideDocument, RidePoint } from "@/domain/ride/types";
@@ -31,7 +32,6 @@ import type {
   LongTripFacts,
   LongTripWeatherFact,
 } from "@/application/long-trip";
-import type { LibraryPoi, RideFact, RideKind } from "@/application/route-library/types";
 
 export type { LibraryExploreRide } from "@/application/library/library-service";
 export type { CatalogRideStory, CatalogStoryTeaser } from "@/application/explore/ride-story";
@@ -85,37 +85,6 @@ export interface CatalogRoadDetail {
   readonly evidence: readonly RoadEvidenceRecord[];
   readonly evidenceSummary: RoadEvidenceSummary;
   readonly ridesThroughCount: number;
-}
-
-/** Where a library place sits, and how exact that is (the index row's pin). */
-export interface CatalogLibraryPlace {
-  readonly lat: number;
-  readonly lon: number;
-  readonly precision: "start" | "area" | "town";
-}
-
-/**
- * The part of a national-library ride the ride page needs beyond a
- * CatalogEntry's own line and credit (L7, L8): whether it is a big trip or a
- * trail area, the source's sections, the stops it lists, and its quoted facts.
- * Every value is copied from the pack; nothing is filled in here.
- */
-export interface CatalogRouteLibrary {
-  readonly kind: RideKind;
-  readonly place: CatalogLibraryPlace | null;
-  readonly sections: readonly string[] | null;
-  readonly stops: {
-    readonly fuel: readonly LibraryPoi[];
-    readonly camping: readonly LibraryPoi[];
-    readonly lodging: readonly LibraryPoi[];
-    readonly pois: readonly LibraryPoi[];
-  };
-  readonly facts: {
-    readonly legal: RideFact<"public-roads" | "designated-ohv" | "mixed">;
-    readonly permits: RideFact<string>;
-    readonly season: RideFact<string>;
-    readonly surface: RideFact<"paved" | "unpaved" | "mixed">;
-  };
 }
 
 export interface CatalogEntry {
@@ -182,11 +151,12 @@ export interface CatalogEntry {
    * track, a reference to follow, never a route we checked or built.
    */
   readonly referenceTrack?: true;
-  /** National-library ride details the ride page reads (L7, L8). Absent on every other ride. */
-  readonly routeLibrary?: CatalogRouteLibrary;
+  /** A national-library ride's own facts (score, source claims, notes, stops), as the pack holds them. */
+  readonly libraryDetail?: RideDetail;
 }
 
 interface RawCatalogEntry {
+  readonly libraryDetail?: unknown;
   readonly id?: unknown;
   readonly name?: unknown;
   readonly region?: unknown;
@@ -217,7 +187,6 @@ interface RawCatalogEntry {
   readonly story?: unknown;
   readonly storyTeaser?: unknown;
   readonly referenceTrack?: unknown;
-  readonly routeLibrary?: unknown;
 }
 
 const SOURCE_ORDER: Readonly<Record<CatalogSource, number>> = {
@@ -596,99 +565,24 @@ function roadReadModel(
     : null;
 }
 
-function rideFact(value: unknown, allowed: readonly string[] | null): RideFact<string> | null {
-  if (!isRecord(value)) return null;
-  const factValue = value.value;
-  const quote = value.quote;
-  const source = value.source;
-  if (factValue !== null && !(typeof factValue === "string" && (allowed === null || allowed.includes(factValue)))) return null;
-  if (quote !== null && typeof quote !== "string") return null;
-  if (source !== null && typeof source !== "string") return null;
-  return { value: factValue, quote, source } as RideFact<string>;
+function isLibraryPlace(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return finiteNumber(value.lat) && finiteNumber(value.lon) && Math.abs(value.lat) <= 90 && Math.abs(value.lon) <= 180
+    && (value.precision === "start" || value.precision === "area" || value.precision === "town");
 }
 
-function libraryPoi(value: unknown): LibraryPoi | null {
-  if (!isRecord(value) || typeof value.name !== "string" || typeof value.source !== "string") return null;
-  if (value.kind !== undefined && typeof value.kind !== "string") return null;
-  if (value.notes !== undefined && typeof value.notes !== "string") return null;
-  if (value.lat !== undefined && !finiteNumber(value.lat)) return null;
-  if (value.lon !== undefined && !finiteNumber(value.lon)) return null;
-  return {
-    name: value.name,
-    source: value.source,
-    ...(typeof value.kind === "string" ? { kind: value.kind } : {}),
-    ...(typeof value.notes === "string" ? { notes: value.notes } : {}),
-    ...(finiteNumber(value.lat) ? { lat: value.lat } : {}),
-    ...(finiteNumber(value.lon) ? { lon: value.lon } : {}),
-  };
-}
-
-function libraryPois(value: unknown): readonly LibraryPoi[] | null {
-  if (!Array.isArray(value)) return null;
-  const pois: LibraryPoi[] = [];
-  for (const item of value) {
-    const poi = libraryPoi(item);
-    if (poi === null) return null;
-    pois.push(poi);
-  }
-  return pois;
-}
-
-/**
- * A national-library ride's extras. A malformed block is `null` (the entry is
- * rejected) rather than partly trusted; absent stays absent, so every ride that
- * is not from the library keeps exactly the entry it had.
- */
-function routeLibraryRide(value: unknown): CatalogRouteLibrary | undefined | null {
-  if (value === undefined) return undefined;
-  if (!isRecord(value)) return null;
-  const kind = value.kind;
-  if (kind !== "road" && kind !== "area" && kind !== "trip") return null;
-  const placeValue = value.place ?? null;
-  const place: CatalogLibraryPlace | null = placeValue === null
-    ? null
-    : isRecord(placeValue)
-      && finiteNumber(placeValue.lat)
-      && finiteNumber(placeValue.lon)
-      && Math.abs(placeValue.lat) <= 90
-      && Math.abs(placeValue.lon) <= 180
-      && (placeValue.precision === "start" || placeValue.precision === "area" || placeValue.precision === "town")
-      ? { lat: placeValue.lat, lon: placeValue.lon, precision: placeValue.precision }
-      : null;
-  if (placeValue !== null && place === null) return null;
-  const sectionsValue = value.sections ?? null;
-  const sections = sectionsValue === null
-    ? null
-    : Array.isArray(sectionsValue) && sectionsValue.length <= 60 && sectionsValue.every((section) => typeof section === "string" && section.trim() !== "")
-      ? sectionsValue
-      : null;
-  if (sectionsValue !== null && sections === null) return null;
-  const stopsValue = value.stops;
-  if (!isRecord(stopsValue)) return null;
-  const fuel = libraryPois(stopsValue.fuel);
-  const camping = libraryPois(stopsValue.camping);
-  const lodging = libraryPois(stopsValue.lodging);
-  const pois = libraryPois(stopsValue.pois);
-  if (fuel === null || camping === null || lodging === null || pois === null) return null;
-  const factsValue = value.facts;
-  if (!isRecord(factsValue)) return null;
-  const legal = rideFact(factsValue.legal, ["public-roads", "designated-ohv", "mixed"]);
-  const permits = rideFact(factsValue.permits, null);
-  const season = rideFact(factsValue.season, null);
-  const surface = rideFact(factsValue.surface, ["paved", "unpaved", "mixed"]);
-  if (legal === null || permits === null || season === null || surface === null) return null;
-  return {
-    kind,
-    place,
-    sections,
-    stops: { fuel, camping, lodging, pois },
-    facts: {
-      legal: legal as RideFact<"public-roads" | "designated-ohv" | "mixed">,
-      permits,
-      season,
-      surface: surface as RideFact<"paved" | "unpaved" | "mixed">,
-    },
-  };
+/** The library's own shape, checked at the doors the page reads: a damaged block is dropped, never half-shown. */
+function isLibraryDetail(value: unknown): value is RideDetail {
+  if (typeof value !== "object" || value === null) return false;
+  const detail = value as Record<string, unknown>;
+  const object = (field: unknown): boolean => typeof field === "object" && field !== null;
+  return typeof detail["id"] === "string" && typeof detail["score"] === "number" && typeof detail["type"] === "string"
+    && object(detail["facts"]) && object(detail["track"]) && object(detail["stops"]) && object(detail["credit"])
+    && Array.isArray(detail["notes"]) && Array.isArray(detail["alsoOn"])
+    && (detail["kind"] === "road" || detail["kind"] === "area" || detail["kind"] === "trip")
+    && ["fuel", "camping", "lodging", "pois"].every((key) => Array.isArray((detail["stops"] as Record<string, unknown>)[key]))
+    && (detail["sections"] === undefined || detail["sections"] === null || Array.isArray(detail["sections"]))
+    && (detail["place"] === undefined || detail["place"] === null || isLibraryPlace(detail["place"]));
 }
 
 export function parseCatalogEntry(value: unknown): CatalogEntry | null {
@@ -737,8 +631,6 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
   if (credit === null) return null;
   const alsoOn = parseAlsoOn(raw.alsoOn);
   if (alsoOn === null) return null;
-  const routeLibrary = routeLibraryRide(raw.routeLibrary);
-  if (routeLibrary === null) return null;
   const parsedLongTripFacts = longTripFacts(raw.longTripFacts);
   const base: CatalogEntry = {
     id: raw.id,
@@ -769,7 +661,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     ...(estimatedTimeMinutes === undefined ? {} : { estimatedTimeMinutes }),
     ...(parsedLongTripFacts === undefined ? {} : { longTripFacts: parsedLongTripFacts }),
     ...(raw.referenceTrack === true ? { referenceTrack: true as const } : {}),
-    ...(routeLibrary === undefined ? {} : { routeLibrary }),
+    ...(isLibraryDetail(raw.libraryDetail) ? { libraryDetail: raw.libraryDetail } : {}),
   };
   const roadData = roadReadModel(raw.roadSummary, raw.roadDetails) ?? roadDetails(raw.roads, base);
   return roadData === null

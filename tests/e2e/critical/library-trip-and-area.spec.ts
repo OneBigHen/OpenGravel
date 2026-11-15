@@ -39,7 +39,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 320, height: 568 }] as
     await page.goto("/explore/az-arizona-bdr");
 
     await expect(page.getByRole("heading", { level: 1, name: /Arizona Backcountry Discovery Route/ })).toBeVisible();
-    await expect(page.getByText("Big trip", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("worth-eyebrow")).toContainText("Big trip");
 
     const days = page.getByTestId("trip-days");
     await expect(days).toBeVisible();
@@ -79,7 +79,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 320, height: 568 }] as
     await page.goto("/explore/mi-orv-route-slc");
 
     await expect(page.getByRole("heading", { level: 1, name: "ORV Route SLC" })).toBeVisible();
-    await expect(page.getByText("Trail area", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("worth-eyebrow")).toContainText("Trail area");
 
     const facts = page.getByTestId("library-facts");
     await expect(facts.getByRole("heading", { name: "Ride here" })).toBeVisible();
