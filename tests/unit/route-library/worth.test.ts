@@ -8,7 +8,7 @@ const none = { value: null, quote: null, source: null } as const;
 function detail(patch: Partial<RideDetail> = {}): RideDetail {
   return {
     id: "x", name: "X", kind: "road", type: "twisty", score: 5, scoreReason: "THE Alabama Dragon, about 100 curves.", states: ["AL"], summary: "", miles: 12, trailMiles: null, loop: false,
-    start: { lat: 1, lon: 1 }, bounds: null, points: 100, segmentCount: 1,
+    start: { lat: 1, lon: 1 }, place: { lat: 1, lon: 1, precision: "start" }, bounds: null, points: 100, segmentCount: 1,
     track: { availability: "hosted", year: 2008, vintage: "2008", old: true, rough: false, mismatch: false, gpxAllowed: true, sourceDownloadUrl: null },
     facts: { surface: { value: "paved", quote: "paved", source: "BMW MOAL route page" }, legal: { value: "public-roads", quote: "public-roads", source: "BMW MOAL route page" }, difficulty: none, permits: none, season: none },
     credit: { author: "Bob", sourceName: "BMW MOAL", sourceUrl: "https://example.test", creditLine: "Track by Bob via BMW MOAL" },

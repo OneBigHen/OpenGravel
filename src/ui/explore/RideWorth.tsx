@@ -59,12 +59,12 @@ function when(date: string | null): string | null {
 }
 
 /** What the source says about the ride, what riders wrote, the stops it lists and where else it appears. */
-export function RideMore({ worth, detail }: { readonly worth: Worth; readonly detail: RideDetail }) {
+export function RideMore({ worth, detail, heading = "Good to know" }: { readonly worth: Worth; readonly detail: RideDetail; readonly heading?: string }) {
   const nothing = worth.goodToKnow.length === 0 && worth.stops.length === 0 && worth.notes.length === 0 && detail.partOf.length === 0;
   if (nothing) return null;
   return (
     <section className="og-worth og-worth--more" aria-labelledby="worth-more-title" data-testid="worth-more">
-      <h2 id="worth-more-title">Good to know</h2>
+      <h2 id="worth-more-title">{heading}</h2>
       {worth.goodToKnow.length === 0 ? null : <p className="og-worth__fine">What the source says:</p>}
       <Lines lines={worth.goodToKnow} testid="worth-known" />
       {worth.stops.length === 0 ? null : (

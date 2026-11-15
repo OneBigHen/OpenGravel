@@ -39,6 +39,24 @@ function pois(list: readonly LibraryPoi[] | undefined): readonly LibraryPoi[] {
   return list ?? [];
 }
 
+/** A track name that is one stage of a published multi-section route, not just the file's name. */
+const SECTION_NAME = /\b(?:section|stage|day)\s+\d/i;
+
+/**
+ * Plan stage 5: a trip's sections come from the source's own track names. One
+ * track called "FortBraggt" is the file's name, not a section, and a single
+ * track with no section wording shows no section table at all.
+ */
+export function sectionsFor(record: Pick<LibraryRecord, "gpx">, kind: RideDetail["kind"]): readonly string[] | null {
+  if (kind !== "trip") return null;
+  const names = (record.gpx.track_names ?? []).map((name) => name.trim()).filter((name) => name !== "");
+  if (names.length === 0) return null;
+  if (names.length === 1 && !SECTION_NAME.test(names[0]!)) return null;
+  // The same name repeated is one track split into segments, not a section list.
+  if (names.length > 1 && new Set(names).size === 1) return null;
+  return names;
+}
+
 export interface PinSource {
   readonly start: { readonly lat: number; readonly lon: number };
   readonly bounds: LibraryBounds;
@@ -135,6 +153,7 @@ export function deriveRide(record: LibraryRecord, policy: SourcePolicy, built: B
     trailMiles: kind === "area" && measured !== null ? measured : null,
     loop: served?.loop === true,
     start: served === null || bundle ? null : { lat: round(served.start.lat, 5), lon: round(served.start.lon, 5) },
+    place: pin === null ? null : { lat: round(pin.lat, 5), lon: round(pin.lon, 5), precision: pin.precision },
     bounds,
     points: served?.points ?? 0,
     segmentCount: served?.segmentCount ?? 0,
@@ -162,7 +181,7 @@ export function deriveRide(record: LibraryRecord, policy: SourcePolicy, built: B
       notes: alternate.notes ?? null,
       gpxUrl: alternate.gpx_url ?? null,
     })),
-    sections: kind === "trip" && (record.gpx.track_names?.length ?? 0) > 0 ? [...record.gpx.track_names!] : null,
+    sections: sectionsFor(record, kind),
     provenance: {
       basis: policy.basis,
       scrapedAt: record.scraped_at,

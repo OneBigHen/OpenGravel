@@ -1,0 +1,174 @@
+/* L7 and L8: a big trip's days, sections, fuel and camps, and a trail area's
+   permit and season. Solid blocks on the page like the rest of the ride card;
+   no new colour, no glass, tokens only. */
+
+.og-library-ride {
+  display: grid;
+  gap: var(--og-space-3);
+  min-width: 0;
+  padding: var(--og-space-4);
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface);
+}
+
+.og-library-ride h2 {
+  margin: 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.og-library-ride h3 {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.og-library-ride__lead {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.og-library-ride__sections {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--og-line);
+  list-style: none;
+}
+
+.og-library-ride__section {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--og-space-3);
+  align-items: baseline;
+  padding: var(--og-space-3) 0;
+  border-bottom: 1px solid var(--og-line);
+}
+
+.og-library-ride__day {
+  color: var(--og-ink-2);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-library-ride__name {
+  min-width: 0;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.og-library-ride__miles {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-library-ride__fine,
+.og-library-ride__none {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  line-height: 1.45;
+}
+
+.og-library-ride__stop-group {
+  display: grid;
+  gap: var(--og-space-2);
+}
+
+.og-library-ride__stops {
+  display: grid;
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-library-ride__stop {
+  display: grid;
+  gap: var(--og-space-1);
+  padding: var(--og-space-2) var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+}
+
+.og-library-ride__stop-name {
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.og-library-ride__stop-note {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.og-library-ride__stop-source {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: var(--og-touch);
+  color: var(--og-primary-text);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+}
+
+.og-library-ride__facts {
+  display: grid;
+  margin: 0;
+}
+
+.og-library-ride__facts > div {
+  display: grid;
+  gap: var(--og-space-1);
+  padding: var(--og-space-3) 0;
+  border-top: 1px solid var(--og-line);
+}
+
+.og-library-ride__facts dt {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 500;
+}
+
+.og-library-ride__facts dd {
+  margin: 0;
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 360px) {
+  .og-library-ride {
+    padding: var(--og-space-3);
+  }
+
+  .og-library-ride__section {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .og-library-ride__day {
+    grid-column: 1 / -1;
+  }
+}

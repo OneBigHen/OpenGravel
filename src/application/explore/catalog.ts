@@ -565,6 +565,12 @@ function roadReadModel(
     : null;
 }
 
+function isLibraryPlace(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return finiteNumber(value.lat) && finiteNumber(value.lon) && Math.abs(value.lat) <= 90 && Math.abs(value.lon) <= 180
+    && (value.precision === "start" || value.precision === "area" || value.precision === "town");
+}
+
 /** The library's own shape, checked at the doors the page reads: a damaged block is dropped, never half-shown. */
 function isLibraryDetail(value: unknown): value is RideDetail {
   if (typeof value !== "object" || value === null) return false;
@@ -572,7 +578,11 @@ function isLibraryDetail(value: unknown): value is RideDetail {
   const object = (field: unknown): boolean => typeof field === "object" && field !== null;
   return typeof detail["id"] === "string" && typeof detail["score"] === "number" && typeof detail["type"] === "string"
     && object(detail["facts"]) && object(detail["track"]) && object(detail["stops"]) && object(detail["credit"])
-    && Array.isArray(detail["notes"]) && Array.isArray(detail["alsoOn"]);
+    && Array.isArray(detail["notes"]) && Array.isArray(detail["alsoOn"])
+    && (detail["kind"] === "road" || detail["kind"] === "area" || detail["kind"] === "trip")
+    && ["fuel", "camping", "lodging", "pois"].every((key) => Array.isArray((detail["stops"] as Record<string, unknown>)[key]))
+    && (detail["sections"] === undefined || detail["sections"] === null || Array.isArray(detail["sections"]))
+    && (detail["place"] === undefined || detail["place"] === null || isLibraryPlace(detail["place"]));
 }
 
 export function parseCatalogEntry(value: unknown): CatalogEntry | null {

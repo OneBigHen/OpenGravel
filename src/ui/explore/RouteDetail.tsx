@@ -8,6 +8,17 @@ import { staticRouteMapUrl } from "@/application/map/static-map";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 
+import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
+import {
+  LibraryFacts,
+  LibraryTripDays,
+  LibraryTripStops,
+} from "@/ui/explore/LibraryRideSections";
+import {
+  deviceUserAgent,
+  directionsActionLabel,
+  directionsToPlaceUrl,
+} from "@/application/explore/directions";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 
@@ -532,6 +543,19 @@ export function RouteDetail({
   // A ride that came from the catalog is not in the rider's library yet, so it
   // can be kept there. One that came from the library has nothing to add.
   const canSave = onSave !== undefined && entry.source === "catalog" && fullGeometry;
+  // L7 and L8: a library trip reads as days and sections, a trail area as a
+  // place to ride to. Both blocks read the pack's own copy; absent means an
+  // ordinary road page, exactly as before.
+  const libraryRide = entry.libraryDetail?.kind === "trip" || entry.libraryDetail?.kind === "area" ? entry.libraryDetail : undefined;
+  // Main's own eyebrow ("Standout · Twisty"); a trail area says it is one instead of its type.
+  const libraryEyebrow = worth === null ? "" : libraryRide?.kind === "area" ? [worth.quality, "Trail area"].filter((part) => part !== null).join(" · ") : worthEyebrow(worth);
+  // The trip and area blocks above carry the stops and the quoted facts, so the
+  // pack's own "Good to know" keeps only what they do not: riders' notes and groups.
+  const moreWorth = worth === null || libraryRide === undefined ? worth : { ...worth, goodToKnow: [], stops: [] };
+  const libraryPlace = libraryRide?.kind === "area" ? (libraryRide.place ?? null) : null;
+  const libraryDirections = libraryPlace === null
+    ? null
+    : directionsToPlaceUrl(libraryPlace, deviceUserAgent());
 
   function exportGpx(): void {
     const xml = buildPlannedRouteGpx({ title: entry.name, geometry: entry.geometry, ...(entry.credit === undefined ? {} : { credit: entry.credit }) });
@@ -550,7 +574,7 @@ export function RouteDetail({
     <main id="main" className="og-route-detail">
       <header className="og-route-detail__header">
         <div className="og-route-detail__heading">
-          {worth === null || worthEyebrow(worth) === "" ? null : <p className="og-eyebrow og-worth__eyebrow" data-testid="worth-eyebrow">{worthEyebrow(worth)}</p>}
+          {libraryEyebrow === "" ? null : <p className="og-eyebrow og-worth__eyebrow" data-testid="worth-eyebrow">{libraryEyebrow}</p>}
           <h1>{entry.name}</h1>
         </div>
         <RideCreditLine credit={entry.credit} />
@@ -577,8 +601,11 @@ export function RouteDetail({
         )}
         {/* The truth under the four numbers: known surface miles, the bike's
             fit, whether anyone checked closures, and fuel only when the ride is
-            longer than the tank. Unknown reads as unknown. */}
-        <RideTruthLines truth={truth} fuel={fuel} riderReports={false} />
+            longer than the tank. Unknown reads as unknown. A trail area is a
+            place, not a line, so its facts block carries the truth instead. */}
+        {libraryRide?.kind === "area" ? null : (
+          <RideTruthLines truth={truth} fuel={fuel} riderReports={false} />
+        )}
         {showHeaderMeta ? (
           <p className="og-route-detail__meta" data-testid="route-meta">
             {startDistance === null ? null : (
@@ -603,8 +630,16 @@ export function RouteDetail({
 
           <span className="og-route-detail__map-title" aria-hidden="true">{entry.name}</span>
       <section className="og-route-detail__map" aria-label="Map preview">
-        {/* The route where it is: a live map to pan, else a map image. */}
-        {map !== undefined && !(entry.referenceTrack === true && entry.bounds === null && lineHasNoPoints(entry)) ? (
+        {/* The route where it is: a live map to pan, else a map image. A trail
+            area is a place, not a line, so its pin leads instead. */}
+        {libraryPlace !== null ? (
+          <RoadLocationMap
+            anchor={[libraryPlace.lon, libraryPlace.lat]}
+            name={entry.name}
+            {...(mapboxToken === undefined ? {} : { token: mapboxToken })}
+            {...(map === undefined ? {} : { live: map })}
+          />
+        ) : map !== undefined && !(entry.referenceTrack === true && entry.bounds === null && lineHasNoPoints(entry)) ? (
           <ExploreMap {...map} entries={[entry]} highlightedId={entry.id} onOpen={() => undefined} tools="recentre" />
         ) : staticMapUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
@@ -622,13 +657,26 @@ export function RouteDetail({
       </section>
         </div>
         <div className="og-route-detail__content">
-      {worth === null ? null : <RideWorth worth={worth} />}
+      {worth === null ? null : <RideWorth worth={libraryRide?.kind === "area" ? { ...worth, truth: worth.truth.filter((line) => line.key !== "track" && line.key !== "legal") } : worth} />}
 
       {/* ONE action a rider takes on this page: it opens the ride ready to
           start. Saving and sharing sit beside it as the quiet choices, together
           on their own row so the commitment is the only thing that stands out. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        {entry.referenceTrack === true && entry.geometry.length < 2 ? (
+        {libraryRide?.kind === "area" && libraryDirections !== null && libraryPlace !== null ? (
+          // A trail area is a place to ride to: the device's maps app takes the
+          // source's own point, because we have no checked line to it.
+          <a
+            className="og-primary"
+            data-testid="ride-to-trailhead"
+            href={libraryDirections}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {directionsActionLabel(libraryPlace.precision)}
+            <span className="sr-only"> (opens your maps app)</span>
+          </a>
+        ) : entry.referenceTrack === true && entry.geometry.length < 2 ? (
           // A library ride with no line of ours: the source's own page is the way on.
           entry.credit?.sourceUrl === undefined ? null : (
             <a className="og-primary" data-testid="ride-source-link" href={entry.credit.sourceUrl} target="_blank" rel="noopener noreferrer">
@@ -649,7 +697,7 @@ export function RouteDetail({
           </button>
         )}
         <div className="og-route-detail__alternates">
-          {canSave ? (
+          {canSave && libraryRide?.kind !== "area" ? (
             // Already saved is a state, not a dead end: the button keeps its
             // focus and says what it did rather than going grey under the thumb.
             <button
@@ -685,7 +733,18 @@ export function RouteDetail({
       {/* The group post usually opens with the same words; say them once. */}
       {repeatsStory(entry.summary, entry.story?.description) ? null : <p className="og-route-detail__summary">{entry.summary}</p>}
 
-      {worth === null || entry.libraryDetail === undefined ? null : <RideMore worth={worth} detail={entry.libraryDetail} />}
+      {/* L7: a trip's days and sections, its fuel and camps. L8: a trail area's
+          permit and season. The rest of "Good to know" is the pack's own. */}
+      {libraryRide === undefined ? null : libraryRide.kind === "trip" ? (
+        <>
+          <LibraryTripDays route={libraryRide} summary={entry.summary} />
+          <LibraryTripStops stops={libraryRide.stops} />
+          <LibraryFacts facts={libraryRide.facts} title="Good to know" />
+        </>
+      ) : libraryRide.kind === "area" ? (
+        <LibraryFacts facts={libraryRide.facts} title="Ride here" />
+      ) : null}
+      {worth === null || entry.libraryDetail === undefined ? null : <RideMore worth={moreWorth ?? worth} detail={entry.libraryDetail} heading={libraryRide === undefined ? undefined : "More from the library"} />}
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} credit={entry.credit} />}
 

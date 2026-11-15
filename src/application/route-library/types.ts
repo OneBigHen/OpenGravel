@@ -156,6 +156,11 @@ export interface RideDetail {
   readonly trailMiles: number | null;
   readonly loop: boolean;
   readonly start: { readonly lat: number; readonly lon: number } | null;
+  /**
+   * Where the ride or the place sits, and how exact that is (the index row's
+   * `p`/`pp`). A trail area has no start but does have a place to ride to.
+   */
+  readonly place: { readonly lat: number; readonly lon: number; readonly precision: "start" | "area" | "town" } | null;
   readonly bounds: LibraryBounds | null;
   readonly points: number;
   readonly segmentCount: number;
