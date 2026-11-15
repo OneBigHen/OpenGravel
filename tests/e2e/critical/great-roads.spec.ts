@@ -27,6 +27,11 @@ const RIDE_NAME = "Lancaster County Loop Tour";
 test.setTimeout(120_000);
 test.describe.configure({ mode: "serial" });
 
+// A route answer still in flight when a test ends must not fail it.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test.beforeAll(() => {
   mkdirSync(dirname(PACK), { recursive: true });
   copyFileSync(FIXTURE, PACK);
@@ -101,6 +106,7 @@ for (const size of [
 ] as const) {
   test(`a planned route names and draws its great roads at ${size.width}x${size.height}`, async ({ page }) => {
     await page.setViewportSize(size);
+    await page.clock.setFixedTime(new Date("2026-10-28T16:00:00Z"));
     await page.goto("/");
     await expect(plannerMap(page)).toBeVisible();
     await settledExtent(page);
