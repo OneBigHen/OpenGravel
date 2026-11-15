@@ -136,6 +136,9 @@ async function openMapPixel(page: Page): Promise<Point> {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Midday in the test area: after sunset Auto switches to night colours and the
+  // day plum this test looks for is never drawn, so an evening CI run failed.
+  await page.clock.setFixedTime(new Date("2026-10-28T16:00:00Z"));
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
