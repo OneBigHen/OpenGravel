@@ -76,6 +76,39 @@ function model(nav: SessionNavigationState, slots = createRiderSettings().uiPref
 afterEach(cleanup);
 
 describe("the strip with filtered telemetry", () => {
+  it("draws no speed slot before the first fix, then two real numbers and a speed (OG-20)", () => {
+    const waiting = navigation({
+      position: {
+        ...FRESH,
+        coordinate: null,
+        observedAt: null,
+        ageMs: null,
+        accuracyMeters: null,
+        headingDegrees: null,
+        speedMps: null,
+        quality: "unavailable",
+      },
+    });
+    const { container } = render(
+      <RideMetricStrip model={model(waiting)} onShowControls={vi.fn()} onChooseSlot={vi.fn()} />,
+    );
+    // No dash, no unitless placeholder: the speed readout is not on the screen at all.
+    expect(screen.queryByTestId("ride-metric-slot-0")).toBeNull();
+    expect(container.querySelector('[data-metric="speed.current"]')).toBeNull();
+    expect(screen.getByTestId("ride-metric-strip").querySelectorAll("button")).toHaveLength(2);
+    expect(screen.getByTestId("ride-metric-strip")).toHaveAttribute("data-slots", "2");
+    // The two readouts the ride does know still show real values.
+    expect(screen.getByTestId("ride-metric-slot-1").querySelector(".og-ride-metrics__value")).not.toHaveTextContent("—");
+    cleanup();
+
+    // The first fix brings it back, with a number and its unit.
+    render(<RideMetricStrip model={model(navigation({ position: { ...FRESH, speedMps: 21 } }))} onShowControls={vi.fn()} onChooseSlot={vi.fn()} />);
+    expect(screen.getByTestId("ride-metric-slot-0")).toHaveAttribute("data-metric", "speed.current");
+    expect(screen.getByTestId("ride-metric-value-0")).toHaveTextContent("47");
+    expect(screen.getByTestId("ride-metric-slot-0").querySelector(".og-ride-metrics__unit")).toHaveTextContent("mph");
+    expect(screen.getByTestId("ride-metric-strip")).toHaveAttribute("data-slots", "3");
+  });
+
   it("shows Record's new default, Speed · Distance · Moving time, in the three slots", () => {
     render(<RideMetricStrip model={model(navigation())} onShowControls={vi.fn()} onChooseSlot={vi.fn()} />);
     expect(screen.getByTestId("ride-metric-strip")).toHaveAttribute("data-preset", "record");
