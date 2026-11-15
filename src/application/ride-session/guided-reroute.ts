@@ -29,12 +29,18 @@ import {
   bendMetersBetween,
   chainage,
   chooseRejoin,
+  connectorAfterTurnAround,
   connectorProblem,
   dirtMetersBetween,
   nearestAlong,
   plannedSecondsBetween,
+  pointAlong,
+  pointInRing,
   rejoinTargets,
   splice,
+  TURN_AROUND_MAX_METERS,
+  turnAroundOutOf,
+  turnAroundTo,
   type ConnectorRoute,
   type PlannedRoute,
   type RejoinOption,
@@ -113,6 +119,8 @@ const NEAREST_AHEAD_WINDOW_METERS = 2_000;
 const MAX_CONNECTOR_SHARE_OF_TIME_LEFT = 0.25;
 /** Off route again this close to the last way back's start: the rider rode away from it. */
 const IGNORED_REROUTE_METERS = 1_000;
+/** The same, when the rider reported a spot: a way round it is wanted even when it costs more. */
+const MAX_REPORT_CONNECTOR_SHARE_OF_TIME_LEFT = 0.5;
 /** Ignored reroutes in a row before the targets start further on. */
 const IGNORED_BEFORE_FAR = 2;
 
@@ -120,6 +128,9 @@ function candidateId(candidate: ProviderCandidate): string | null {
   const id = candidate.providerMetadata?.["candidateId"];
   return typeof id === "string" && id.length > 0 ? id : null;
 }
+
+/** A new line may start this far from the rider (road snapping); more is a jump. */
+const START_JUMP_METERS = 40;
 
 /** Below this speed a GPS heading is noise, so the route may leave any way. */
 const HEADING_MIN_SPEED_MPS = 2;
@@ -263,6 +274,7 @@ export function createGuidedReroutePlanner(deps: {
     readonly route: RerouteBoundRoute;
     readonly planningGeneration: number;
     readonly far: boolean;
+    readonly reason?: "off-route" | "report";
     readonly signal: AbortSignal;
   }): Promise<GuidedRerouteResult | null> {
     const { navigation, route, planningGeneration, signal } = args;
@@ -317,6 +329,13 @@ export function createGuidedReroutePlanner(deps: {
     });
     if (targets.length === 0) return null;
 
+    // Standing inside a reported spot: the router would start the way back at
+    // the nearest road outside it, a jump from the rider. Start it where the
+    // line they rode leaves the spot, and ride that road back first.
+    const inSpot = request.avoidPolygons.some((ring) => pointInRing(position, ring));
+    const turn = inSpot ? turnAroundOutOf(route.line, chain, position, fromAlong, request.avoidPolygons) : null;
+    if (inSpot && turn === null) return null;
+
     deps.provider.beginAttempt({
       rideId: navigation.plan.rideId,
       rideRevision: navigation.plan.rideRevision,
@@ -329,7 +348,7 @@ export function createGuidedReroutePlanner(deps: {
         // rides the chosen roads, and the way back needs none of them.
         const connectorRequest: ProviderRouteRequest = {
           requestId: `${request.requestId}-rejoin-${index}`,
-          origin: request.origin,
+          origin: turn === null ? request.origin : turn.anchor,
           destination: target.coordinate,
           stops: [],
           shaping: [],
@@ -338,7 +357,7 @@ export function createGuidedReroutePlanner(deps: {
           roadSpans: [],
           options: { ...request.options, includeAlternatives: false },
         };
-        return deps.provider.candidates(withRiderHeading(connectorRequest, navigation), signal);
+        return deps.provider.candidates(turn === null ? withRiderHeading(connectorRequest, navigation) : connectorRequest, signal);
       }),
     );
     if (signal.aborted) throw signal.reason;
@@ -358,7 +377,24 @@ export function createGuidedReroutePlanner(deps: {
         ...(candidate.speedLimits === undefined ? {} : { speedLimits: candidate.speedLimits }),
       };
       if (connectorProblem(connector, route.line, target) !== null) return;
-      const spliced = splice(connector, planned, target);
+      let whole: ConnectorRoute | null = connector;
+      if (turn !== null) {
+        // The router's road must start on the road just ridden, and the way
+        // out runs back to exactly there (a road touching the spot is blocked
+        // as a whole, so it may start a little further back than asked).
+        let out = turn;
+        const first = connector.geometry[0] as Coordinate;
+        if (haversine(first, turn.anchor) > 1) {
+          const startAlong = nearestAlong(route.line, chain, first, Math.max(0, fromAlong - TURN_AROUND_MAX_METERS), fromAlong);
+          if (haversine(first, pointAlong(route.line, chain, startAlong).coordinate) > 3) return;
+          const longer = turnAroundTo(route.line, chain, position, fromAlong, startAlong, request.avoidPolygons);
+          if (longer === null) return;
+          out = longer;
+        }
+        whole = connectorAfterTurnAround(out, connector);
+        if (whole === null) return;
+      }
+      const spliced = splice(whole, planned, target);
       // Stop rule: a join that cannot be spliced exactly is not used at all.
       if (spliced === null) return;
       options.push({ option: { target, connector }, spliced, candidate });
@@ -375,7 +411,7 @@ export function createGuidedReroutePlanner(deps: {
     // rider's nearest point to the rejoin would have taken some of it anyway.
     const timeLeft = plannedSeconds(fromAlong, total);
     const addedSeconds = picked.option.connector.durationSeconds - plannedSeconds(fromAlong, picked.option.target.alongMeters);
-    if (addedSeconds > timeLeft * MAX_CONNECTOR_SHARE_OF_TIME_LEFT) return null;
+    if (addedSeconds > timeLeft * (args.reason === "report" ? MAX_REPORT_CONNECTOR_SHARE_OF_TIME_LEFT : MAX_CONNECTOR_SHARE_OF_TIME_LEFT)) return null;
 
     const stored = await deps.geometry.put(
       { kind: "line", coordinates: picked.spliced.geometry },
@@ -436,6 +472,7 @@ export function createGuidedReroutePlanner(deps: {
           route: input.route,
           planningGeneration,
           far: ignoredInARow >= IGNORED_BEFORE_FAR,
+          ...(input.reason === undefined ? {} : { reason: input.reason }),
           signal: input.signal,
         });
         if (rejoined !== null) {
@@ -485,6 +522,16 @@ export function createGuidedReroutePlanner(deps: {
         answer.candidates.find((candidate) => candidate.providerMetadata?.["bestRide"] === true) ??
         answer.candidates[0];
       if (chosen === undefined || chosen.geometry.length < 2) return { status: "unavailable", reason: "no-route" };
+      // Standing inside an avoided spot, the router starts at the nearest road
+      // outside it. A line that starts away from the rider is not a route from
+      // here: say so and keep the old one rather than draw a jump.
+      const riderHere = navigation.position.coordinate;
+      if (
+        built.request.avoidPolygons.some((ring) => pointInRing(riderHere, ring)) &&
+        haversine(chosen.geometry[0] as Coordinate, riderHere) > START_JUMP_METERS
+      ) {
+        return { status: "unavailable", reason: "no-route" };
+      }
       const stored = await deps.geometry.put(
         { kind: "line", coordinates: chosen.geometry },
         { kind: "route", now: now() },

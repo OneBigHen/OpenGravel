@@ -514,7 +514,9 @@ export async function reportRerouteViolations(
   run: ScenarioRun,
   ring: readonly Coordinate[],
   riderAlong: number,
-): Promise<{ violations: string[]; joinAlong: number | null; ringLast: number | null }> {
+  /** The rider stands in the spot (the "road blocked" button): the road they rode out of it is real. */
+  standing = false,
+): Promise<{ violations: string[]; joinAlong: number | null; ringLast: number | null; spliced: readonly Coordinate[] }> {
   const violations: string[] = [];
   const line = run.route.geometry;
   const chain = chainage(line);
@@ -546,15 +548,36 @@ export async function reportRerouteViolations(
     reason: "report",
     signal: new AbortController().signal,
   });
+  // Avoided for the rest of the ride: a later reroute asks for the same spot again.
+  if (standing && plan.status === "planned") {
+    await planner.plan({
+      navigation,
+      route: { line, alongMeters: riderAlong, instructions: run.route.instructions, durationSeconds: run.route.durationSeconds },
+      reason: "off-route",
+      signal: new AbortController().signal,
+    });
+  }
   const ringSpan = ringSpanAlong(line, chain, ring, riderAlong);
-  if (plan.status !== "planned") return { violations: [`${run.track.id}: no route around the reported spot (${plan.reason})`], joinAlong: null, ringLast: ringSpan?.lastMeters ?? null };
+  if (plan.status !== "planned") return { violations: [`${run.track.id}: no route around the reported spot (${plan.reason})`], joinAlong: null, ringLast: ringSpan?.lastMeters ?? null, spliced: [] };
   if (provider.requests.some((request) => !request.avoidPolygons.some((polygon) => polygon.length === ring.length && polygon.every((point, index) => point.lon === ring[index]!.lon && point.lat === ring[index]!.lat)))) {
     violations.push(`${run.track.id}: a reroute request did not carry the reported spot`);
   }
   if (plan.rejoin === undefined) violations.push(`${run.track.id}: the report replanned the whole ride instead of rejoining it`);
   const stored = await geometry.get(plan.routeGeometryRef);
   const spliced = stored?.payload.kind === "line" ? stored.payload.coordinates : [];
-  if (ringSpanAlong(spliced, chainage(spliced), ring, 0) !== null) violations.push(`${run.track.id}: the new route enters the reported spot`);
+  if (standing) {
+    // Never invent geometry: the line starts at the rider and its first stretch is the planned road, backwards.
+    if (haversine(spliced[0]!, here.coordinate) > 1) violations.push(`${run.track.id}: the new route does not start at the rider`);
+    let leftAt = 0;
+    while (leftAt < spliced.length && ringSpanAlong([spliced[leftAt]!, spliced[Math.min(leftAt + 1, spliced.length - 1)]!], [0, 1], ring, 0) !== null) leftAt += 1;
+    const outside = spliced.slice(leftAt);
+    if (leftAt === 0 || outside.length < 2) violations.push(`${run.track.id}: the new route never leaves the reported spot`);
+    else if (ringSpanAlong(outside, chainage(outside), ring, 0) !== null) violations.push(`${run.track.id}: the new route re-enters the reported spot`);
+    const behind = spliced.slice(1, leftAt + 1);
+    if (behind.some((point) => haversine(point, pointAlong(line, chain, nearestAlong(line, chain, point)).coordinate) > 3)) {
+      violations.push(`${run.track.id}: the way out of the spot is not the road just ridden`);
+    }
+  } else if (ringSpanAlong(spliced, chainage(spliced), ring, 0) !== null) violations.push(`${run.track.id}: the new route enters the reported spot`);
   const tail = plannedTailStart(spliced, line);
   let joinAlong: number | null = null;
   if (tail === null) {
@@ -563,5 +586,5 @@ export async function reportRerouteViolations(
     joinAlong = nearestAlong(line, chain, spliced[tail.joinIndex]!, chain[tail.plannedFrom - 1] as number, chain[tail.plannedFrom] as number);
     if (ringSpan === null || joinAlong <= ringSpan.lastMeters) violations.push(`${run.track.id}: the new route rejoins before the reported spot`);
   }
-  return { violations, joinAlong, ringLast: ringSpan?.lastMeters ?? null };
+  return { violations, joinAlong, ringLast: ringSpan?.lastMeters ?? null, spliced };
 }

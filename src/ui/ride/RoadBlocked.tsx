@@ -134,12 +134,18 @@ export function RoadBlockedOverlay({ state, onReroute, rerouteBusy = false }: {
       )}
       {state.marked === null ? null : (
         <div className="og-ride__toast og-ride__toast--report" data-testid="road-blocked-toast" role="status">
-          <span>{state.marked.saved ? "Marked. Your next routes avoid this spot." : "Could not save this spot on this device."}</span>
+          <span>{
+            !state.marked.saved
+              ? "Could not save this spot on this device."
+              : onReroute === undefined
+                ? "Marked. Your next routes avoid this spot."
+                : "Marked and saved. Finding a way around it."
+          }</span>
           {!state.marked.saved ? null : (
             <button type="button" className="og-ride__toast-action" data-testid="road-blocked-undo" onClick={state.undo}>Undo</button>
           )}
           {onReroute === undefined || !state.marked.saved ? null : (
-            <button type="button" className="og-ride__toast-action" data-testid="road-blocked-reroute" disabled={rerouteBusy} onClick={onReroute}>New route from here</button>
+            <button type="button" className="og-ride__toast-action" data-testid="road-blocked-reroute" disabled={rerouteBusy} onClick={onReroute}>Try again</button>
           )}
         </div>
       )}

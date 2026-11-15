@@ -26,6 +26,9 @@ import { appCss, cssRule, cssRuleRaw, tokensCss } from "../../helpers/app-css";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { saveRiderReport } from "@/application/persistence/rider-report-repository";
+import { newRiderReport } from "@/application/roads/rider-reports";
+
 import type {
   RideFocusEnvironmentPort,
   RideFocusEnvironmentSnapshot,
@@ -933,6 +936,29 @@ function recordingViewModel(
     }),
   };
 }
+
+describe("road blocked while riding (#295)", () => {
+  it("reroutes the ride in progress at once; a failure says so, keeps the old line and keeps the spot", async () => {
+    const plan = vi.fn<GuidedReroutePlanner["plan"]>(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
+    const { store } = await harness({ position: "fresh", instruction: "turn", reroutePlanner: { plan } });
+    const lineBefore = store.getState().routeLine;
+    expect(lineBefore.length).toBeGreaterThan(1);
+    const now = Date.now();
+    const here = { lon: -75.4385, lat: 40.1385 };
+    window.localStorage.removeItem("og-rider-reports");
+    await act(async () => {
+      expect(saveRiderReport(newRiderReport({ id: "rr_test_here", point: here, headingDegrees: 212, kind: "gate-closed", nowMs: now }), now)).toBe(true);
+    });
+    await waitFor(() => expect(plan).toHaveBeenCalledTimes(1));
+    expect(plan.mock.calls[0]![0]).toMatchObject({ reason: "report" });
+    await waitFor(() => expect(store.getState().rerouteBusy).toBe(false));
+    expect(store.getState().rerouteError).toBe("Couldn't find a way around the spot you marked. Your route is unchanged and the spot is saved.");
+    // Never a blank map: the line the rider had is still the line.
+    expect(store.getState().routeLine).toBe(lineBefore);
+    // The spot is still saved.
+    expect(JSON.parse(window.localStorage.getItem("og-rider-reports") ?? "[]")).toHaveLength(1);
+  });
+});
 
 describe("recording from the map screen", () => {
   it("names the recording on one line above the readouts, and speaks the elapsed time", async () => {
