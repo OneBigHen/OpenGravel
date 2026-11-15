@@ -52,7 +52,7 @@ describe("a big trip reads as days and sections (L7)", () => {
     const facts = screen.getByTestId("library-facts");
     expect(within(facts).getByRole("heading", { name: "Good to know" })).toBeInTheDocument();
     expect(within(facts).getByText(/Navajo Nation permit/)).toBeInTheDocument();
-    expect(within(facts).getByText("Season: May, June, September, October (the source says)")).toBeInTheDocument();
+    expect(within(facts).getByText("May, June, September, October (the source says)")).toBeInTheDocument();
 
     // Link-only BDR: the source is the way on, never a followed line of ours.
     expect(screen.getByTestId("ride-source-link").getAttribute("href")).toContain("ridebdr.com");
@@ -79,7 +79,7 @@ describe("a trail area is a place to ride to, with its permit and season (L8)", 
     const facts = screen.getByTestId("library-facts");
     expect(within(facts).getByRole("heading", { name: "Ride here" })).toBeInTheDocument();
     expect(within(facts).getByText("Open to motorcycles, the source says")).toBeInTheDocument();
-    expect(within(facts).getByText(/Permit: Michigan DNR ORV license/)).toBeInTheDocument();
+    expect(within(facts).getByText(/^Michigan DNR ORV license/)).toBeInTheDocument();
     expect(within(facts).getByText("Season not stated")).toBeInTheDocument();
     expect(within(facts).getByText("Unpaved, the source says")).toBeInTheDocument();
 

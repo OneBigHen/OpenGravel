@@ -117,6 +117,13 @@ export function LibraryTripStops({ stops }: { readonly stops: RideDetail["stops"
  * the source's words. Permit and season are always said, even as "not stated";
  * surface only appears when the source made a claim.
  */
+/** The row already names the fact, so a value that opens with the same label drops it ("Permit: Permit: …" read twice). */
+function withoutLabel(label: string, text: string | null): string | null {
+  if (text === null) return null;
+  const prefix = `${label}:`;
+  return text.toLowerCase().startsWith(prefix.toLowerCase()) ? text.slice(prefix.length).trimStart() : text;
+}
+
 export function LibraryFacts({ facts, title }: {
   readonly facts: RideDetail["facts"];
   readonly title: string;
@@ -134,11 +141,11 @@ export function LibraryFacts({ facts, title }: {
         </div>
         <div>
           <dt>Permit</dt>
-          <dd>{permit ?? "Permit not stated"}</dd>
+          <dd>{withoutLabel("Permit", permit) ?? "Permit not stated"}</dd>
         </div>
         <div>
           <dt>Season</dt>
-          <dd>{seasonWording(facts.season, "page") ?? "Season not stated"}</dd>
+          <dd>{withoutLabel("Season", seasonWording(facts.season, "page")) ?? "Season not stated"}</dd>
         </div>
         {facts.surface.value === null ? null : (
           <div>

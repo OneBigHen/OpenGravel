@@ -63,8 +63,8 @@ for (const size of [{ width: 390, height: 844 }, { width: 320, height: 568 }] as
 
     // The permit and season the trip is ridden under, in the source's words.
     const facts = page.getByTestId("library-facts");
-    await expect(facts).toContainText("Permit: AZ State Land Trust Recreation Permit");
-    await expect(facts).toContainText("Season: May, June, September, October (the source says)");
+    await expect(facts).toContainText("AZ State Land Trust Recreation Permit");
+    await expect(facts).toContainText("May, June, September, October (the source says)");
 
     // Link-only: the source is the way on, and the page does not invent a map.
     await expect(page.getByTestId("ride-source-link")).toHaveAttribute("href", "https://ridebdr.com/AZBDR");
@@ -84,7 +84,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 320, height: 568 }] as
     const facts = page.getByTestId("library-facts");
     await expect(facts.getByRole("heading", { name: "Ride here" })).toBeVisible();
     await expect(facts).toContainText("Open to motorcycles, the source says");
-    await expect(facts).toContainText("Permit: Michigan DNR ORV license");
+    await expect(facts).toContainText("Michigan DNR ORV license");
     await expect(facts).toContainText("Season not stated");
     await expect(facts).toContainText("Unpaved, the source says");
 
