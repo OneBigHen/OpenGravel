@@ -44,6 +44,8 @@ import {
   WEATHER_SOURCE_CREDIT,
 } from "@/ui/preparation/RoutePreparationSection";
 import { PlannerAlongOpportunities } from "@/ui/planner/PlannerAlongOpportunities";
+import { PlannerGreatRoads } from "@/ui/planner/PlannerGreatRoads";
+import type { AlongRouteRide } from "@/application/route-library/along-route";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
 import { PlannerFuelAlong } from "@/ui/planner/PlannerFuelAlong";
@@ -79,6 +81,11 @@ export interface PlannerPreparationProps {
   readonly opportunityMap?: ExploreMapConfig | undefined;
   readonly onRouteThrough?: ((road: RoadOpeningSummary) => void | Promise<void>) | undefined;
   readonly onAddStopAt?: (coordinate: Coordinate, name: string) => void;
+  /** The national library's rides near this route (L6), when the pack is on. */
+  readonly greatRoads?: {
+    readonly rides: readonly AlongRouteRide[];
+    readonly sources: readonly string[];
+  } | undefined;
 }
 
 /** What the ride can use before the reserve, in whole miles; `null` when unknown. */
@@ -335,6 +342,7 @@ export function PlannerPreparation({
   onAddStopAt,
   onRouteThrough,
   opportunityMap,
+  greatRoads,
 }: PlannerPreparationProps) {
   const wide = useSyncExternalStore(
     subscribeToWidth,
@@ -514,6 +522,7 @@ export function PlannerPreparation({
         </details>
       )}
 
+      {greatRoads === undefined ? null : <PlannerGreatRoads rides={greatRoads.rides} sources={greatRoads.sources} />}
       <PlannerAlongOpportunities route={route} departure={effectiveDeparture} source={providers?.mapLayers} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
     </>
   );

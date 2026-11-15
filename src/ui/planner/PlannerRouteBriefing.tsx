@@ -11,6 +11,7 @@ import type { RideStyleActions } from "@/ui/planner/RideStyleControls";
 import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import type { RouteTrafficLabel } from "@/ui/planner/PlannerPreparation";
+import type { AlongRouteRide } from "@/application/route-library/along-route";
 
 export interface PlannerRouteBriefingProps {
   readonly route: (PlannerPreparationRoute & { readonly routeId: string }) | null;
@@ -25,6 +26,11 @@ export interface PlannerRouteBriefingProps {
   readonly actions: Pick<RideStyleActions, "setBike" | "setDeparture" | "setArriveBy">;
   readonly onWeatherLine?: (line: string | null) => void;
   readonly onRouteTraffic: (traffic: RouteTrafficLabel | null) => void;
+  /** Great roads from the national library near this route (L6). */
+  readonly greatRoads?: {
+    readonly rides: readonly AlongRouteRide[];
+    readonly sources: readonly string[];
+  } | undefined;
 }
 
 /** Binds the active ride's typed controls and garage choices to its briefing. */
@@ -40,6 +46,7 @@ export function PlannerRouteBriefing({
   actions,
   onRouteTraffic,
   onWeatherLine,
+  greatRoads,
 }: PlannerRouteBriefingProps) {
   return (
     <PlannerPreparation
@@ -59,6 +66,7 @@ export function PlannerRouteBriefing({
       onBikeChange={actions.setBike}
       onRouteTraffic={onRouteTraffic}
       onWeatherLine={onWeatherLine}
+      {...(greatRoads === undefined ? {} : { greatRoads })}
     />
   );
 }

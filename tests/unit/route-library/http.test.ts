@@ -45,13 +45,13 @@ describe("the manifest", () => {
     expect(await response.json()).toMatchObject({ rides: 14, located: 12, withLine: 11, polylinePrecision: 5, states: { PA: 4, NC: 2, TN: 2, NY: 1 } });
   });
 
-  it("is 404 with no pack configured, or a missing file, or a file that is not a pack", async () => {
+  it("answers off with no pack configured, or a missing file, or a file that is not a pack", async () => {
     delete process.env["OGV_ROUTE_LIBRARY_PACK"];
-    expect(manifestResponse().status).toBe(404);
+    expect(await manifestResponse().json()).toEqual({ available: false });
     process.env["OGV_ROUTE_LIBRARY_PACK"] = "/nonexistent/pack.sqlite";
-    expect(manifestResponse().status).toBe(404);
+    expect(await manifestResponse().json()).toEqual({ available: false });
     process.env["OGV_ROUTE_LIBRARY_PACK"] = path.resolve(import.meta.dirname, "pack-build.test.ts");
-    expect(manifestResponse().status).toBe(404);
+    expect(await manifestResponse().json()).toEqual({ available: false });
     expect(packManifest()).toBeNull();
   });
 });
@@ -199,7 +199,7 @@ describe("reopening", () => {
   it("reads the environment each time, so unsetting it turns the library off", async () => {
     expect(manifestResponse().status).toBe(200);
     delete process.env["OGV_ROUTE_LIBRARY_PACK"];
-    expect(manifestResponse().status).toBe(404);
+    expect(await manifestResponse().json()).toEqual({ available: false });
     process.env["OGV_ROUTE_LIBRARY_PACK"] = FIXTURE;
     expect(manifestResponse().status).toBe(200);
     expect(await version()).toMatch(/^[0-9a-f]{12}$/);

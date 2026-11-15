@@ -48,7 +48,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
-
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import {
   buildRideHandoff,
@@ -63,7 +62,6 @@ import type {
 } from "@/application/map/map-host";
 import { buildSketchCorridor } from "@/application/planner/sketch-corridor";
 import type { ShareServicePort } from "@/application/sharing/share-commands";
-
 import {
   fastestReference,
   isPlanningInFlight, itineraryRefFor,
@@ -78,6 +76,7 @@ import {
   updateRecoveryActions,
 } from "@/application/planner/update-recovery";
 import {
+  GreatRoadsOnMap,
   PlannerWorkspaceDock,
   PlannerWorkspaceFrame,
   PlannerTripCard,
@@ -86,6 +85,7 @@ import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
   usePlannerHikeActivity, usePlannedHikeSummary, usePlannerActiveRoute,
+  usePlannerGreatRoads,
   usePlannerAnswerLifecycle,
   usePlannerAvoidAreas,
   usePlannerCamera,
@@ -234,7 +234,6 @@ export function PlannerWorkspace({
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
   const [refineEditing, setRefineEditing] = useState(false);
   const { breadcrumb, bar: breadcrumbBar, mapGlance, dockGlance, mapProps: breadcrumbMapProps } = usePlannerBreadcrumbView({ document, rideDocumentStore, planningSessionStore, plannerUiStore, libraryService, preparationProviders, rideActions });
-
   const {
     store: areaStore,
     readGeometry,
@@ -274,12 +273,10 @@ export function PlannerWorkspace({
     onRemoveLastVertex: handleRemoveAvoidAreaVertex,
     onRemove: handleRemoveAvoidArea,
   } = avoidAreaPanelProps;
-
   const offlineRoute = useMemo(
     () => selectedOfflineRoute(document, session, geometry),
     [document, session, geometry],
   );
-
   /**
    * The endpoints the committed sketch derives from its own trace (04 §19).
    *
@@ -300,6 +297,9 @@ export function PlannerWorkspace({
    * (04 §28) needs the `geometryRef` the line lives under.
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
+
+  // Great roads from the national library near the line on screen (L6).
+  const { library: routeLibrary, greatRoads, mapHost, setMapHost } = usePlannerGreatRoads(activeRoute, document.provenance);
 
   // The drawn route on screen names its own ends until the drawing is kept.
   const sketchPreviewEndpoints = useMemo(() => {
@@ -769,9 +769,11 @@ export function PlannerWorkspace({
         onEscape: handleEscape,
         onRenderError: handleRenderError,
         onLoadStatus: handleMapLoadStatus,
+        onHost: setMapHost,
         retryToken: mapRetryToken,
       }}
     >
+        <GreatRoadsOnMap host={mapHost} library={routeLibrary} rides={greatRoads?.rides ?? []} />
         <PlannerWorkspaceDock
           placeSheet={placeFlow.sheet} onDismissPlace={placeFlow.dismissSheet}
           showOptions={placeFlow.optionsOpen} onFullSheet={() => plannerUiStore.getState().setSheetDetent("expanded")}
@@ -870,6 +872,7 @@ export function PlannerWorkspace({
               onAddStopAt: stopAuthoring.addStopAt,
               actions: rideStyle.actions,
               onRouteTraffic: setRouteTraffic,
+              ...(greatRoads === undefined ? {} : { greatRoads }),
             },
             sheetExpanded: sheetDetent === "expanded",
             // OG-05: the numbers on screen belong to an older answer while a new

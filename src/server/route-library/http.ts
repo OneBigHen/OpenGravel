@@ -34,7 +34,10 @@ function etagMatches(request: Request, etag: string): boolean {
 
 export function manifestResponse(): Response {
   const manifest = packManifest();
-  if (manifest === null) return notFound("The ride library is not available.");
+  // Off is an ordinary answer, not a 404: the planner asks on every phone, and a
+  // 404 puts a red "Failed to load resource" in the browser console of every
+  // deployment that has no pack. The client reads no version and stays off.
+  if (manifest === null) return Response.json({ available: false }, { headers: { "cache-control": "no-store" } });
   return Response.json(manifest, { headers: { "cache-control": FIVE_MINUTES } });
 }
 
