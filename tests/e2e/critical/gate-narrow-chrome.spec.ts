@@ -7,7 +7,6 @@ import {
   expectReachable,
   floatingControlProblems,
   settleChrome,
-  waitingOn,
   withWeatherAlert,
 } from "./rider-gate-helpers";
 import { directionsTo } from "./search-helpers";
@@ -19,12 +18,10 @@ import { directionsTo } from "./search-helpers";
  * the top bar: nothing hangs off the screen, no two top-bar controls sit on top of each other, and the
  * words the rider types into the search box are really there to read.
  *
- * Waiting on the fixes in open PR #242 (small phones and landscape): on main the weather chip spills
- * over the menu button at 320 and covers typed text. Remove the fixme when #242 lands.
+ * On a 320 phone the weather note steps aside on purpose (the red alert pill stays, and a tap opens the
+ * alert), and while the rider types the whole weather chip steps aside so the words have the bar.
  */
 test.describe.configure({ timeout: 120_000 });
-
-const FIX_242 = "waiting on PR #242 (small phones and landscape): on main the weather chip crowds the menu at 320";
 
 for (const size of PHONE_SIZES) {
   const tag = `${size.width}x${size.height}`;
@@ -40,9 +37,11 @@ for (const size of PHONE_SIZES) {
     });
 
     test(`home map with a weather alert: nothing hangs off ${tag} and no controls overlap`, async ({ page }) => {
-      if (size.width === 320) waitingOn(FIX_242);
-      // The alert really is in the bar (otherwise this measures nothing).
-      await expect(page.getByTestId("top-search").getByText(/Freeze Warning/)).toBeVisible({ timeout: 15_000 });
+      // The alert really is in the bar (otherwise this measures nothing): its red pill always,
+      // and its words wherever the bar has room for them (not at 320, where the pill is just a red temperature).
+      const alertPill = page.getByTestId("top-search").locator('.og-conditions__pill[data-tone="alert"]');
+      await expect(alertPill).toBeVisible({ timeout: 15_000 });
+      if (size.width > 360) await expect(alertPill.getByText(/Freeze Warning/)).toBeVisible();
       await settleChrome(page);
       await expectNoSidewaysScroll(page, `home ${tag}`);
       expect(await floatingControlProblems(page), `home ${tag}`).toEqual([]);
@@ -51,7 +50,6 @@ for (const size of PHONE_SIZES) {
     });
 
     test(`typed search text is visible ${tag}`, async ({ page }) => {
-      waitingOn(FIX_242);
       const field = page.getByTestId("top-place-search");
       await field.fill("Hawk Mountain Sanctuary");
       const box = await field.boundingBox();
@@ -67,9 +65,11 @@ for (const size of PHONE_SIZES) {
         });
       });
       expect(covered, "points along the typed text that belong to another control").toEqual([]);
-      // What the field holds is what it shows: the text is not scrolled out of its own box.
+      // A long name scrolls to follow the cursor, as it should. A short one must show from its first
+      // letter: if it is already scrolled, the bar is too narrow to hold even a few words.
+      await field.fill("Hawk Mtn");
       const scrolled = await field.evaluate((input: HTMLInputElement) => input.scrollLeft);
-      expect(scrolled, "the field has not scrolled past its first letters").toBeLessThanOrEqual(1);
+      expect(scrolled, "a short search shows from its first letter").toBeLessThanOrEqual(1);
       expect(box.x + box.width, "the field ends on screen").toBeLessThanOrEqual(size.width + 1);
     });
 
@@ -83,7 +83,6 @@ for (const size of PHONE_SIZES) {
     });
 
     test(`Explore header does not stretch the page ${tag}`, async ({ page }) => {
-      if (size.width === 320) waitingOn(FIX_242);
       await page.goto("/explore");
       await expect(page.getByRole("heading", { name: "Explore" }).first()).toBeVisible();
       await settleChrome(page);
