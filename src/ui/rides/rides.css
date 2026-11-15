@@ -102,8 +102,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-library__row {
@@ -257,8 +255,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-rides__menu-entry {
@@ -402,8 +398,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-library__empty[data-drop-target="true"] {
@@ -445,8 +439,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-library__state p {
@@ -530,8 +522,6 @@
   border: 1px solid var(--og-glass-edge);
   background: var(--og-glass-dense);
   box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-import--quiet {

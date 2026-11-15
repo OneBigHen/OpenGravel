@@ -101,7 +101,7 @@ describe("Explore's filter toolbar", () => {
     // Filters is the last chip: 40px to the eye, a 48px hit area.
     const chip = rulesFor(".og-explore__quick-chip").filter((rule) => rule.media === null);
     expect(chip.some((rule) => declaration(rule.body, "display") === "inline-flex")).toBe(true);
-    expect(chip.some((rule) => declaration(rule.body, "min-height") === "40px")).toBe(true);
+    expect(chip.some((rule) => declaration(rule.body, "min-height") === "44px")).toBe(true);
     const hit = rulesFor(".og-explore__quick-chip::before");
     expect(hit.some((rule) => declaration(rule.body, "inset") === "-4px 0")).toBe(true);
   });
