@@ -8,7 +8,7 @@ import {
   settledExtent,
   type Coordinate,
 } from "./map-helpers";
-import { sharedLinePoint, waitingOn } from "./rider-gate-helpers";
+import { sharedLinePoint } from "./rider-gate-helpers";
 
 /**
  * GATE-IDLE-BUDGET (#328; behind QA-19, "the route reroutes a ton as you look at it").
@@ -45,7 +45,6 @@ async function pixelOf(page: Page, point: Coordinate): Promise<{ x: number; y: n
 }
 
 test("a minute of panning and zooming that starts on the route line asks the router for nothing and changes nothing", async ({ page }) => {
-  waitingOn("waiting on PR #338 (route gestures): on main a mouse pan from the route line reshapes the route");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
