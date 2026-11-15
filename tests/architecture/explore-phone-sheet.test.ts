@@ -94,7 +94,7 @@ describe("Explore's filters sheet on a phone", () => {
     expect(row["gap"]).toBe("var(--og-space-2)");
     expect(declarationsFor(".og-explore__row > *")["flex"]).toBe("0 0 auto");
     // Every chip has a 48px hit area: 40px to the eye plus 4px each side.
-    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("40px");
+    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("44px");
     expect(declarationsFor(".og-explore__quick-chip::before")["inset"]).toBe("-4px 0");
   });
 

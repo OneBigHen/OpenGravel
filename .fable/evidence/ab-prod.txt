@@ -1,0 +1,24 @@
+{"cfg":"A","name":"Hatboro 2-hour (app default)","try":1,"seconds":16.8,"ok":true,"err":null,"minutes":106,"miles":56.2,"minLat":"40.176","headingDeg":11,"intoPhilly":false}
+{"cfg":"C","name":"Hatboro 2-hour (app default)","try":1,"seconds":32.1,"ok":true,"err":null,"minutes":116,"miles":59.2,"minLat":"40.176","headingDeg":35,"intoPhilly":false}
+{"cfg":"A","name":"Crystal Cave Street Loop","try":1,"seconds":29.7,"ok":true,"err":null,"minutes":234,"miles":128.6,"minLat":"40.041"}
+{"cfg":"C","name":"Crystal Cave Street Loop","try":1,"seconds":28.3,"ok":true,"err":null,"minutes":234,"miles":128.6,"minLat":"40.041"}
+{"cfg":"A","name":"Lansdale Street Ride","try":1,"seconds":17.4,"ok":true,"err":null,"minutes":102,"miles":54.9,"minLat":"40.242"}
+{"cfg":"C","name":"Lansdale Street Ride","try":1,"seconds":20.9,"ok":true,"err":null,"minutes":102,"miles":54.9,"minLat":"40.242"}
+{"cfg":"A","name":"Phoenixville, Marsh Creek & French Creek Loop","try":1,"seconds":14.8,"ok":true,"err":null,"minutes":148,"miles":72,"minLat":"40.131"}
+{"cfg":"C","name":"Phoenixville, Marsh Creek & French Creek Loop","try":1,"seconds":15.6,"ok":true,"err":null,"minutes":148,"miles":72,"minLat":"40.131"}
+{"cfg":"A","name":"Green Lane and Back Easier Ride","try":1,"seconds":10,"ok":true,"err":null,"minutes":130,"miles":64,"minLat":"40.321"}
+{"cfg":"C","name":"Green Lane and Back Easier Ride","try":1,"seconds":9.6,"ok":true,"err":null,"minutes":130,"miles":64,"minLat":"40.321"}
+{"cfg":"A","name":"Frenchtown loop, 3 h","try":1,"seconds":26.8,"ok":true,"err":null,"minutes":181,"miles":96.5,"minLat":"40.306"}
+{"cfg":"C","name":"Frenchtown loop, 3 h","try":1,"seconds":24.1,"ok":true,"err":null,"minutes":181,"miles":96.5,"minLat":"40.306"}
+{"cfg":"A","name":"Hatboro 2-hour (app default)","try":1,"seconds":39.1,"ok":true,"err":null,"minutes":110,"miles":56,"minLat":"40.176","headingDeg":42,"intoPhilly":false}
+{"cfg":"C","name":"Hatboro 2-hour (app default)","try":1,"seconds":38,"ok":true,"err":null,"minutes":120,"miles":63.6,"minLat":"40.119","headingDeg":295,"intoPhilly":false}
+{"cfg":"A","name":"Crystal Cave Street Loop","try":1,"seconds":30.7,"ok":true,"err":null,"minutes":234,"miles":128.6,"minLat":"40.041"}
+{"cfg":"C","name":"Crystal Cave Street Loop","try":1,"seconds":29.5,"ok":true,"err":null,"minutes":234,"miles":128.6,"minLat":"40.041"}
+{"cfg":"A","name":"Lansdale Street Ride","try":1,"seconds":20.1,"ok":true,"err":null,"minutes":102,"miles":54.9,"minLat":"40.242"}
+{"cfg":"C","name":"Lansdale Street Ride","try":1,"seconds":17.6,"ok":true,"err":null,"minutes":102,"miles":54.9,"minLat":"40.242"}
+{"cfg":"A","name":"Phoenixville, Marsh Creek & French Creek Loop","try":1,"seconds":13.6,"ok":true,"err":null,"minutes":148,"miles":72,"minLat":"40.131"}
+{"cfg":"C","name":"Phoenixville, Marsh Creek & French Creek Loop","try":1,"seconds":14.3,"ok":true,"err":null,"minutes":148,"miles":72,"minLat":"40.131"}
+{"cfg":"A","name":"Green Lane and Back Easier Ride","try":1,"seconds":10.2,"ok":true,"err":null,"minutes":130,"miles":64,"minLat":"40.321"}
+{"cfg":"C","name":"Green Lane and Back Easier Ride","try":1,"seconds":8.6,"ok":true,"err":null,"minutes":130,"miles":64,"minLat":"40.321"}
+{"cfg":"A","name":"Frenchtown loop, 3 h","try":1,"seconds":23.7,"ok":true,"err":null,"minutes":181,"miles":96.5,"minLat":"40.306"}
+{"cfg":"C","name":"Frenchtown loop, 3 h","try":1,"seconds":23.8,"ok":true,"err":null,"minutes":181,"miles":96.5,"minLat":"40.306"}

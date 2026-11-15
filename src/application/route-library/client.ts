@@ -60,6 +60,8 @@ export interface RowFilter {
   readonly types?: readonly LibraryChip[];
   readonly standoutOnly?: boolean;
   readonly bounds?: ViewBounds;
+  /** A state's two-letter code: rides in that state (a ride in two states is in both). */
+  readonly state?: string;
 }
 
 export function hasLine(row: IndexRow): boolean {
@@ -84,19 +86,20 @@ function inBounds(row: IndexRow, bounds: ViewBounds): boolean {
 
 /** Rows that pass every filter. Several chips mean "any of these". */
 export function filterRows(rows: readonly IndexRow[], filter: RowFilter): readonly IndexRow[] {
-  const { types, standoutOnly, bounds } = filter;
-  if ((types === undefined || types.length === 0) && standoutOnly !== true && bounds === undefined) return rows;
+  const { types, standoutOnly, bounds, state } = filter;
+  if ((types === undefined || types.length === 0) && standoutOnly !== true && bounds === undefined && state === undefined) return rows;
   const out: IndexRow[] = [];
   for (const row of rows) {
     if (standoutOnly === true && row.q < 5) continue;
     if (types !== undefined && types.length > 0 && !types.some((chip) => matchesChip(row, chip))) continue;
     if (bounds !== undefined && !inBounds(row, bounds)) continue;
+    if (state !== undefined && !row.st.includes(state)) continue;
     out.push(row);
   }
   return out;
 }
 
-function kmBetween(origin: readonly [number, number], point: readonly [number, number]): number {
+export function kmBetween(origin: readonly [number, number], point: readonly [number, number]): number {
   const radians = Math.PI / 180;
   const dLat = (point[0] - origin[0]) * radians;
   const dLon = (point[1] - origin[1]) * radians;

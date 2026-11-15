@@ -133,7 +133,7 @@
 
 /* Alaska and Hawaii: one small labelled bubble each at the map's lower left, clear of the chips and the pill. */
 .og-routes__bubble[data-inset] {
-  inset: auto auto 84px 10px;
+  inset: auto auto calc(84px + var(--og-strip-h, 0px)) 10px;
   white-space: nowrap;
 }
 
@@ -237,9 +237,38 @@
   color: var(--og-ink);
 }
 
-/* The smallest phones: the card drops the credit (it is on the ride page) and the map keeps the room. */
+/* The smallest phones: the cards drop the credit (it is on the ride page) and the map keeps the room. */
 @media (max-width: 360px) {
-  .og-routes__card-credit {
+  .og-routes__card-credit,
+  .og-routes__strip-credit,
+  .og-routes__strip-title,
+  .og-routes__stripwrap .og-routes__strip-shape,
+  .og-routes__strip-body > :nth-child(3) {
     display: none;
   }
+
+  .og-routes__stripwrap .og-routes__strip-link {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--og-space-1) var(--og-space-2);
+  }
+
+  .og-routes__stripwrap .og-routes__strip {
+    padding-block: var(--og-space-2) var(--og-space-1);
+  }
+
+  .og-routes .og-routes__stripwrap {
+    bottom: calc(var(--og-touch) + var(--og-space-4));
+  }
+}
+
+/* Library rows say everything they have: no clamped titles, no ellipsis on a long credit. */
+.og-routes__row :is(.og-explore-card__title, .og-explore-card__facts) {
+  display: block;
+  overflow: visible;
+}
+
+.og-routes__row .og-explore-card__credit {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
 }
