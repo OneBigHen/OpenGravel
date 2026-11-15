@@ -100,7 +100,7 @@ export function PlannerWorkspaceStatus({
         {hiking ? hikeStatus(message) : message}
       </p>
 
-      <SaveIndicator state={saveStatus.state} />
+      <SaveIndicator state={saveStatus.state} savedBefore={saveStatus.result !== null} />
 
       {/*
         05 §12: the delta of the update that just landed sits beside its status.
