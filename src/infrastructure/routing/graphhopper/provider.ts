@@ -46,6 +46,7 @@ import type {
 } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
 import { countDeadEndSpurs } from "@/domain/geometry/dead-end-spurs";
+import type { LoopRing } from "@/application/planner/loop-skeletons";
 import { GRAPHHOPPER_ENGINE_PROFILES } from "./profiles";
 import {
   REQUESTED_DETAILS,
@@ -101,6 +102,8 @@ const UNREACHABLE_MESSAGE =
 interface SketchChunkOverride {
   readonly points: readonly GraphHopperWirePoint[];
   readonly band: readonly Coordinate[];
+  /** This is a loop ring: no round trip, pass through anchors, dead ends cost. */
+  readonly ring?: true;
 }
 
 /** One engine answer for one discovery seed (or the one plain request). */
@@ -136,6 +139,19 @@ const FIRST_ANSWER_RESEED_BUDGET_MS = 2_000;
 const FIRST_ANSWER_HEDGE_MS = 3_500;
 const FIRST_ANSWER_HEDGE_SEED_STEP = 3 * 1_000_003;
 
+/** Builds loop rings for a request; empty means "no usable table, use the engine's own loop". */
+export type LoopRingMaker = (
+  request: ProviderRouteRequest,
+  importDate: string | null,
+  scales?: readonly number[],
+) => readonly LoopRing[];
+
+/** A loop plan makes at most this many engine calls on the ring path (3 rings, 2 corrections, 1 engine loop). */
+const RING_CORRECTIONS = 6;
+/** Extra seeds tried when every seed of a loop failed outright. */
+const LOOP_FALLBACK_SEEDS = 4;
+const RING_TOLERANCE_FRACTION = 0.15;
+
 interface RouteAttempt {
   readonly response: Response;
   readonly payload: GraphHopperResponse;
@@ -167,6 +183,8 @@ export interface GraphHopperProviderOptions {
    * turns it on because one plan sends a first-route and a full request.
    */
   readonly shareIdenticalRequests?: boolean;
+  /** Loop rings through known good roads (RM-5). Absent: loops use the engine's own round trip. */
+  readonly loopRings?: LoopRingMaker;
   /**
    * Route through GraphHopper's hosted Directions API instead of our own graph
    * (WORK-ORDER §1.2). The free plan answers only the stock `car` profile with no
@@ -325,12 +343,15 @@ export function createGraphHopperProvider(
       try {
         const response = await fetcher(infoUrl, { method: "GET", signal: AbortSignal.any([signal, AbortSignal.timeout(GRAPH_INFO_TIMEOUT_MS)]) });
         if (!response.ok) return null;
-        const payload = (await response.json()) as { readonly encoded_values?: unknown };
+        const payload = (await response.json()) as { readonly encoded_values?: unknown; readonly import_date?: unknown };
         const values = payload.encoded_values;
         const names = Array.isArray(values) ? values.filter((value): value is string => typeof value === "string")
           : typeof values === "object" && values !== null ? Object.keys(values) : null;
         if (names === null) return null;
-        graphFacts = { encodedValues: names };
+        graphFacts = {
+          encodedValues: names,
+          ...(typeof payload.import_date === "string" && payload.import_date !== "" ? { importDate: payload.import_date } : {}),
+        };
         return graphFacts;
       } catch {
         return null;
@@ -374,7 +395,8 @@ export function createGraphHopperProvider(
           ...(graphFacts === null ? {} : { encodedValues: new Set(graphFacts.encodedValues) }),
           omitSmoothness,
           spans: spanConstraints(request),
-          ...(request.discovery === undefined
+          ...(chunk?.ring === true ? { loopRing: true } : {}),
+          ...(request.discovery === undefined || chunk?.ring === true
             ? {}
             : {
                 roundTrip: {
@@ -655,9 +677,64 @@ export function createGraphHopperProvider(
         return { paths: [routed.path], engineVersion: routed.engineVersion, degraded: routed.degraded };
       };
 
-      const settledAnswers = await Promise.allSettled(seeds.map(async (seed) => {
-        const answer = sketchRouted ? await sketchAnswer() : await calibrated(seed);
-        return answer.paths.map((path, index) => parseGraphHopperPath(path, {
+      // Loop rings (RM-5): start -> known good roads -> start, one request per
+      // ring, corrected toward the asked time at most twice.
+      const ringsEnabled =
+        options.loopRings !== undefined && request.discovery !== undefined && hosted === undefined && !sketchRouted;
+      const ringAnswers = async (): Promise<SeedAnswer[]> => {
+        const discovery = request.discovery;
+        const makeRings = options.loopRings;
+        if (!ringsEnabled || discovery === undefined || makeRings === undefined) return [];
+        const facts = await readGraph(signal);
+        const importDate = facts?.importDate ?? null;
+        const rings = makeRings(request, importDate);
+        if (rings.length === 0) return [];
+        const targetMs = discovery.targetMinutes * 60_000;
+        const toleranceMs = Math.max(discovery.toleranceMinutes * 60_000, targetMs * RING_TOLERANCE_FRACTION);
+        const home = { lon: request.origin.lon, lat: request.origin.lat };
+        const route = async (ring: LoopRing): Promise<SeedAnswer> =>
+          answerFor(undefined, undefined, {
+            points: [home, ...ring.anchors.map((point) => ({ lon: point.lon, lat: point.lat, ...(point.heading === undefined ? {} : { heading: point.heading }) })), home],
+            band: [],
+            ring: true,
+          });
+        const timeOf = (answer: SeedAnswer): number => answer.paths[0]?.time ?? Number.POSITIVE_INFINITY;
+        const missOf = (answer: SeedAnswer): number => Math.abs(timeOf(answer) - targetMs);
+        const wanted = discovery.firstAnswer === true ? rings.slice(0, 1) : rings;
+        const settled = await Promise.allSettled(wanted.map(route));
+        if (signal.aborted) throw signal.reason;
+        const done: { ring: LoopRing; answer: SeedAnswer }[] = [];
+        settled.forEach((result, index) => {
+          const ring = wanted[index];
+          if (result.status === "fulfilled" && ring !== undefined) done.push({ ring, answer: result.value });
+        });
+        if (discovery.firstAnswer !== true && importDate !== null) {
+          const off = done.filter((entry) => missOf(entry.answer) > toleranceMs && timeOf(entry.answer) > 0)
+            .sort((a, b) => missOf(a.answer) - missOf(b.answer))
+            .slice(0, RING_CORRECTIONS);
+          if (off.length > 0) {
+            const scales: number[] = [];
+            for (const entry of off) scales[entry.ring.slot] = entry.ring.scale * (targetMs / timeOf(entry.answer));
+            const redrawn = makeRings(request, importDate, scales);
+            const again = await Promise.allSettled(off.map(async (entry) => {
+              const ring = redrawn.find((candidate) => candidate.slot === entry.ring.slot);
+              if (ring === undefined) throw new Error("ring gone");
+              return { entry, ring, answer: await route(ring) };
+            }));
+            if (signal.aborted) throw signal.reason;
+            for (const result of again) {
+              if (result.status !== "fulfilled") continue;
+              if (missOf(result.value.answer) < missOf(result.value.entry.answer)) {
+                result.value.entry.answer = result.value.answer;
+                result.value.entry.ring = result.value.ring;
+              }
+            }
+          }
+        }
+        return done.map((entry) => entry.answer);
+      };
+      const parseAnswer = (answer: SeedAnswer) =>
+        answer.paths.map((path, index) => parseGraphHopperPath(path, {
           providerId: GRAPHHOPPER_PROVIDER_ID,
           profile: request.profile,
           index,
@@ -667,10 +744,47 @@ export function createGraphHopperProvider(
           ...candidate,
           providerMetadata: { ...candidate.providerMetadata, basicRouting: true },
         });
+
+      const firstAnswerOnly = request.discovery?.firstAnswer === true;
+      const ringPromise: Promise<SeedAnswer[]> = ringsEnabled
+        ? ringAnswers().catch((caught: unknown) => {
+            if (signal.aborted) throw caught;
+            return [];
+          })
+        : Promise.resolve([]);
+      ringPromise.catch(() => undefined);
+      if (ringsEnabled && firstAnswerOnly) {
+        const quickRing = await ringPromise;
+        if (quickRing.length > 0) return { candidates: quickRing.flatMap(parseAnswer) };
+      }
+      // The engine's own loop is the fallback: it runs when there are no rings,
+      // or when no ring landed within the asked time.
+      const ringed = ringsEnabled ? await ringPromise : [];
+      const ringTargetMs = (request.discovery?.targetMinutes ?? 0) * 60_000;
+      const ringTolerance = Math.max((request.discovery?.toleranceMinutes ?? 0) * 60_000, ringTargetMs * RING_TOLERANCE_FRACTION);
+      const ringLanded = ringed.some((answer) => Math.abs((answer.paths[0]?.time ?? Number.POSITIVE_INFINITY) - ringTargetMs) <= ringTolerance);
+      const seedList = ringLanded ? [] : seeds;
+      const settledAnswers = await Promise.allSettled(seedList.map(async (seed) => {
+        const answer = sketchRouted ? await sketchAnswer() : await calibrated(seed);
+        return parseAnswer(answer);
       }));
-      const answers = settledAnswers.flatMap((answer) =>
+      if (ringed.length > 0) settledAnswers.push({ status: "fulfilled", value: ringed.flatMap(parseAnswer) });
+      let answers = settledAnswers.flatMap((answer) =>
         answer.status === "fulfilled" ? answer.value : [],
       );
+      // The engine cannot place a loop on some start points for some seeds
+      // ("Could not find a valid point"). When every seed failed that way,
+      // other seeds from the same ask are tried, one at a time.
+      if (answers.length === 0 && request.discovery !== undefined && hosted === undefined && !sketchRouted && seeds[0] !== undefined) {
+        for (let attempt = 1; attempt <= LOOP_FALLBACK_SEEDS && answers.length === 0; attempt += 1) {
+          if (signal.aborted) throw signal.reason;
+          try {
+            answers = parseAnswer(await answerFor((seeds[0] + attempt * LOOP_RESEED_STEP) % 2_147_483_647));
+          } catch (caught) {
+            if (signal.aborted) throw caught;
+          }
+        }
+      }
       if (answers.length === 0) {
         const failure = settledAnswers.find(
           (answer): answer is PromiseRejectedResult => answer.status === "rejected",

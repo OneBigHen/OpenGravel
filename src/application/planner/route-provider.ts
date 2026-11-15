@@ -404,6 +404,8 @@ export interface ProviderCandidateSet {
 export interface ProviderGraphFacts {
   /** Encoded values the graph lists, e.g. `og_curve`, `og_through`. */
   readonly encodedValues: readonly string[];
+  /** The graph's `import_date` from `/info`, when it reports one. */
+  readonly importDate?: string;
 }
 
 export interface RouteCandidateProvider {

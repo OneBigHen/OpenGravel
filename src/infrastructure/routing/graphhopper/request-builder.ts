@@ -287,6 +287,12 @@ export interface GraphHopperRequestOptions {
   readonly omitSmoothness?: boolean;
   /** Encoded values the running graph lists (`/info`); absent means unknown, treated as the old graph. */
   readonly encodedValues?: ReadonlySet<string>;
+  /**
+   * This request is one loop ring (start, known good roads, start): ride
+   * through every anchor without turning round on it, and make dead-end
+   * territory expensive when the graph carries the flag.
+   */
+  readonly loopRing?: boolean;
   /** Surface/roughness rules; absent when no bike policy was supplied. */
   readonly surfacePolicy?: GraphHopperSurfacePolicy;
   /** Road spans to route through or toward. */
@@ -656,6 +662,15 @@ function roundTripPoints(request: ProviderRouteRequest): GraphHopperWirePoint[] 
   return [{ lon: request.origin.lon, lat: request.origin.lat }];
 }
 
+/** Dead-end territory costs twenty times as much on a loop ring (street bikes use the street flag). */
+function loopRingRules(options: GraphHopperRequestOptions, request: ProviderRouteRequest): GraphHopperCustomModelRule[] {
+  if (options.loopRing !== true) return [];
+  const street = request.options.bike?.category === "street" || request.options.bike?.category === "touring";
+  const flag = street ? "og_through_street" : "og_through";
+  if (options.encodedValues === undefined || !options.encodedValues.has(flag)) return [];
+  return [{ if: `!${flag}`, multiply_by: "0.05" }];
+}
+
 /**
  * Builds the `/route` body for one port request.
  *
@@ -747,6 +762,7 @@ export function createGraphHopperRequest(
       if: `!in_${feature.id}`,
       multiply_by: SKETCH_OUTSIDE_BAND_FACTOR,
     })),
+    ...loopRingRules(options, request),
     ...surfacePreferenceRules(request.options.surfacePreference),
     ...surfaceRules(options.surfacePolicy, options.omitSmoothness === true),
   ];
@@ -786,6 +802,7 @@ export function createGraphHopperRequest(
     locale: LOCALE,
     details: [...options.details],
     ...(customModel === undefined ? {} : { custom_model: customModel }),
+    ...(options.loopRing === true ? { pass_through: true } : {}),
     ...(roundTrip === undefined && points.some((point) => point.heading !== undefined)
       ? {
           headings: points.map((point) => point.heading ?? "NaN"),

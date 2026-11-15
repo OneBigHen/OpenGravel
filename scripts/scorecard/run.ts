@@ -21,6 +21,7 @@ import { unlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createGraphHopperProvider } from '../../src/infrastructure/routing/graphhopper/provider';
+import { createLoopRingMaker } from '../../src/server/planning/loop-ring-maker';
 import { planRide } from '../../src/server/planning/plan-service';
 import { createGravelAtlas } from '../../src/server/roads/gravel-atlas';
 import type { ProviderCandidate, ProviderRouteRequest } from '../../src/application/planner/route-provider';
@@ -125,7 +126,8 @@ async function main(): Promise<void> {
   // Counting lives here, not in src/, so the planner is measured exactly as it ships.
   const meter = createRouterMeter(fetch, (call, body) => writeFile(`scorecard-out/router-error-${call}.json`, Buffer.from(body)));
   const fetcher = meter.fetcher;
-  const production = createGraphHopperProvider({ baseUrl, riderModesEnabled: true, fetcher });
+  const anchorsPath = process.env.OGV_LOOP_ANCHORS_PATH ?? 'data/scorecard/loop-anchors-v1.sqlite';
+  const production = createGraphHopperProvider({ baseUrl, riderModesEnabled: true, fetcher, loopRings: createLoopRingMaker(anchorsPath) });
   // The baseline is the engine's plain fastest loop; only OpenGravel re-seeds loops that retrace a dead-end road.
   const fastest = createGraphHopperProvider({ baseUrl, riderModesEnabled: false, reseedDeadEndLoops: false, fetcher });
   const riderLineCache = await readRiderLineCache(args.includes('--refresh-rider-lines'));

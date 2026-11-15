@@ -1,3 +1,4 @@
+import { createLoopRingMaker } from "./loop-ring-maker";
 import { planHike } from "./hike-plan";
 import { geometryFunRecommendation } from "@/application/planner/geometry-fun";
 import { loopDirtTarget } from "@/application/planner/atlas-dirt-loops";
@@ -553,9 +554,13 @@ export function graphHopperProviderFromEnv(
   const apiKey = env["GRAPHHOPPER_API_KEY"]?.trim() ?? "";
   const budget = Number(env["GRAPHHOPPER_HOSTED_DAILY_BUDGET"] ?? DEFAULT_HOSTED_DAILY_BUDGET);
   const riderModesEnabled = env["OGV_RIDER_MODES"] !== "off";
-  const cacheKey = `${baseUrl}|${apiKey}|${budget}|${riderModesEnabled}`;
+  const cacheKey = `${baseUrl}|${apiKey}|${budget}|${riderModesEnabled}|${env["OGV_LOOP_ANCHORS_PATH"] ?? ""}`;
   if (sharedProvider?.key === cacheKey) return sharedProvider.provider;
-  const primary = createGraphHopperProvider({ baseUrl, riderModesEnabled, shareIdenticalRequests: true });
+  const anchorsPath = env["OGV_LOOP_ANCHORS_PATH"]?.trim();
+  const primary = createGraphHopperProvider({
+    baseUrl, riderModesEnabled, shareIdenticalRequests: true,
+    ...(anchorsPath ? { loopRings: createLoopRingMaker(anchorsPath) } : {}),
+  });
   const provider = apiKey.length === 0
     ? primary
     : createFallbackRouteProvider({
