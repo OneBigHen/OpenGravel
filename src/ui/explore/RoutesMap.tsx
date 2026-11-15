@@ -5,11 +5,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { MapHost } from "@/application/map/map-host";
 import type { MapScene } from "@/application/map/types";
 import { sortBest, type LibraryChip, type RouteLibrary } from "@/application/route-library/client";
+import { bestNear } from "@/application/route-library/discover";
 import type { IndexRow } from "@/application/route-library/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { bubblesFor, COUNTRY_EXTENT, COUNTRY_INSETS, extentFromCamera, statesInView, zoomForBounds, type Bubble } from "@/ui/explore/routes-camera";
 import { createRoutesOverlay, LINE_MIN_ZOOM, STATE_BUBBLE_MAX_ZOOM, type MapView } from "@/ui/explore/routes-overlay";
+import { BestStrip } from "@/ui/explore/RoutesFind";
 import { RoutesMapCard } from "@/ui/explore/RoutesMapCard";
 
 export interface RoutesCamera {
@@ -29,6 +31,8 @@ export interface RoutesMapProps extends ExploreMapConfig {
   /** The view settled: the numbers the address bar and the "rides here" pill need. */
   readonly onView: (view: MapView) => void;
   readonly onOpen: (id: string) => void;
+  /** Phone map view: a strip of the best rides near the view fills the room under the country. */
+  readonly strip?: boolean;
   /** The card sits above this bottom clearance (the pill and tab bar); CSS owns the number. */
   readonly className?: string;
 }
@@ -48,6 +52,11 @@ const EMPTY_SCENE: MapScene = {
 };
 
 const GROUP_ZOOM_STEP = 2;
+const COUNTRY_CENTRE = [39, -96] as const;
+/** Air between the strip and the country above it, in pixels. */
+const STRIP_GAP = 8;
+/** The Map / List pill and its margins, from the bottom of the map. */
+const PILL_ZONE = 72;
 
 /**
  * Explore's whole-country map: a bubble per state, then bubbles for groups of
@@ -55,7 +64,7 @@ const GROUP_ZOOM_STEP = 2;
  * pinned to the map (so they are real, labelled, thumb-sized controls); the
  * lines and dots are map layers (routes-overlay.ts).
  */
-export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, onOpen, hostFactory, basemap, assetBasePath, className }: RoutesMapProps) {
+export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, onOpen, hostFactory, basemap, assetBasePath, className, strip = false }: RoutesMapProps) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
   const [host, setHost] = useState<MapHost | null>(null);
@@ -64,6 +73,8 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   const [pickedIndex, setPickedIndex] = useState(0);
   const [initial] = useState(() => camera);
   const [linesDrawn, setLinesDrawn] = useState(0);
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [stripHeight, setStripHeight] = useState<number | null>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const byId = useMemo(() => new Map(library.rows.map((row) => [row.id, row])), [library.rows]);
   const handlers = useRef({ onView, tap: (ids: readonly string[]): void => { void ids; }, frame: () => {} });
@@ -94,11 +105,20 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
 
   // The opening fit: PlannerMap's own mount fit frames an empty scene, so say where to look.
   const fitted = useRef<MapHost | null>(null);
+  const best = useMemo(
+    () => (strip ? bestNear(rows, view === null ? COUNTRY_CENTRE : [view.center.lat, view.center.lon]) : []),
+    [strip, rows, view],
+  );
+  // The country frame leaves room for the strip, once the strip has a height.
+  const stripWanted = strip && best.length > 0;
+  useLayoutEffect(() => {
+    if (stripRef.current !== null && stripHeight === null) setStripHeight(stripRef.current.offsetHeight);
+  }, [stripHeight, stripWanted]);
   useEffect(() => {
-    if (host === null || fitExtent === null || fitted.current === host) return;
+    if (host === null || fitExtent === null || fitted.current === host || (stripWanted && stripHeight === null)) return;
     fitted.current = host;
-    host.fitBounds(fitExtent, initial === null ? COUNTRY_INSETS : { top: 0, right: 0, bottom: 0, left: 0 });
-  }, [host, fitExtent, initial]);
+    host.fitBounds(fitExtent, initial === null ? { ...COUNTRY_INSETS, bottom: stripWanted ? PILL_ZONE + stripHeight! + STRIP_GAP : COUNTRY_INSETS.bottom } : { top: 0, right: 0, bottom: 0, left: 0 });
+  }, [host, fitExtent, initial, stripWanted, stripHeight]);
 
   useEffect(() => {
     overlay.setAllRows(library.rows);
@@ -188,8 +208,9 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
   }
 
   const picked = pickedRows[pickedIndex];
+  const stripShown = best.length > 0 && picked === undefined && (view === null || view.zoom < LINE_MIN_ZOOM);
   return (
-    <div className={className === undefined ? "og-routes__map" : `og-routes__map ${className}`} ref={frameRef} data-testid="routes-map" data-zoom={view === null ? undefined : view.zoom.toFixed(1)} data-bubbles={bubbles.length} data-lines={linesDrawn}>
+    <div className={className === undefined ? "og-routes__map" : `og-routes__map ${className}`} ref={frameRef} data-testid="routes-map" data-zoom={view === null ? undefined : view.zoom.toFixed(1)} data-bubbles={bubbles.length} data-lines={linesDrawn} style={stripShown && stripHeight !== null ? ({ "--og-strip-h": `${stripHeight}px` } as React.CSSProperties) : undefined}>
       {fitExtent === null ? null : (
         <PlannerMap
           scene={EMPTY_SCENE}
@@ -227,6 +248,11 @@ export function RoutesMap({ library, rows, chips, standoutOnly, camera, onView, 
           </button>
         ))}
       </div>
+      {stripShown ? (
+        <div className="og-routes__stripwrap" ref={stripRef}>
+          <BestStrip best={best} sources={library.sources} />
+        </div>
+      ) : null}
       {picked === undefined ? null : (
         <RoutesMapCard
           rows={pickedRows}

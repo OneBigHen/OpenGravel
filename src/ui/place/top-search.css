@@ -167,9 +167,6 @@
     cursor: pointer;
   }
 
-  /* 44px to the eye and the thumb (PF-6). */
-
-
   .og-search-chips__glyph {
     flex: none;
     width: 18px;
@@ -298,8 +295,11 @@
 @media (max-width: 360px) { /* QA-01: the weather pill steps aside so it never pushes the menu over search */
   .og-top-search__bar { gap: var(--og-space-2); }
   .og-conditions__pill { padding: 0 var(--og-space-3); }
-  .og-conditions__note, .og-conditions__glyph, .og-top-search__bar:focus-within .og-conditions { display: none; }
+  .og-conditions__note, .og-conditions__glyph { display: none; }
 }
+
+/* Typing a search: the weather steps aside on every phone, so the words typed have the whole bar (at 390 with an alert the field was 50px wide). */
+.og-top-search__bar:focus-within .og-conditions { display: none; }
 
 /* Short phones (iPhone SE): bar 8px from the top, 48px tall, so the map keeps room for a ride. */
 @media (max-height: 700px) and (min-height: 501px) and (max-width: 760px) {
