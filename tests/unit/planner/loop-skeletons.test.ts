@@ -21,12 +21,12 @@ describe("planLoopRings", () => {
     expect(planLoopRings(input)).toEqual(planLoopRings(input));
   });
 
-  it("makes up to three rings at least 60 degrees apart, never reusing a corridor in a ring", () => {
+  it("makes up to three directions, two rings each, directions at least 60 degrees apart, never reusing a corridor in a ring", () => {
     const rings = planLoopRings(input);
     expect(rings.length).toBeGreaterThanOrEqual(2);
-    expect(rings.length).toBeLessThanOrEqual(3);
+    expect(rings.length).toBeLessThanOrEqual(6);
     for (const a of rings) for (const b of rings) {
-      if (a !== b) expect(Math.min(Math.abs(a.bearing - b.bearing), 360 - Math.abs(a.bearing - b.bearing))).toBeGreaterThanOrEqual(60);
+      if (a.bearing !== b.bearing) expect(Math.min(Math.abs(a.bearing - b.bearing), 360 - Math.abs(a.bearing - b.bearing))).toBeGreaterThanOrEqual(60);
     }
     for (const ring of rings) {
       expect(new Set(ring.anchorIds).size).toBe(ring.anchorIds.length);

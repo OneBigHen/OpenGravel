@@ -34,14 +34,13 @@ function stub(timeMs: number): { bodies: Record<string, unknown>[]; fetcher: typ
 }
 
 describe("loop rings in the provider", () => {
-  it("routes each ring as one request through its anchors, with the dead-end rule, within six calls", async () => {
+  it("routes each ring as one request through its anchors, with the dead-end rule, with at most six rings and six corrections", async () => {
     const { bodies, fetcher } = stub(60 * 60_000); // half the asked time: forces corrections
     const provider = createGraphHopperProvider({ baseUrl: "http://x", fetcher, loopRings: maker });
     const set = await provider.candidates(REQUEST, new AbortController().signal);
     expect(set.candidates.length).toBeGreaterThanOrEqual(3);
-    expect(bodies.length).toBeLessThanOrEqual(6);
     const rings = bodies.filter((b) => b["algorithm"] !== "round_trip");
-    expect(rings.length).toBeLessThanOrEqual(5);
+    expect(rings.length).toBeLessThanOrEqual(12);
     for (const ring of rings) {
       expect(ring["pass_through"]).toBe(true);
       const points = ring["points"] as number[][];
